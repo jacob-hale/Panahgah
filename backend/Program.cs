@@ -114,3 +114,5 @@ using (var scope = app.Services.CreateScope())
 await AuthIdentityGenerator.SeedAsync(app.Services, app.Configuration);
 
 app.Run();
+
+// Round 2 attempt
