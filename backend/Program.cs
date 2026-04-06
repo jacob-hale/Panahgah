@@ -101,6 +101,16 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapGroup("/api/auth").MapIdentityApi<ApplicationUser>();
 
+// Apply database migrations automatically on startup
+using (var scope = app.Services.CreateScope())
+{
+    var appDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await appDb.Database.MigrateAsync();
+
+    var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
+    await identityDb.Database.MigrateAsync();
+}
+
 await AuthIdentityGenerator.SeedAsync(app.Services, app.Configuration);
 
 app.Run();
