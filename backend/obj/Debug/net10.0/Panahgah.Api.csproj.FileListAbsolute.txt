@@ -124,3 +124,4 @@ C:\Users\jacob\OneDrive\Documents\INTEX II\backend\bin\Debug\net10.0\Microsoft.A
 C:\Users\jacob\OneDrive\Documents\INTEX II\backend\bin\Debug\net10.0\Swashbuckle.AspNetCore.Swagger.dll
 C:\Users\jacob\OneDrive\Documents\INTEX II\backend\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 C:\Users\jacob\OneDrive\Documents\INTEX II\backend\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\jacob\OneDrive\Documents\INTEX II\backend\obj\Debug\net10.0\Panahgah.Api.sourcelink.json
