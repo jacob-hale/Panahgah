@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+}
+
+body.theme-light {
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+body.theme-dark {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+body.theme-dark .bg-body-tertiary {
+  background-color: #1d1f21 !important;
+}
+
+body.theme-dark .card {
+  background-color: #1d1f21;
+  color: #f8f9fa;
+}
+
+body.theme-dark .text-body-secondary {
+  color: #adb5bd !important;
+}
+
+.cookie-banner {
+  position: sticky;
+  bottom: 0;
+  z-index: 1030;
+}

@@ -1,0 +1,18 @@
+# Global Project Rules: Panahgah
+
+## 1. Project Stack
+- **Backend:** .NET 10 Web API (C#), Entity Framework Core.
+- **Frontend:** React 18+, TypeScript, Vite.
+- **Database:** PostgreSQL (Local pgAdmin for dev, Railway for production).
+- **Styling:** CSS and Bootstrap 5 ONLY. Absolutely NO Tailwind CSS.
+
+## 2. AI Assistant Directives (Strict Boundaries)
+- **Do Not Hallucinate Packages:** Only install npm packages or NuGet packages that are explicitly requested or absolutely essential for the current task.
+- **No Architectural Shortcuts:** This project is strictly graded on its security architecture. Do not suggest or implement "easier" alternatives to the security requirements. 
+- **One Step at a Time:** Do not refactor code outside the scope of the current prompt. If you see an opportunity for optimization outside the immediate task, ask the user first.
+- **Clean Code:** Remove all unused using statements, unused imports, and console.logs before finalizing a code block.
+
+## 3. Communication Style
+- Be concise. Explain *why* a change is being made, especially if it relates to security, but avoid overly verbose pleasantries.
+- Always provide complete, copy-pasteable blocks of code for modified files. Do not use `// ... existing code ...` unless the file is massive.
+- Before suggesting a database schema change, verify it aligns with the original `DataDictionary.md`.

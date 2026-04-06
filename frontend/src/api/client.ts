@@ -1,0 +1,39 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7270';
+
+type ApiFetchOptions = RequestInit & {
+  jsonBody?: unknown;
+};
+
+export async function apiFetch<T>(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<T> {
+  const { jsonBody, headers, ...rest } = options;
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...rest,
+    credentials: 'include',
+    headers: {
+      ...(jsonBody ? { 'Content-Type': 'application/json' } : {}),
+      ...headers,
+    },
+    body: jsonBody !== undefined ? JSON.stringify(jsonBody) : rest.body,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed with status ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+export type AuthMeResponse = {
+  isAuthenticated: boolean;
+  email: string | null;
+  roles: string[];
+};
