@@ -42,6 +42,36 @@ export function AppLayout() {
                   Impact Dashboard
                 </NavLink>
               </li>
+              {!isLoading && authSession?.roles.includes('Admin') && (
+                <li className="nav-item dropdown">
+                  <button
+                    type="button"
+                    className="nav-link dropdown-toggle"
+                    id="adminNavDropdown"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    Staff portal
+                  </button>
+                  <ul className="dropdown-menu" aria-labelledby="adminNavDropdown">
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin">
+                        Admin dashboard
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/caseload">
+                        Caseload inventory
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/process-recordings">
+                        Process recordings
+                      </NavLink>
+                    </li>
+                  </ul>
+                </li>
+              )}
               <li className="nav-item">
                 <NavLink className="nav-link" to="/privacy">
                   Privacy
