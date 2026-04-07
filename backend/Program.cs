@@ -34,9 +34,9 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    // Frontend and API are on different origins in deployment, so auth cookie must allow
-    // cross-site credentialed requests.
-    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SameSite = builder.Environment.IsDevelopment()
+        ? SameSiteMode.None
+        : SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
     options.SlidingExpiration = true;
@@ -58,14 +58,19 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(localFrontendCorsPolicy, policy =>
     {
-        policy
-            .WithOrigins(
+        var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?.Split(',')
+            ?? new[]
+            {
                 "http://localhost:5173",
                 "https://localhost:5173",
                 "http://localhost:4173",
                 "https://localhost:4173",
                 "http://localhost:3000",
-                "https://localhost:3000")
+                "https://localhost:3000"
+            };
+
+        policy
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -96,6 +101,18 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapGroup("/api/auth").MapIdentityApi<ApplicationUser>();
 
+// Apply database migrations automatically on startup
+using (var scope = app.Services.CreateScope())
+{
+    var appDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await appDb.Database.MigrateAsync();
+
+    var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
+    await identityDb.Database.MigrateAsync();
+}
+
 await AuthIdentityGenerator.SeedAsync(app.Services, app.Configuration);
 
 app.Run();
+
+// Round 2 attempt
