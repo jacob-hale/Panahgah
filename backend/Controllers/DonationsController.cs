@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,40 @@ namespace Panahgah.Api.Controllers;
 public class DonationsController(ApplicationDbContext dbContext) : ControllerBase
 {
     [HttpGet]
-    [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
+    [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public async Task<IActionResult> GetAll()
     {
-        var donations = await dbContext.donations.AsNoTracking().ToListAsync();
+        var donations = await dbContext.donations
+            .AsNoTracking()
+            .Include(d => d.donation_allocations)
+            .OrderByDescending(d => d.donation_date)
+            .ToListAsync();
+        return Ok(donations);
+    }
+
+    [HttpGet("mine")]
+    [Authorize(Policy = AuthPolicies.RequireDonor)]
+    public async Task<IActionResult> GetMine()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var supporter = await dbContext.supporters.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.identity_user_id == userId);
+        if (supporter is null)
+        {
+            return Ok(Array.Empty<Donation>());
+        }
+
+        var donations = await dbContext.donations
+            .AsNoTracking()
+            .Include(d => d.donation_allocations)
+            .Where(d => d.supporter_id == supporter.supporter_id)
+            .OrderByDescending(d => d.donation_date)
+            .ToListAsync();
         return Ok(donations);
     }
 
@@ -24,8 +55,32 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
     [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
     public async Task<IActionResult> GetById(int id)
     {
-        var donation = await dbContext.donations.AsNoTracking().FirstOrDefaultAsync(d => d.donation_id == id);
-        return donation is null ? NotFound() : Ok(donation);
+        var donation = await dbContext.donations
+            .AsNoTracking()
+            .Include(d => d.donation_allocations)
+            .FirstOrDefaultAsync(d => d.donation_id == id);
+        if (donation is null)
+        {
+            return NotFound();
+        }
+
+        if (!User.IsInRole(AuthRoles.Admin))
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Forbid();
+            }
+
+            var supporter = await dbContext.supporters.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.identity_user_id == userId);
+            if (supporter is null || supporter.supporter_id != donation.supporter_id)
+            {
+                return Forbid();
+            }
+        }
+
+        return Ok(donation);
     }
 
     [HttpPost]

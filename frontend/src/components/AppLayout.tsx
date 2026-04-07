@@ -94,6 +94,11 @@ export function AppLayout() {
                         Social post studio
                       </NavLink>
                     </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/supporters">
+                        Supporters &amp; donations
+                      </NavLink>
+                    </li>
                   </ul>
                 </li>
               )}
@@ -104,7 +109,12 @@ export function AppLayout() {
                 <span className="text-body-secondary small">Checking session...</span>
               ) : isAuthenticated ? (
                 <>
-                  <span className="text-body-secondary small">
+                  {authSession?.roles.includes('Donor') && (
+                    <Link className="btn btn-outline-secondary btn-sm" to="/account">
+                      My account
+                    </Link>
+                  )}
+                  <span className="text-body-secondary small d-none d-md-inline">
                     {authSession?.email} ({authSession?.roles.join(', ') || 'No roles'})
                   </span>
                   <button type="button" className="btn btn-outline-danger btn-sm" onClick={handleLogout}>
@@ -112,9 +122,14 @@ export function AppLayout() {
                   </button>
                 </>
               ) : (
-                <Link className="btn btn-primary btn-sm" to="/login">
-                  Login
-                </Link>
+                <>
+                  <Link className="btn btn-outline-primary btn-sm" to="/register">
+                    Sign up
+                  </Link>
+                  <Link className="btn btn-primary btn-sm" to="/login">
+                    Login
+                  </Link>
+                </>
               )}
             </div>
           </div>
