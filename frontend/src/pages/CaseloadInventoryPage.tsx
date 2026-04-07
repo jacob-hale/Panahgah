@@ -116,6 +116,9 @@ export function CaseloadInventoryPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [expandedResidentId, setExpandedResidentId] = useState<number | null>(null);
+
   const loadData = useCallback(async () => {
     setListLoading(true);
     setListError(null);
@@ -223,75 +226,52 @@ export function CaseloadInventoryPage() {
         <div className="alert alert-danger">{listError}</div>
       ) : (
         <>
-          <section className="card shadow-sm mb-4">
-            <div className="card-body">
-              <h2 className="h5 card-title">Residents</h2>
-              <div className="table-responsive">
-                <table className="table table-sm table-striped align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th scope="col">ID</th>
-                      <th scope="col">Case control</th>
-                      <th scope="col">Internal code</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Sex</th>
-                      <th scope="col">DOB</th>
-                      <th scope="col">Safehouse</th>
-                      <th scope="col">Social worker</th>
-                      <th scope="col" className="text-end">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {residents.length === 0 ? (
-                      <tr>
-                        <td colSpan={9} className="text-body-secondary small">
-                          No residents yet. Create one using the form below.
-                        </td>
-                      </tr>
-                    ) : (
-                      residents.map((r) => (
-                        <tr key={r.resident_id}>
-                          <td>{r.resident_id}</td>
-                          <td>{r.case_control_no}</td>
-                          <td>{r.internal_code}</td>
-                          <td>{r.case_status}</td>
-                          <td>{r.sex}</td>
-                          <td>{r.date_of_birth}</td>
-                          <td>{safehouseNameById.get(r.safehouse_id) ?? r.safehouse_id}</td>
-                          <td>{r.assigned_social_worker}</td>
-                          <td className="text-end">
-                            <button
-                              type="button"
-                              className="btn btn-outline-danger btn-sm"
-                              onClick={() => {
-                                setDeleteError(null);
-                                setDeleteTarget(r);
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+          <div className="row g-4">
+            {/* Left column: actions + add accordion */}
+            <div className="col-12 col-lg-3 order-1 order-lg-1">
+              <div className="card shadow-sm mb-4">
+                <div className="card-body">
+                  <h2 className="h6 card-title panahgah-heading">Resident actions</h2>
+                  <div className="d-grid gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={() => setIsAddOpen(true)}
+                    >
+                      Add new resident
+                    </button>
+                    <button type="button" className="btn btn-outline-secondary btn-sm" disabled>
+                      Export (coming soon)
+                    </button>
+                  </div>
+                  <p className="small text-body-secondary mb-0 mt-2">
+                    Use the table to scan and expand rows for full case details.
+                  </p>
+                </div>
               </div>
-            </div>
-          </section>
 
-          <section className="card shadow-sm">
-            <div className="card-body">
-              <h2 className="h5 card-title">Create resident</h2>
-              <p className="small text-body-secondary">
-                All fields mirror the API contract. Restricted notes belong in the dedicated field only.
-              </p>
+              <div className="accordion" id="addResidentAccordion">
+                <div className="accordion-item">
+                  <h2 className="accordion-header" id="addResidentHeading">
+                    <button
+                      className={`accordion-button panahgah-heading ${isAddOpen ? '' : 'collapsed'}`}
+                      type="button"
+                      aria-expanded={isAddOpen}
+                      aria-controls="addResidentCollapse"
+                      onClick={() => setIsAddOpen((v) => !v)}
+                    >
+                      Add New Resident
+                    </button>
+                  </h2>
+                  <div
+                    id="addResidentCollapse"
+                    className={`accordion-collapse collapse ${isAddOpen ? 'show' : ''}`}
+                    aria-labelledby="addResidentHeading"
+                  >
+                    <div className="accordion-body">
+                      {createError && <div className="alert alert-danger py-2 small">{createError}</div>}
 
-              {createError && <div className="alert alert-danger py-2 small">{createError}</div>}
-
-              <form onSubmit={handleCreate} className="d-grid gap-4">
+                      <form onSubmit={handleCreate} className="d-grid gap-4">
                 <fieldset className="border rounded-3 p-3">
                   <legend className="float-none w-auto px-2 fs-6 fw-semibold">Case identification</legend>
                   <div className="row g-3">
@@ -794,9 +774,353 @@ export function CaseloadInventoryPage() {
                     {createSubmitting ? 'Creating…' : 'Create resident'}
                   </button>
                 </div>
-              </form>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </section>
+
+            {/* Right column: filters UI only */}
+            <div className="col-12 col-lg-3 order-2 order-lg-3">
+              <div className="card shadow-sm">
+                <div className="card-body">
+                  <h2 className="h6 card-title panahgah-heading">Filters</h2>
+                  <p className="small text-body-secondary mb-3">UI only (not wired yet).</p>
+
+                  <div className="d-grid gap-3">
+                    <div>
+                      <label className="form-label" htmlFor="search">
+                        Search
+                      </label>
+                      <input
+                        id="search"
+                        className="form-control"
+                        placeholder="case control, internal code, social worker…"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="f_case_status">
+                        Case status
+                      </label>
+                      <input id="f_case_status" className="form-control" placeholder="e.g., Active" />
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="f_safehouse">
+                        Safehouse
+                      </label>
+                      <select id="f_safehouse" className="form-select">
+                        <option value="">All safehouses</option>
+                        {safehouses.map((sh) => (
+                          <option key={sh.safehouse_id} value={sh.safehouse_id}>
+                            {sh.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="f_case_category">
+                        Case category
+                      </label>
+                      <input id="f_case_category" className="form-control" placeholder="e.g., Trafficked" />
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="f_sw">
+                        Assigned social worker
+                      </label>
+                      <input id="f_sw" className="form-control" placeholder="e.g., SW-01" />
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="f_reintegration">
+                        Reintegration status
+                      </label>
+                      <input id="f_reintegration" className="form-control" placeholder="e.g., In progress" />
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="f_risk">
+                        Risk level
+                      </label>
+                      <input id="f_risk" className="form-control" placeholder="initial or current" />
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="f_referral">
+                        Referral source
+                      </label>
+                      <input id="f_referral" className="form-control" placeholder="e.g., Agency" />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <label className="form-label" htmlFor="f_doa_from">
+                          Admission from
+                        </label>
+                        <input id="f_doa_from" type="date" className="form-control" />
+                      </div>
+                      <div className="col-6">
+                        <label className="form-label" htmlFor="f_doa_to">
+                          Admission to
+                        </label>
+                        <input id="f_doa_to" type="date" className="form-control" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Center column: residents table */}
+            <div className="col-12 col-lg-6 order-3 order-lg-2">
+              <div className="card shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-baseline justify-content-between gap-3 mb-2">
+                    <h2 className="h5 card-title mb-0 panahgah-heading">Residents</h2>
+                    <div className="d-flex align-items-center gap-2">
+                      <label className="small text-body-secondary" htmlFor="rpp">
+                        Records
+                      </label>
+                      <select id="rpp" className="form-select form-select-sm" style={{ width: 110 }}>
+                        <option>5</option>
+                        <option selected>10</option>
+                        <option>20</option>
+                        <option>50</option>
+                        <option>Max</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-sm table-striped align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col">Case control</th>
+                          <th scope="col">Internal code</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Case category</th>
+                          <th scope="col">Safehouse</th>
+                          <th scope="col">Social worker</th>
+                          <th scope="col">Admission</th>
+                          <th scope="col">Reintegration</th>
+                          <th scope="col" className="text-end">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {residents.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="text-body-secondary small">
+                              No residents yet. Use “Add New Resident” to create one.
+                            </td>
+                          </tr>
+                        ) : (
+                          residents.map((r) => {
+                            const isOpen = expandedResidentId === r.resident_id;
+                            return (
+                              <>
+                                <tr key={r.resident_id}>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="btn btn-link p-0 text-decoration-none"
+                                      onClick={() =>
+                                        setExpandedResidentId((cur) => (cur === r.resident_id ? null : r.resident_id))
+                                      }
+                                      aria-expanded={isOpen}
+                                      aria-controls={`resident-details-${r.resident_id}`}
+                                    >
+                                      {r.case_control_no}
+                                    </button>
+                                  </td>
+                                  <td>{r.internal_code}</td>
+                                  <td>{r.case_status}</td>
+                                  <td>{r.case_category}</td>
+                                  <td>{safehouseNameById.get(r.safehouse_id) ?? r.safehouse_id}</td>
+                                  <td>{r.assigned_social_worker}</td>
+                                  <td>{r.date_of_admission}</td>
+                                  <td>{r.reintegration_status ?? ''}</td>
+                                  <td className="text-end">
+                                    <div className="dropdown">
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline-secondary btn-sm"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        aria-label="Actions menu"
+                                      >
+                                        ⋮
+                                      </button>
+                                      <ul className="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                          <button className="dropdown-item" type="button" disabled>
+                                            Edit (coming soon)
+                                          </button>
+                                        </li>
+                                        <li>
+                                          <button
+                                            className="dropdown-item text-danger"
+                                            type="button"
+                                            onClick={() => {
+                                              setDeleteError(null);
+                                              setDeleteTarget(r);
+                                            }}
+                                          >
+                                            Delete
+                                          </button>
+                                        </li>
+                                      </ul>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {isOpen && (
+                                  <tr key={`${r.resident_id}-details`} id={`resident-details-${r.resident_id}`}>
+                                    <td colSpan={9}>
+                                      <div className="border rounded p-3 bg-body-tertiary">
+                                        <div className="row g-3">
+                                          <div className="col-12 col-md-6">
+                                            <h3 className="h6 panahgah-heading mb-2">Demographics</h3>
+                                            <div className="row g-2 small">
+                                              <div className="col-6 text-body-secondary">Sex</div>
+                                              <div className="col-6">{r.sex}</div>
+                                              <div className="col-6 text-body-secondary">Date of birth</div>
+                                              <div className="col-6">{r.date_of_birth}</div>
+                                              <div className="col-6 text-body-secondary">Birth status</div>
+                                              <div className="col-6">{r.birth_status}</div>
+                                              <div className="col-6 text-body-secondary">Place of birth</div>
+                                              <div className="col-6">{r.place_of_birth}</div>
+                                              <div className="col-6 text-body-secondary">Religion</div>
+                                              <div className="col-6">{r.religion}</div>
+                                            </div>
+                                          </div>
+
+                                          <div className="col-12 col-md-6">
+                                            <h3 className="h6 panahgah-heading mb-2">Case category & sub-categories</h3>
+                                            <div className="small text-body-secondary mb-2">{r.case_category}</div>
+                                            <div className="d-flex flex-wrap gap-2">
+                                              {r.sub_cat_orphaned && <span className="badge text-bg-light border">Orphaned</span>}
+                                              {r.sub_cat_trafficked && <span className="badge text-bg-light border">Trafficked</span>}
+                                              {r.sub_cat_child_labor && <span className="badge text-bg-light border">Child labor</span>}
+                                              {r.sub_cat_physical_abuse && <span className="badge text-bg-light border">Physical abuse</span>}
+                                              {r.sub_cat_sexual_abuse && <span className="badge text-bg-light border">Sexual abuse</span>}
+                                              {r.sub_cat_osaec && <span className="badge text-bg-light border">OSAEC</span>}
+                                              {r.sub_cat_cicl && <span className="badge text-bg-light border">CICL</span>}
+                                              {r.sub_cat_at_risk && <span className="badge text-bg-light border">At risk</span>}
+                                              {r.sub_cat_street_child && <span className="badge text-bg-light border">Street child</span>}
+                                              {r.sub_cat_child_with_hiv && <span className="badge text-bg-light border">Child with HIV</span>}
+                                            </div>
+                                          </div>
+
+                                          <div className="col-12 col-md-6">
+                                            <h3 className="h6 panahgah-heading mb-2">Disability / special needs</h3>
+                                            <div className="d-flex flex-wrap gap-2 mb-2">
+                                              <span className={`badge ${r.is_pwd ? 'text-bg-info' : 'text-bg-light border'}`}>
+                                                PWD: {r.is_pwd ? 'Yes' : 'No'}
+                                              </span>
+                                              <span className={`badge ${r.has_special_needs ? 'text-bg-info' : 'text-bg-light border'}`}>
+                                                Special needs: {r.has_special_needs ? 'Yes' : 'No'}
+                                              </span>
+                                            </div>
+                                            <div className="row g-2 small">
+                                              <div className="col-6 text-body-secondary">PWD type</div>
+                                              <div className="col-6">{r.pwd_type ?? ''}</div>
+                                              <div className="col-6 text-body-secondary">Diagnosis</div>
+                                              <div className="col-6">{r.special_needs_diagnosis ?? ''}</div>
+                                            </div>
+                                          </div>
+
+                                          <div className="col-12 col-md-6">
+                                            <h3 className="h6 panahgah-heading mb-2">Family socio-demographic profile</h3>
+                                            <div className="d-flex flex-wrap gap-2">
+                                              {r.family_is_4ps && <span className="badge text-bg-light border">4Ps</span>}
+                                              {r.family_solo_parent && <span className="badge text-bg-light border">Solo parent</span>}
+                                              {r.family_indigenous && <span className="badge text-bg-light border">Indigenous</span>}
+                                              {r.family_parent_pwd && <span className="badge text-bg-light border">Parent PWD</span>}
+                                              {r.family_informal_settler && <span className="badge text-bg-light border">Informal settler</span>}
+                                              {!r.family_is_4ps &&
+                                                !r.family_solo_parent &&
+                                                !r.family_indigenous &&
+                                                !r.family_parent_pwd &&
+                                                !r.family_informal_settler && (
+                                                  <span className="small text-body-secondary">No flags recorded.</span>
+                                                )}
+                                            </div>
+                                          </div>
+
+                                          <div className="col-12">
+                                            <h3 className="h6 panahgah-heading mb-2">Admission and referral details</h3>
+                                            <div className="row g-2 small">
+                                              <div className="col-12 col-md-3 text-body-secondary">Date of admission</div>
+                                              <div className="col-12 col-md-3">{r.date_of_admission}</div>
+                                              <div className="col-12 col-md-3 text-body-secondary">Referral source</div>
+                                              <div className="col-12 col-md-3">{r.referral_source}</div>
+                                              <div className="col-12 col-md-3 text-body-secondary">Referring agency/person</div>
+                                              <div className="col-12 col-md-9">{r.referring_agency_person}</div>
+                                              <div className="col-12 col-md-3 text-body-secondary">Initial assessment</div>
+                                              <div className="col-12 col-md-9">{r.initial_case_assessment}</div>
+                                              <div className="col-12 col-md-3 text-body-secondary">Initial risk</div>
+                                              <div className="col-12 col-md-3">{r.initial_risk_level}</div>
+                                              <div className="col-12 col-md-3 text-body-secondary">Current risk</div>
+                                              <div className="col-12 col-md-3">{r.current_risk_level}</div>
+                                            </div>
+                                          </div>
+
+                                          <div className="col-12 col-md-6">
+                                            <h3 className="h6 panahgah-heading mb-2">Social worker and case tracking</h3>
+                                            <div className="row g-2 small">
+                                              <div className="col-6 text-body-secondary">Assigned social worker</div>
+                                              <div className="col-6">{r.assigned_social_worker}</div>
+                                              <div className="col-6 text-body-secondary">Case study prepared</div>
+                                              <div className="col-6">{r.date_case_study_prepared ?? ''}</div>
+                                              <div className="col-6 text-body-secondary">Case status</div>
+                                              <div className="col-6">{r.case_status}</div>
+                                            </div>
+                                          </div>
+
+                                          <div className="col-12 col-md-6">
+                                            <h3 className="h6 panahgah-heading mb-2">Reintegration tracking</h3>
+                                            <div className="row g-2 small">
+                                              <div className="col-6 text-body-secondary">Type</div>
+                                              <div className="col-6">{r.reintegration_type ?? ''}</div>
+                                              <div className="col-6 text-body-secondary">Status</div>
+                                              <div className="col-6">{r.reintegration_status ?? ''}</div>
+                                              <div className="col-6 text-body-secondary">Date closed</div>
+                                              <div className="col-6">{r.date_closed ?? ''}</div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3">
+                    <nav aria-label="Caseload pagination">
+                      <ul className="pagination pagination-sm mb-0">
+                        <li className="page-item disabled">
+                          <span className="page-link">Prev</span>
+                        </li>
+                        <li className="page-item active" aria-current="page">
+                          <span className="page-link">1</span>
+                        </li>
+                        <li className="page-item disabled">
+                          <span className="page-link">2</span>
+                        </li>
+                        <li className="page-item disabled">
+                          <span className="page-link">Next</span>
+                        </li>
+                      </ul>
+                    </nav>
+                    <span className="small text-body-secondary">Pagination UI only (not wired yet).</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
