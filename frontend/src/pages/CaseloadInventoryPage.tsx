@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
-import type { Resident, ResidentUpsertPayload, Safehouse } from '../api/types';
-import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
+import type { PagedResponse, Resident, ResidentUpsertPayload, Safehouse } from '../api/types';
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -112,22 +111,32 @@ export function CaseloadInventoryPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSubmitting, setCreateSubmitting] = useState(false);
 
-  const [deleteTarget, setDeleteTarget] = useState<Resident | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [expandedResidentId, setExpandedResidentId] = useState<number | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<'5' | '10' | '20' | '50' | 'Max'>('10');
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [filters, setFilters] = useState(() => ({
+    search: '',
+    case_status: '',
+    safehouse_id: '',
+    case_category: '',
+    assigned_social_worker: '',
+    reintegration_status: '',
+    current_risk_level: '',
+    referral_source: '',
+    date_of_admission_from: '',
+    date_of_admission_to: '',
+  }));
 
   const loadData = useCallback(async () => {
     setListLoading(true);
     setListError(null);
     try {
-      const [r, s] = await Promise.all([
-        apiFetch<Resident[]>('/api/residents'),
-        apiFetch<Safehouse[]>('/api/safehouses'),
-      ]);
-      setResidents(r);
+      const s = await apiFetch<Safehouse[]>('/api/safehouses');
       setSafehouses(s);
     } catch {
       setListError('Could not load residents or safehouses. Ensure you are signed in as Admin or Donor for reads.');
@@ -139,6 +148,44 @@ export function CaseloadInventoryPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const loadResidents = useCallback(async () => {
+    setListLoading(true);
+    setListError(null);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('page_size', String(pageSize === 'Max' ? 0 : Number.parseInt(pageSize, 10)));
+      params.set('sort_field', 'case_control_no');
+      params.set('sort_direction', 'asc');
+
+      if (filters.search.trim()) params.set('search', filters.search.trim());
+      if (filters.case_status.trim()) params.set('case_status', filters.case_status.trim());
+      if (filters.safehouse_id) params.set('safehouse_id', filters.safehouse_id);
+      if (filters.case_category.trim()) params.set('case_category', filters.case_category.trim());
+      if (filters.assigned_social_worker.trim()) params.set('assigned_social_worker', filters.assigned_social_worker.trim());
+      if (filters.reintegration_status.trim()) params.set('reintegration_status', filters.reintegration_status.trim());
+      if (filters.current_risk_level.trim()) params.set('current_risk_level', filters.current_risk_level.trim());
+      if (filters.referral_source.trim()) params.set('referral_source', filters.referral_source.trim());
+      if (filters.date_of_admission_from) params.set('date_of_admission_from', filters.date_of_admission_from);
+      if (filters.date_of_admission_to) params.set('date_of_admission_to', filters.date_of_admission_to);
+
+      const res = await apiFetch<PagedResponse<Resident>>(`/api/residents?${params.toString()}`);
+      setResidents(res.items);
+      setTotalRecords(res.total_records);
+      setTotalPages(res.total_pages);
+      setPage(res.current_page);
+      setExpandedResidentId(null);
+    } catch {
+      setListError('Could not load residents. Ensure you are signed in as Admin or Donor for reads.');
+    } finally {
+      setListLoading(false);
+    }
+  }, [filters, page, pageSize]);
+
+  useEffect(() => {
+    void loadResidents();
+  }, [loadResidents]);
 
   useEffect(() => {
     if (safehouses.length > 0 && form.safehouse_id === 0) {
@@ -169,31 +216,12 @@ export function CaseloadInventoryPage() {
         jsonBody: payload,
       });
       setForm(emptyResidentForm(safehouses[0]?.safehouse_id ?? 0));
-      await loadData();
+      setPage(1);
+      await loadResidents();
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : 'Create failed.');
     } finally {
       setCreateSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) {
-      return;
-    }
-    setDeleteError(null);
-    setDeleteSubmitting(true);
-    try {
-      await apiFetch<unknown>(`/api/residents/${deleteTarget.resident_id}`, {
-        method: 'DELETE',
-        jsonBody: { confirmDelete: true },
-      });
-      setDeleteTarget(null);
-      await loadData();
-    } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : 'Delete failed.');
-    } finally {
-      setDeleteSubmitting(false);
     }
   };
 
@@ -233,11 +261,7 @@ export function CaseloadInventoryPage() {
                 <div className="card-body">
                   <h2 className="h6 card-title panahgah-heading">Resident actions</h2>
                   <div className="d-grid gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => setIsAddOpen(true)}
-                    >
+                    <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setIsAddOpen(true)}>
                       Add new resident
                     </button>
                     <button type="button" className="btn btn-outline-secondary btn-sm" disabled>
@@ -797,19 +821,41 @@ export function CaseloadInventoryPage() {
                         id="search"
                         className="form-control"
                         placeholder="case control, internal code, social worker…"
+                        value={filters.search}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, search: e.target.value }));
+                        }}
                       />
                     </div>
                     <div>
                       <label className="form-label" htmlFor="f_case_status">
                         Case status
                       </label>
-                      <input id="f_case_status" className="form-control" placeholder="e.g., Active" />
+                      <input
+                        id="f_case_status"
+                        className="form-control"
+                        placeholder="e.g., Active"
+                        value={filters.case_status}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, case_status: e.target.value }));
+                        }}
+                      />
                     </div>
                     <div>
                       <label className="form-label" htmlFor="f_safehouse">
                         Safehouse
                       </label>
-                      <select id="f_safehouse" className="form-select">
+                      <select
+                        id="f_safehouse"
+                        className="form-select"
+                        value={filters.safehouse_id}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, safehouse_id: e.target.value }));
+                        }}
+                      >
                         <option value="">All safehouses</option>
                         {safehouses.map((sh) => (
                           <option key={sh.safehouse_id} value={sh.safehouse_id}>
@@ -822,46 +868,131 @@ export function CaseloadInventoryPage() {
                       <label className="form-label" htmlFor="f_case_category">
                         Case category
                       </label>
-                      <input id="f_case_category" className="form-control" placeholder="e.g., Trafficked" />
+                      <input
+                        id="f_case_category"
+                        className="form-control"
+                        placeholder="e.g., Trafficked"
+                        value={filters.case_category}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, case_category: e.target.value }));
+                        }}
+                      />
                     </div>
                     <div>
                       <label className="form-label" htmlFor="f_sw">
                         Assigned social worker
                       </label>
-                      <input id="f_sw" className="form-control" placeholder="e.g., SW-01" />
+                      <input
+                        id="f_sw"
+                        className="form-control"
+                        placeholder="e.g., SW-01"
+                        value={filters.assigned_social_worker}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, assigned_social_worker: e.target.value }));
+                        }}
+                      />
                     </div>
                     <div>
                       <label className="form-label" htmlFor="f_reintegration">
                         Reintegration status
                       </label>
-                      <input id="f_reintegration" className="form-control" placeholder="e.g., In progress" />
+                      <input
+                        id="f_reintegration"
+                        className="form-control"
+                        placeholder="e.g., In progress"
+                        value={filters.reintegration_status}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, reintegration_status: e.target.value }));
+                        }}
+                      />
                     </div>
                     <div>
                       <label className="form-label" htmlFor="f_risk">
                         Risk level
                       </label>
-                      <input id="f_risk" className="form-control" placeholder="initial or current" />
+                      <input
+                        id="f_risk"
+                        className="form-control"
+                        placeholder="initial or current"
+                        value={filters.current_risk_level}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, current_risk_level: e.target.value }));
+                        }}
+                      />
                     </div>
                     <div>
                       <label className="form-label" htmlFor="f_referral">
                         Referral source
                       </label>
-                      <input id="f_referral" className="form-control" placeholder="e.g., Agency" />
+                      <input
+                        id="f_referral"
+                        className="form-control"
+                        placeholder="e.g., Agency"
+                        value={filters.referral_source}
+                        onChange={(e) => {
+                          setPage(1);
+                          setFilters((f) => ({ ...f, referral_source: e.target.value }));
+                        }}
+                      />
                     </div>
                     <div className="row g-2">
                       <div className="col-6">
                         <label className="form-label" htmlFor="f_doa_from">
                           Admission from
                         </label>
-                        <input id="f_doa_from" type="date" className="form-control" />
+                        <input
+                          id="f_doa_from"
+                          type="date"
+                          className="form-control"
+                          value={filters.date_of_admission_from}
+                          onChange={(e) => {
+                            setPage(1);
+                            setFilters((f) => ({ ...f, date_of_admission_from: e.target.value }));
+                          }}
+                        />
                       </div>
                       <div className="col-6">
                         <label className="form-label" htmlFor="f_doa_to">
                           Admission to
                         </label>
-                        <input id="f_doa_to" type="date" className="form-control" />
+                        <input
+                          id="f_doa_to"
+                          type="date"
+                          className="form-control"
+                          value={filters.date_of_admission_to}
+                          onChange={(e) => {
+                            setPage(1);
+                            setFilters((f) => ({ ...f, date_of_admission_to: e.target.value }));
+                          }}
+                        />
                       </div>
                     </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={() => {
+                        setPage(1);
+                        setFilters({
+                          search: '',
+                          case_status: '',
+                          safehouse_id: '',
+                          case_category: '',
+                          assigned_social_worker: '',
+                          reintegration_status: '',
+                          current_risk_level: '',
+                          referral_source: '',
+                          date_of_admission_from: '',
+                          date_of_admission_to: '',
+                        });
+                      }}
+                    >
+                      Clear filters
+                    </button>
                   </div>
                 </div>
               </div>
@@ -877,12 +1008,21 @@ export function CaseloadInventoryPage() {
                       <label className="small text-body-secondary" htmlFor="rpp">
                         Records
                       </label>
-                      <select id="rpp" className="form-select form-select-sm" style={{ width: 110 }}>
-                        <option>5</option>
-                        <option selected>10</option>
-                        <option>20</option>
-                        <option>50</option>
-                        <option>Max</option>
+                      <select
+                        id="rpp"
+                        className="form-select form-select-sm"
+                        style={{ width: 110 }}
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPage(1);
+                          setPageSize(e.target.value as typeof pageSize);
+                        }}
+                      >
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="Max">Max</option>
                       </select>
                     </div>
                   </div>
@@ -955,15 +1095,8 @@ export function CaseloadInventoryPage() {
                                           </button>
                                         </li>
                                         <li>
-                                          <button
-                                            className="dropdown-item text-danger"
-                                            type="button"
-                                            onClick={() => {
-                                              setDeleteError(null);
-                                              setDeleteTarget(r);
-                                            }}
-                                          >
-                                            Delete
+                                          <button className="dropdown-item text-danger" type="button" disabled>
+                                            Delete (coming soon)
                                           </button>
                                         </li>
                                       </ul>
@@ -1101,21 +1234,34 @@ export function CaseloadInventoryPage() {
                   <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3">
                     <nav aria-label="Caseload pagination">
                       <ul className="pagination pagination-sm mb-0">
-                        <li className="page-item disabled">
-                          <span className="page-link">Prev</span>
+                        <li className={`page-item ${pageSize === 'Max' || page <= 1 ? 'disabled' : ''}`}>
+                          <button
+                            type="button"
+                            className="page-link"
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={pageSize === 'Max' || page <= 1}
+                          >
+                            Prev
+                          </button>
                         </li>
                         <li className="page-item active" aria-current="page">
-                          <span className="page-link">1</span>
+                          <span className="page-link">{page}</span>
                         </li>
-                        <li className="page-item disabled">
-                          <span className="page-link">2</span>
-                        </li>
-                        <li className="page-item disabled">
-                          <span className="page-link">Next</span>
+                        <li className={`page-item ${pageSize === 'Max' || page >= totalPages ? 'disabled' : ''}`}>
+                          <button
+                            type="button"
+                            className="page-link"
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={pageSize === 'Max' || page >= totalPages}
+                          >
+                            Next
+                          </button>
                         </li>
                       </ul>
                     </nav>
-                    <span className="small text-body-secondary">Pagination UI only (not wired yet).</span>
+                    <span className="small text-body-secondary">
+                      Page {page} of {totalPages} ({totalRecords} total)
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1123,26 +1269,6 @@ export function CaseloadInventoryPage() {
           </div>
         </>
       )}
-
-      <ConfirmDeleteModal
-        show={deleteTarget !== null}
-        title="Delete resident"
-        description="This permanently removes the resident record from the caseload. This cannot be undone."
-        itemLabel={
-          deleteTarget
-            ? `${deleteTarget.case_control_no} (ID ${deleteTarget.resident_id})`
-            : ''
-        }
-        isSubmitting={deleteSubmitting}
-        error={deleteError}
-        onClose={() => {
-          if (!deleteSubmitting) {
-            setDeleteTarget(null);
-            setDeleteError(null);
-          }
-        }}
-        onDelete={handleDelete}
-      />
     </div>
   );
 }
