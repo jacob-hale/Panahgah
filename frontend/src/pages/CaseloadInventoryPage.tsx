@@ -169,8 +169,9 @@ export function CaseloadInventoryPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedResidentForDetails, setSelectedResidentForDetails] = useState<Resident | null>(null);
-  const [isResidentFormOpen, setIsResidentFormOpen] = useState(false);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<'5' | '10' | '20' | '50' | 'Max'>('10');
@@ -276,7 +277,7 @@ export function CaseloadInventoryPage() {
         });
         await loadResidents();
         setEditingResidentId(null);
-        setIsResidentFormOpen(false);
+        setIsAddOpen(false);
       } else {
         await apiFetch<Resident>('/api/residents', {
           method: 'POST',
@@ -285,7 +286,7 @@ export function CaseloadInventoryPage() {
         setForm(emptyResidentForm(safehouses[0]?.safehouse_id ?? 0));
         setPage(1);
         await loadResidents();
-        setIsResidentFormOpen(false);
+        setIsAddOpen(false);
       }
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : editingResidentId !== null ? 'Update failed.' : 'Create failed.');
@@ -327,13 +328,6 @@ export function CaseloadInventoryPage() {
 
   const closeDetails = () => {
     setSelectedResidentForDetails(null);
-  };
-
-  const closeResidentForm = () => {
-    if (createSubmitting) {
-      return;
-    }
-    setIsResidentFormOpen(false);
   };
 
   const canPaginate = useMemo(() => pageSize !== 'Max' && totalPages > 1, [pageSize, totalPages]);
@@ -384,403 +378,53 @@ export function CaseloadInventoryPage() {
         <div className="alert alert-danger">{listError}</div>
       ) : (
         <>
-          {/* Full-width table focus + top action bar */}
-          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-            <div className="small text-body-secondary">
-              {totalRecords} resident{totalRecords === 1 ? '' : 's'}
-            </div>
-            <div className="d-flex align-items-center gap-2 ms-auto">
-              <div className="dropdown">
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  Filters
-                </button>
-                <div className="dropdown-menu dropdown-menu-end p-3" style={{ width: 320 }}>
-                  <div className="d-grid gap-3">
-                    <div>
-                      <label className="form-label" htmlFor="search">
-                        Search
-                      </label>
-                      <input
-                        id="search"
-                        className="form-control"
-                        placeholder="case control, internal code, social worker…"
-                        value={filters.search}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, search: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_case_status">
-                        Case status
-                      </label>
-                      <input
-                        id="f_case_status"
-                        className="form-control"
-                        placeholder="e.g., Active"
-                        value={filters.case_status}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, case_status: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_safehouse">
-                        Safehouse
-                      </label>
-                      <select
-                        id="f_safehouse"
-                        className="form-select"
-                        value={filters.safehouse_id}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, safehouse_id: e.target.value }));
-                        }}
-                      >
-                        <option value="">All safehouses</option>
-                        {safehouses.map((sh) => (
-                          <option key={sh.safehouse_id} value={sh.safehouse_id}>
-                            {sh.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_case_category">
-                        Case category
-                      </label>
-                      <input
-                        id="f_case_category"
-                        className="form-control"
-                        placeholder="e.g., Trafficked"
-                        value={filters.case_category}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, case_category: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_sw">
-                        Assigned social worker
-                      </label>
-                      <input
-                        id="f_sw"
-                        className="form-control"
-                        placeholder="e.g., SW-01"
-                        value={filters.assigned_social_worker}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, assigned_social_worker: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_reintegration">
-                        Reintegration status
-                      </label>
-                      <input
-                        id="f_reintegration"
-                        className="form-control"
-                        placeholder="e.g., In progress"
-                        value={filters.reintegration_status}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, reintegration_status: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_risk">
-                        Risk level
-                      </label>
-                      <input
-                        id="f_risk"
-                        className="form-control"
-                        placeholder="initial or current"
-                        value={filters.current_risk_level}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, current_risk_level: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_referral">
-                        Referral source
-                      </label>
-                      <input
-                        id="f_referral"
-                        className="form-control"
-                        placeholder="e.g., Agency"
-                        value={filters.referral_source}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, referral_source: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div className="row g-2">
-                      <div className="col-6">
-                        <label className="form-label" htmlFor="f_doa_from">
-                          Admission from
-                        </label>
-                        <input
-                          id="f_doa_from"
-                          type="date"
-                          className="form-control"
-                          value={filters.date_of_admission_from}
-                          onChange={(e) => {
-                            setPage(1);
-                            setFilters((f) => ({ ...f, date_of_admission_from: e.target.value }));
-                          }}
-                        />
-                      </div>
-                      <div className="col-6">
-                        <label className="form-label" htmlFor="f_doa_to">
-                          Admission to
-                        </label>
-                        <input
-                          id="f_doa_to"
-                          type="date"
-                          className="form-control"
-                          value={filters.date_of_admission_to}
-                          onChange={(e) => {
-                            setPage(1);
-                            setFilters((f) => ({ ...f, date_of_admission_to: e.target.value }));
-                          }}
-                        />
-                      </div>
-                    </div>
-
+          <div className="row g-4">
+            {/* Left column: add + filters accordion */}
+            <div className="col-12 col-lg-3 order-1 order-lg-1">
+              <div className="accordion" id="caseloadAccordion">
+                <div className="accordion-item">
+                  <h2 className="accordion-header" id="addResidentHeading">
                     <button
+                      className={`accordion-button panahgah-heading ${isAddOpen ? '' : 'collapsed'}`}
                       type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={() => {
-                        setPage(1);
-                        setFilters({
-                          search: '',
-                          case_status: '',
-                          safehouse_id: '',
-                          case_category: '',
-                          assigned_social_worker: '',
-                          reintegration_status: '',
-                          current_risk_level: '',
-                          referral_source: '',
-                          date_of_admission_from: '',
-                          date_of_admission_to: '',
-                        });
-                      }}
+                      aria-expanded={isAddOpen}
+                      aria-controls="addResidentCollapse"
+                      onClick={() => setIsAddOpen((v) => !v)}
                     >
-                      Clear filters
+                      Add New Resident
                     </button>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => {
-                  setCreateError(null);
-                  setEditingResidentId(null);
-                  setForm(emptyResidentForm(safehouses[0]?.safehouse_id ?? 0));
-                  setIsResidentFormOpen(true);
-                }}
-              >
-                Add New Resident
-              </button>
-            </div>
-          </div>
-
-          <div className="card shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-baseline justify-content-between gap-3 mb-2">
-                <h2 className="h5 card-title mb-0 panahgah-heading">Residents</h2>
-                <div className="d-flex align-items-center gap-2">
-                  <label className="small text-body-secondary" htmlFor="rpp">
-                    Records
-                  </label>
-                  <select
-                    id="rpp"
-                    className="form-select form-select-sm"
-                    style={{ width: 110 }}
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPage(1);
-                      setPageSize(e.target.value as typeof pageSize);
-                    }}
+                  </h2>
+                  <div
+                    id="addResidentCollapse"
+                    className={`accordion-collapse collapse ${isAddOpen ? 'show' : ''}`}
+                    aria-labelledby="addResidentHeading"
                   >
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="Max">Max</option>
-                  </select>
-                </div>
-              </div>
+                    <div className="accordion-body">
+                      {createError && <div className="alert alert-danger py-2 small">{createError}</div>}
 
-              <div className="table-responsive">
-                <table className="table table-sm table-striped align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th scope="col">Case control</th>
-                      <th scope="col">Internal code</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Case category</th>
-                      <th scope="col">Safehouse</th>
-                      <th scope="col">Social worker</th>
-                      <th scope="col">Admission</th>
-                      <th scope="col">Reintegration</th>
-                      <th scope="col" className="text-end">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {residents.length === 0 ? (
-                      <tr>
-                        <td colSpan={9} className="text-body-secondary small">
-                          No residents found for the current filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      residents.map((r) => {
-                        return (
-                          <tr key={r.resident_id}>
-                            <td>
-                              <button
-                                type="button"
-                                className="btn btn-link p-0 text-decoration-none"
-                                onClick={() => setSelectedResidentForDetails(r)}
-                              >
-                                {r.case_control_no}
-                              </button>
-                            </td>
-                            <td>{r.internal_code}</td>
-                            <td>{r.case_status}</td>
-                            <td>{r.case_category}</td>
-                            <td>{safehouseNameById.get(r.safehouse_id) ?? r.safehouse_id}</td>
-                            <td>{r.assigned_social_worker}</td>
-                            <td>{r.date_of_admission}</td>
-                            <td>{r.reintegration_status ?? ''}</td>
-                            <td className="text-end">
-                              <div className="dropdown">
-                                <button
-                                  type="button"
-                                  className="btn btn-outline-secondary btn-sm"
-                                  data-bs-toggle="dropdown"
-                                  aria-expanded="false"
-                                  aria-label="Actions menu"
-                                >
-                                  ⋮
-                                </button>
-                                <ul className="dropdown-menu dropdown-menu-end">
-                                  <li>
-                                    <button
-                                      className="dropdown-item"
-                                      type="button"
-                                      onClick={() => {
-                                        setCreateError(null);
-                                        setEditingResidentId(r.resident_id);
-                                        setForm(residentToUpsertPayload(r));
-                                        setIsResidentFormOpen(true);
-                                      }}
-                                    >
-                                      Edit
-                                    </button>
-                                  </li>
-                                  <li>
-                                    <button
-                                      className="dropdown-item text-danger"
-                                      type="button"
-                                      onClick={() => {
-                                        setDeleteError(null);
-                                        setDeleteTarget(r);
-                                      }}
-                                    >
-                                      Delete
-                                    </button>
-                                  </li>
-                                </ul>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3">
-                <nav aria-label="Caseload pagination">
-                  <ul className="pagination pagination-sm mb-0">
-                    <li className={`page-item ${!canPaginate || page <= 1 ? 'disabled' : ''}`}>
-                      <button
-                        type="button"
-                        className="page-link"
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={!canPaginate || page <= 1}
-                      >
-                        Prev
-                      </button>
-                    </li>
-
-                    {paginationModel.showLeftEllipsis && (
-                      <li className="page-item disabled" aria-hidden="true">
-                        <span className="page-link">…</span>
-                      </li>
-                    )}
-
-                    {paginationModel.pages.map((p) => (
-                      <li
-                        key={p}
-                        className={`page-item ${p === page ? 'active' : ''}`}
-                        aria-current={p === page ? 'page' : undefined}
-                      >
-                        {p === page ? (
-                          <span className="page-link">{p}</span>
-                        ) : (
-                          <button type="button" className="page-link" onClick={() => setPage(p)} disabled={!canPaginate}>
-                            {p}
+                      <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
+                        <div className="small text-body-secondary">
+                          {editingResidentId !== null ? `Editing resident #${editingResidentId}.` : 'Create a new resident profile.'}
+                        </div>
+                        {editingResidentId !== null && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => {
+                              setEditingResidentId(null);
+                              setForm(emptyResidentForm(safehouses[0]?.safehouse_id ?? 0));
+                            }}
+                            disabled={createSubmitting}
+                          >
+                            Cancel edit
                           </button>
                         )}
-                      </li>
-                    ))}
+                      </div>
 
-                    {paginationModel.showRightEllipsis && (
-                      <li className="page-item disabled" aria-hidden="true">
-                        <span className="page-link">…</span>
-                      </li>
-                    )}
-
-                    <li className={`page-item ${!canPaginate || page >= totalPages ? 'disabled' : ''}`}>
-                      <button
-                        type="button"
-                        className="page-link"
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={!canPaginate || page >= totalPages}
-                      >
-                        Next
-                      </button>
-                    </li>
-                  </ul>
-                </nav>
-                <span className="small text-body-secondary">
-                  Page {page} of {totalPages} ({totalRecords} total)
-                </span>
-              </div>
-            </div>
-          </div>
-
+                      <form onSubmit={handleCreate} className="d-grid gap-4">
+                <fieldset className="border rounded-3 p-3">
+                  <legend className="float-none w-auto px-2 fs-6 fw-semibold">Case identification</legend>
+                  <div className="row g-3">
                     <div className="col-md-4">
                       <label className="form-label" htmlFor="ccn">
                         Case control no. *
