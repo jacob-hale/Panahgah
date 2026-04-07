@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Panahgah.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0a981f3ac824b9abd084f499e9aad03de68a7559")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8ad27e5ca410276847bb2dbc275c05444602bce0")]
 [assembly: System.Reflection.AssemblyProductAttribute("Panahgah.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Panahgah.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

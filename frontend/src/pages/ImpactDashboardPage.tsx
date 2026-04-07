@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
-import { useAuth } from '../contexts/AuthContext';
 
 type Safehouse = { safehouse_id: number };
 type Resident = { resident_id: number };
 type Donation = { donation_id: number; estimated_value: number };
 
 export function ImpactDashboardPage() {
-  const { isAuthenticated, isLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [safehouseCount, setSafehouseCount] = useState(0);
@@ -16,11 +14,6 @@ export function ImpactDashboardPage() {
   const [estimatedDonationTotal, setEstimatedDonationTotal] = useState(0);
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated) {
-      setLoading(false);
-      return;
-    }
-
     const loadDashboard = async () => {
       setLoading(true);
       setError(null);
@@ -38,26 +31,21 @@ export function ImpactDashboardPage() {
           donations.reduce((sum, donation) => sum + (donation.estimated_value ?? 0), 0),
         );
       } catch {
-        setError('Unable to load dashboard data. Ensure you are logged in with the required role.');
+        setError('Unable to load dashboard data right now.');
       } finally {
         setLoading(false);
       }
     };
 
     void loadDashboard();
-  }, [isAuthenticated, isLoading]);
-
-  if (isLoading) {
-    return <p>Checking session...</p>;
-  }
-
-  if (!isAuthenticated) {
-    return <div className="alert alert-warning">Please log in to view the Impact Dashboard.</div>;
-  }
+  }, []);
 
   return (
     <section>
       <h1 className="h3 mb-3">Impact Dashboard</h1>
+      <div className="alert alert-info">
+        Public preview: this dashboard should be viewable without logging in.
+      </div>
       {loading ? <p>Loading dashboard...</p> : null}
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
