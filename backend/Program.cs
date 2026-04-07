@@ -57,6 +57,10 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole(AuthRoles.Donor, AuthRoles.Admin));
 });
 
+builder.Services.AddHttpClient<AnthropicSocialPostGenerator>();
+builder.Services.AddHttpClient<GeminiSocialPostGenerator>();
+builder.Services.AddScoped<ISocialPostGenerator, ConfigurableSocialPostGenerator>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(localFrontendCorsPolicy, policy =>

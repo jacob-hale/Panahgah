@@ -10,6 +10,7 @@ import { DonorLapseInsightsPage } from './pages/DonorLapseInsightsPage';
 import { DonorUpgradeInsightsPage } from './pages/DonorUpgradeInsightsPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { ProcessRecordingPage } from './pages/ProcessRecordingPage';
+import { SocialPostStudioPage } from './pages/SocialPostStudioPage';
 import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <Route path="social-insights" element={<SocialMediaInsightsPage />} />
           <Route path="donor-lapse-insights" element={<DonorLapseInsightsPage />} />
           <Route path="donor-upgrade-insights" element={<DonorUpgradeInsightsPage />} />
+          <Route path="social-post-studio" element={<SocialPostStudioPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

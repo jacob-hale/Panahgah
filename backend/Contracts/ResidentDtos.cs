@@ -2,6 +2,40 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Panahgah.Api.Contracts;
 
+public class ResidentsQueryDto
+{
+    public int page { get; set; } = 1;
+    public int page_size { get; set; } = 10;
+
+    /// <summary>
+    /// Sort field. Suggested values: "case_control_no" (default), "date_of_admission", "internal_code",
+    /// "assigned_social_worker", "case_status", "safehouse", "case_category", "reintegration_status",
+    /// "current_risk_level", "referral_source".
+    /// </summary>
+    public string? sort_field { get; set; } = "case_control_no";
+
+    /// <summary>
+    /// Sort direction. Allowed: "asc" (default), "desc".
+    /// </summary>
+    public string? sort_direction { get; set; } = "asc";
+
+    /// <summary>
+    /// General search term (case_control_no, internal_code, assigned_social_worker).
+    /// </summary>
+    public string? search { get; set; }
+
+    public string? case_status { get; set; }
+    public int? safehouse_id { get; set; }
+    public string? safehouse { get; set; }
+    public string? case_category { get; set; }
+    public string? assigned_social_worker { get; set; }
+    public string? reintegration_status { get; set; }
+    public string? current_risk_level { get; set; }
+    public string? referral_source { get; set; }
+    public DateOnly? date_of_admission_from { get; set; }
+    public DateOnly? date_of_admission_to { get; set; }
+}
+
 public class ResidentUpsertDto
 {
     [Required, MaxLength(64)]

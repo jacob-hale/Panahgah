@@ -14,10 +14,179 @@ public class ResidentsController(ApplicationDbContext dbContext) : ControllerBas
 {
     [HttpGet]
     [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] ResidentsQueryDto query)
     {
-        var residents = await dbContext.residents.AsNoTracking().ToListAsync();
-        return Ok(residents);
+        var q = dbContext.residents.AsNoTracking().AsQueryable();
+
+        // Filters (AND)
+        if (!string.IsNullOrWhiteSpace(query.case_status))
+        {
+            var v = query.case_status.Trim();
+            q = q.Where(r => r.case_status == v);
+        }
+
+        if (query.safehouse_id.HasValue)
+        {
+            q = q.Where(r => r.safehouse_id == query.safehouse_id.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.case_category))
+        {
+            var v = query.case_category.Trim();
+            q = q.Where(r => r.case_category == v);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.assigned_social_worker))
+        {
+            var v = query.assigned_social_worker.Trim();
+            q = q.Where(r => r.assigned_social_worker == v);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.reintegration_status))
+        {
+            var v = query.reintegration_status.Trim();
+            q = q.Where(r => r.reintegration_status != null && r.reintegration_status == v);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.current_risk_level))
+        {
+            var v = query.current_risk_level.Trim();
+            q = q.Where(r => r.current_risk_level == v);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.referral_source))
+        {
+            var v = query.referral_source.Trim();
+            q = q.Where(r => r.referral_source == v);
+        }
+
+        if (query.date_of_admission_from.HasValue)
+        {
+            q = q.Where(r => r.date_of_admission >= query.date_of_admission_from.Value);
+        }
+
+        if (query.date_of_admission_to.HasValue)
+        {
+            q = q.Where(r => r.date_of_admission <= query.date_of_admission_to.Value);
+        }
+
+        // Safehouse name filter (requires join)
+        if (!string.IsNullOrWhiteSpace(query.safehouse))
+        {
+            var v = query.safehouse.Trim();
+            q =
+                from r in q
+                join sh in dbContext.safehouses.AsNoTracking() on r.safehouse_id equals sh.safehouse_id
+                where EF.Functions.Like(sh.name, $"%{v}%")
+                select r;
+        }
+
+        // Search across key fields
+        if (!string.IsNullOrWhiteSpace(query.search))
+        {
+            var term = query.search.Trim();
+            q = q.Where(r =>
+                EF.Functions.Like(r.case_control_no, $"%{term}%") ||
+                EF.Functions.Like(r.internal_code, $"%{term}%") ||
+                EF.Functions.Like(r.assigned_social_worker, $"%{term}%"));
+        }
+
+        // Sorting (stable)
+        var field = (query.sort_field ?? "case_control_no").Trim().ToLowerInvariant();
+        var dir = (query.sort_direction ?? "asc").Trim().ToLowerInvariant();
+        var asc = dir != "desc";
+
+        q = field switch
+        {
+            "date_of_admission" => asc
+                ? q.OrderBy(r => r.date_of_admission).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.date_of_admission).ThenByDescending(r => r.resident_id),
+            "internal_code" => asc
+                ? q.OrderBy(r => r.internal_code).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.internal_code).ThenByDescending(r => r.resident_id),
+            "assigned_social_worker" => asc
+                ? q.OrderBy(r => r.assigned_social_worker).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.assigned_social_worker).ThenByDescending(r => r.resident_id),
+            "case_status" => asc
+                ? q.OrderBy(r => r.case_status).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.case_status).ThenByDescending(r => r.resident_id),
+            "case_category" => asc
+                ? q.OrderBy(r => r.case_category).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.case_category).ThenByDescending(r => r.resident_id),
+            "reintegration_status" => asc
+                ? q.OrderBy(r => r.reintegration_status).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.reintegration_status).ThenByDescending(r => r.resident_id),
+            "current_risk_level" => asc
+                ? q.OrderBy(r => r.current_risk_level).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.current_risk_level).ThenByDescending(r => r.resident_id),
+            "referral_source" => asc
+                ? q.OrderBy(r => r.referral_source).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.referral_source).ThenByDescending(r => r.resident_id),
+            // safehouse sorting: join to safehouses for ordering by name, then stable by resident_id
+            "safehouse" => asc
+                ? (from r in q
+                   join sh in dbContext.safehouses.AsNoTracking() on r.safehouse_id equals sh.safehouse_id
+                   orderby sh.name, r.resident_id
+                   select r)
+                : (from r in q
+                   join sh in dbContext.safehouses.AsNoTracking() on r.safehouse_id equals sh.safehouse_id
+                   orderby sh.name descending, r.resident_id descending
+                   select r),
+            _ => asc
+                ? q.OrderBy(r => r.case_control_no).ThenBy(r => r.resident_id)
+                : q.OrderByDescending(r => r.case_control_no).ThenByDescending(r => r.resident_id),
+        };
+
+        var totalRecords = await q.CountAsync();
+
+        var pageSize = query.page_size < 0 ? 10 : query.page_size;
+        if (pageSize == 0)
+        {
+            var all = await q.ToListAsync();
+            return Ok(new PagedResponseDto<Resident>
+            {
+                items = all,
+                total_records = totalRecords,
+                total_pages = 1,
+                current_page = 1,
+                page_size = 0
+            });
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 10;
+        }
+        if (pageSize > 500)
+        {
+            pageSize = 500;
+        }
+
+        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+        if (totalPages <= 0)
+        {
+            totalPages = 1;
+        }
+
+        var currentPage = query.page < 1 ? 1 : query.page;
+        if (currentPage > totalPages)
+        {
+            currentPage = totalPages;
+        }
+
+        var items = await q
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new PagedResponseDto<Resident>
+        {
+            items = items,
+            total_records = totalRecords,
+            total_pages = totalPages,
+            current_page = currentPage,
+            page_size = pageSize
+        });
     }
 
     [HttpGet("{id:int}")]

@@ -89,6 +89,11 @@ export function AppLayout() {
                         Social media insights
                       </NavLink>
                     </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/social-post-studio">
+                        Social post studio
+                      </NavLink>
+                    </li>
                   </ul>
                 </li>
               )}
