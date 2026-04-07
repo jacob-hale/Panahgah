@@ -15,6 +15,85 @@ namespace Panahgah.Api.Controllers;
 [Authorize(Policy = AuthPolicies.RequireAdmin)]
 public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEnvironment environment, IConfiguration configuration) : ControllerBase
 {
+    [HttpPost("train")]
+    public async Task<IActionResult> TrainFromDatabase()
+    {
+        var posts = await dbContext.social_media_posts
+            .AsNoTracking()
+            .Select(p => new
+            {
+                p.platform,
+                p.day_of_week,
+                p.post_hour,
+                p.post_type,
+                p.media_type,
+                p.num_hashtags,
+                p.mentions_count,
+                p.has_call_to_action,
+                p.call_to_action_type,
+                p.content_topic,
+                p.sentiment_tone,
+                p.caption_length,
+                p.features_resident_story,
+                p.campaign_name,
+                p.is_boosted,
+                p.boost_budget_php,
+                p.donation_referrals,
+                p.created_at
+            })
+            .ToListAsync();
+
+        if (posts.Count < 30)
+        {
+            return BadRequest("Need at least 30 social media posts to train Model 5.");
+        }
+
+        var contentRoot = environment.ContentRootPath;
+        var defaultTrainScriptPath = Path.GetFullPath(Path.Combine(contentRoot, "..", "ML Pipelines", "model_5_train.py"));
+        var defaultArtifactsDir = Path.GetFullPath(Path.Combine(contentRoot, "..", "ML Pipelines", "artifacts"));
+
+        var pythonExecutable = configuration["Ml:PythonExecutable"] ?? "python";
+        var trainScriptPath = configuration["Ml:Model5TrainScriptPath"] ?? defaultTrainScriptPath;
+        var artifactsDir = configuration["Ml:Model5ArtifactsDir"] ?? defaultArtifactsDir;
+
+        if (!System.IO.File.Exists(trainScriptPath))
+        {
+            return Problem($"Model 5 train script not found: {trainScriptPath}", statusCode: 500);
+        }
+
+        var inputJson = JsonSerializer.Serialize(new { posts });
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = pythonExecutable,
+            Arguments = $"\"{trainScriptPath}\" --artifacts-dir \"{artifactsDir}\"",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = new Process { StartInfo = startInfo };
+        process.Start();
+
+        await process.StandardInput.WriteAsync(inputJson);
+        process.StandardInput.Close();
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
+
+        if (process.ExitCode != 0)
+        {
+            return Problem($"Model 5 training failed: {stderr}", statusCode: 500);
+        }
+
+        return Content(stdout, "application/json", Encoding.UTF8);
+    }
+
     [HttpGet("insights")]
     public async Task<IActionResult> GetInsights()
     {

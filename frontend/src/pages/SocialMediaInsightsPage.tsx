@@ -11,28 +11,58 @@ type Model5InsightsResponse = {
   best_post_type_by_platform: PlatformPostTypeInsight[];
   story_effect: StoryEffect;
 };
+type Model5TrainResponse = {
+  rows_used: number;
+  train_rows: number;
+  test_rows: number;
+  mae: number;
+  rmse: number;
+  r2: number;
+  predictive_model_path: string;
+  explanatory_model_path: string;
+};
 
 export function SocialMediaInsightsPage() {
   const [insights, setInsights] = useState<Model5InsightsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [training, setTraining] = useState(false);
+  const [trainError, setTrainError] = useState<string | null>(null);
+  const [trainResult, setTrainResult] = useState<Model5TrainResponse | null>(null);
+
+  const loadInsights = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch<Model5InsightsResponse>('/api/ml/model5/insights');
+      setInsights(data);
+    } catch {
+      setError('Unable to run Model 5 scoring. Ensure Python, model artifact, and admin access are configured.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await apiFetch<Model5InsightsResponse>('/api/ml/model5/insights');
-        setInsights(data);
-      } catch {
-        setError('Unable to run Model 5 scoring. Ensure Python, model artifact, and admin access are configured.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+    void loadInsights();
   }, []);
+
+  const handleTrainModel = async () => {
+    setTraining(true);
+    setTrainError(null);
+    setTrainResult(null);
+    try {
+      const result = await apiFetch<Model5TrainResponse>('/api/ml/model5/train', {
+        method: 'POST',
+      });
+      setTrainResult(result);
+      await loadInsights();
+    } catch (e) {
+      setTrainError(e instanceof Error ? e.message : 'Training failed.');
+    } finally {
+      setTraining(false);
+    }
+  };
 
   const baseline = insights?.baseline_expected_referrals ?? 0;
   const bestWindows = insights?.best_windows ?? [];
@@ -62,6 +92,24 @@ export function SocialMediaInsightsPage() {
         Mirrors the Model 5 final output blocks: baseline referrals, best posting windows, best post type per
         platform, and resident-story effect.
       </p>
+      <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <button type="button" className="btn btn-primary" onClick={handleTrainModel} disabled={training}>
+          {training ? 'Training model…' : 'Retrain Model 5 from DB'}
+        </button>
+        <button type="button" className="btn btn-outline-secondary" onClick={() => void loadInsights()} disabled={loading}>
+          Refresh insights
+        </button>
+      </div>
+      {trainError ? <div className="alert alert-danger">{trainError}</div> : null}
+      {trainResult ? (
+        <div className="alert alert-success">
+          <div className="fw-semibold mb-1">Training complete</div>
+          <div className="small">
+            Rows: {trainResult.rows_used} (train {trainResult.train_rows}, test {trainResult.test_rows}) | MAE:{' '}
+            {trainResult.mae.toFixed(2)} | RMSE: {trainResult.rmse.toFixed(2)} | R2: {trainResult.r2.toFixed(3)}
+          </div>
+        </div>
+      ) : null}
 
       {loading ? <p>Loading insights...</p> : null}
       {error ? <div className="alert alert-danger">{error}</div> : null}
