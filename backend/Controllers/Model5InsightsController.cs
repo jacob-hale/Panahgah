@@ -54,7 +54,7 @@ public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEn
             var defaultTrainScriptPath = Path.Combine(contentRoot, "ML", "model_5_train.py");
             var defaultArtifactsDir = Path.Combine(contentRoot, "ML", "artifacts");
 
-            var pythonExecutable = configuration["Ml:PythonExecutable"] ?? "python";
+            var pythonExecutable = configuration["Ml:PythonExecutable"] ?? "/opt/venv/bin/python";
             var trainScriptPath = configuration["Ml:Model5TrainScriptPath"] ?? defaultTrainScriptPath;
             var artifactsDir = configuration["Ml:Model5ArtifactsDir"] ?? defaultArtifactsDir;
 
@@ -136,7 +136,7 @@ public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEn
         var defaultScriptPath = Path.Combine(contentRoot, "ML", "model_5_score.py");
         var defaultModelPath = Path.Combine(contentRoot, "ML", "artifacts", "model5_predictive.joblib");
 
-        var pythonExecutable = configuration["Ml:PythonExecutable"] ?? "python";
+            var pythonExecutable = configuration["Ml:PythonExecutable"] ?? "/opt/venv/bin/python";
         var scriptPath = configuration["Ml:Model5ScriptPath"] ?? defaultScriptPath;
         var modelPath = configuration["Ml:Model5ModelPath"] ?? defaultModelPath;
 
