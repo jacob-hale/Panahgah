@@ -34,9 +34,9 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = builder.Environment.IsDevelopment()
-        ? SameSiteMode.None
-        : SameSiteMode.Lax;
+    // Frontend and API are on different origins in deployment, so auth cookie must allow
+    // cross-site credentialed requests.
+    options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
     options.SlidingExpiration = true;
@@ -58,7 +58,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(localFrontendCorsPolicy, policy =>
     {
-        var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?.Split(',')
+        var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             ?? new[]
             {
                 "http://localhost:5173",
