@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
-import { useAuth } from '../contexts/AuthContext';
 
-type Safehouse = { safehouse_id: number };
-type Resident = { resident_id: number };
-type Donation = { donation_id: number; estimated_value: number };
+type PublicImpactSummary = {
+  safehouse_count: number;
+  resident_count: number;
+  donation_count: number;
+  estimated_donation_total_php: number;
+};
 
 export function ImpactDashboardPage() {
-  const { isAuthenticated, isLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [safehouseCount, setSafehouseCount] = useState(0);
@@ -16,44 +17,24 @@ export function ImpactDashboardPage() {
   const [estimatedDonationTotal, setEstimatedDonationTotal] = useState(0);
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated) {
-      setLoading(false);
-      return;
-    }
-
     const loadDashboard = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [safehouses, residents, donations] = await Promise.all([
-          apiFetch<Safehouse[]>('/api/safehouses'),
-          apiFetch<Resident[]>('/api/residents'),
-          apiFetch<Donation[]>('/api/donations'),
-        ]);
-
-        setSafehouseCount(safehouses.length);
-        setResidentCount(residents.length);
-        setDonationCount(donations.length);
-        setEstimatedDonationTotal(
-          donations.reduce((sum, donation) => sum + (donation.estimated_value ?? 0), 0),
-        );
-      } catch {
-        setError('Unable to load dashboard data. Ensure you are logged in with the required role.');
+        const summary = await apiFetch<PublicImpactSummary>('/api/public-impact/summary');
+        setSafehouseCount(summary.safehouse_count);
+        setResidentCount(summary.resident_count);
+        setDonationCount(summary.donation_count);
+        setEstimatedDonationTotal(summary.estimated_donation_total_php);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Unable to load dashboard data.');
       } finally {
         setLoading(false);
       }
     };
 
     void loadDashboard();
-  }, [isAuthenticated, isLoading]);
-
-  if (isLoading) {
-    return <p>Checking session...</p>;
-  }
-
-  if (!isAuthenticated) {
-    return <div className="alert alert-warning">Please log in to view the Impact Dashboard.</div>;
-  }
+  }, []);
 
   return (
     <section>
