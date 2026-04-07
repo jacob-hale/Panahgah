@@ -64,6 +64,6 @@ public class ProcessRecordingUpsertDto
     public bool concerns_flagged { get; set; }
     [Required]
     public bool referral_made { get; set; }
-    [Required, MaxLength(4000)]
-    public string notes_restricted { get; set; } = string.Empty;
+    [MaxLength(4000)]
+    public string? notes_restricted { get; set; }
 }

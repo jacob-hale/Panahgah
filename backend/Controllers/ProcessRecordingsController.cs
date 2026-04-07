@@ -144,7 +144,7 @@ public class ProcessRecordingsController(ApplicationDbContext dbContext) : Contr
             progress_noted = request.progress_noted,
             concerns_flagged = request.concerns_flagged,
             referral_made = request.referral_made,
-            notes_restricted = request.notes_restricted.Trim()
+            notes_restricted = (request.notes_restricted ?? string.Empty).Trim()
         };
 
         dbContext.process_recordings.Add(recording);
@@ -175,7 +175,7 @@ public class ProcessRecordingsController(ApplicationDbContext dbContext) : Contr
         recording.progress_noted = request.progress_noted;
         recording.concerns_flagged = request.concerns_flagged;
         recording.referral_made = request.referral_made;
-        recording.notes_restricted = request.notes_restricted.Trim();
+        recording.notes_restricted = (request.notes_restricted ?? string.Empty).Trim();
 
         await dbContext.SaveChangesAsync();
         return Ok(recording);

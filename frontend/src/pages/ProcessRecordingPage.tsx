@@ -12,6 +12,20 @@ function dateOnly(v: string): string {
   return v.slice(0, 10);
 }
 
+function highlightColor(rec: ProcessRecording): string {
+  // Precedence matters: red is a strict subset of yellow per spec.
+  if (!rec.progress_noted && rec.concerns_flagged) {
+    return '#dc3545'; // Bootstrap danger
+  }
+  if (rec.progress_noted && !rec.concerns_flagged) {
+    return '#198754'; // Bootstrap success
+  }
+  if (!rec.progress_noted || rec.concerns_flagged) {
+    return '#ffc107'; // Bootstrap warning
+  }
+  return 'transparent';
+}
+
 function emptyRecordingPayload(residentId: number): ProcessRecordingUpsertPayload {
   const t = todayIsoDate();
   return {
@@ -658,12 +672,11 @@ export function ProcessRecordingPage() {
                               </div>
                               <div className="col-12">
                                 <label className="form-label" htmlFor="nr">
-                                  Restricted notes *
+                                  Restricted notes
                                 </label>
                                 <textarea
                                   id="nr"
                                   className="form-control"
-                                  required
                                   maxLength={4000}
                                   rows={3}
                                   value={sessionForm.notes_restricted}
@@ -793,129 +806,129 @@ export function ProcessRecordingPage() {
                   {recordings.map((rec) => (
                     <div key={rec.recording_id} className="card shadow-sm">
                       <div className="card-body">
-                        <div className="d-flex align-items-start justify-content-between gap-3">
-                          <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                            <div className="d-flex flex-wrap align-items-baseline gap-2">
-                              <span className="h6 mb-0 panahgah-heading">{dateOnly(rec.session_date)}</span>
-                              <span className="badge text-bg-secondary">{rec.session_type}</span>
+                        <div
+                          className="border-start border-4 ps-3"
+                          style={{ borderLeftColor: highlightColor(rec) }}
+                        >
+                          <div className="d-flex align-items-start justify-content-between gap-3">
+                            <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                              <div className="d-flex flex-wrap align-items-baseline gap-2">
+                                <span className="h6 mb-0 panahgah-heading">{dateOnly(rec.session_date)}</span>
+                                <span className="badge text-bg-secondary">{rec.session_type}</span>
+                              </div>
+                              <div className="d-flex flex-wrap gap-3 mt-1 small text-body-secondary">
+                                <span>
+                                  <span className="text-body-secondary">Social worker: </span>
+                                  <span className="text-body">{rec.social_worker}</span>
+                                </span>
+                                <span>
+                                  <span className="text-body-secondary">Duration: </span>
+                                  <span className="text-body">{rec.session_duration_minutes} min</span>
+                                </span>
+                              </div>
                             </div>
-                            <div className="small text-body-secondary mt-1">
-                              Process recording entry for counseling session documentation.
+
+                            <div className="dropdown">
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary btn-sm"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                aria-label="Actions menu"
+                              >
+                                ⋮
+                              </button>
+                              <ul className="dropdown-menu dropdown-menu-end">
+                                <li>
+                                  <button
+                                    className="dropdown-item"
+                                    type="button"
+                                    onClick={() => {
+                                      setCreateError(null);
+                                      setEditingRecordingId(rec.recording_id);
+                                      setSessionForm({
+                                        resident_id: rec.resident_id,
+                                        session_date: dateOnly(rec.session_date),
+                                        social_worker: rec.social_worker,
+                                        session_type: rec.session_type,
+                                        session_duration_minutes: rec.session_duration_minutes,
+                                        emotional_state_observed: rec.emotional_state_observed,
+                                        emotional_state_end: rec.emotional_state_end,
+                                        session_narrative: rec.session_narrative,
+                                        interventions_applied: rec.interventions_applied,
+                                        follow_up_actions: rec.follow_up_actions,
+                                        progress_noted: rec.progress_noted,
+                                        concerns_flagged: rec.concerns_flagged,
+                                        referral_made: rec.referral_made,
+                                        notes_restricted: rec.notes_restricted ?? '',
+                                      });
+                                      setIsFormOpen(true);
+                                      document
+                                        .getElementById('logSessionAccordion')
+                                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="dropdown-item text-danger"
+                                    type="button"
+                                    onClick={() => {
+                                      setDeleteError(null);
+                                      setDeleteTarget(rec);
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                </li>
+                              </ul>
                             </div>
-                            <div className="d-flex flex-wrap gap-3 mt-1 small text-body-secondary">
-                              <span>
-                                <span className="text-body-secondary">Social worker: </span>
-                                <span className="text-body">{rec.social_worker}</span>
-                              </span>
-                              <span>
-                                <span className="text-body-secondary">Duration: </span>
-                                <span className="text-body">{rec.session_duration_minutes} min</span>
-                              </span>
+                          </div>
+
+                          <div className="d-flex flex-wrap gap-2 mt-3">
+                            {rec.progress_noted && (
+                              <span className="badge text-bg-light border text-body-secondary">Progress noted</span>
+                            )}
+                            {rec.concerns_flagged && (
+                              <span className="badge text-bg-light border text-body-secondary">Concerns flagged</span>
+                            )}
+                            {rec.referral_made && (
+                              <span className="badge text-bg-light border text-body-secondary">Referral made</span>
+                            )}
+                          </div>
+
+                          <div className="border rounded p-2 mt-3 bg-body-tertiary">
+                            <div className="small text-body-secondary">Affect Progression</div>
+                            <div className="small fw-semibold text-break">
+                              <span className="text-body-secondary">Observed: </span>
+                              {rec.emotional_state_observed}
+                              <span className="text-body-secondary"> → End: </span>
+                              {rec.emotional_state_end}
                             </div>
                           </div>
 
-                          <div className="dropdown">
-                            <button
-                              type="button"
-                              className="btn btn-outline-secondary btn-sm"
-                              data-bs-toggle="dropdown"
-                              aria-expanded="false"
-                              aria-label="Actions menu"
-                            >
-                              ⋮
-                            </button>
-                            <ul className="dropdown-menu dropdown-menu-end">
-                              <li>
-                                <button
-                                  className="dropdown-item"
-                                  type="button"
-                                  onClick={() => {
-                                    setCreateError(null);
-                                    setEditingRecordingId(rec.recording_id);
-                                    setSessionForm({
-                                      resident_id: rec.resident_id,
-                                      session_date: dateOnly(rec.session_date),
-                                      social_worker: rec.social_worker,
-                                      session_type: rec.session_type,
-                                      session_duration_minutes: rec.session_duration_minutes,
-                                      emotional_state_observed: rec.emotional_state_observed,
-                                      emotional_state_end: rec.emotional_state_end,
-                                      session_narrative: rec.session_narrative,
-                                      interventions_applied: rec.interventions_applied,
-                                      follow_up_actions: rec.follow_up_actions,
-                                      progress_noted: rec.progress_noted,
-                                      concerns_flagged: rec.concerns_flagged,
-                                      referral_made: rec.referral_made,
-                                      notes_restricted: rec.notes_restricted ?? '',
-                                    });
-                                    setIsFormOpen(true);
-                                    document.getElementById('logSessionAccordion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                              </li>
-                              <li>
-                                <button
-                                  className="dropdown-item text-danger"
-                                  type="button"
-                                  onClick={() => {
-                                    setDeleteError(null);
-                                    setDeleteTarget(rec);
-                                  }}
-                                >
-                                  Delete
-                                </button>
-                              </li>
-                            </ul>
+                          <div className="mt-3">
+                            <div className="small text-body-secondary mb-1">Session Narrative (summary)</div>
+                            <div className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                              {rec.session_narrative}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="d-flex flex-wrap gap-2 mt-3">
-                          {rec.progress_noted && (
-                            <span className="badge text-bg-light border text-body-secondary">Progress noted</span>
-                          )}
-                          {rec.concerns_flagged && (
-                            <span className="badge text-bg-light border text-body-secondary">Concerns flagged</span>
-                          )}
-                          {rec.referral_made && (
-                            <span className="badge text-bg-light border text-body-secondary">Referral made</span>
-                          )}
-                        </div>
-
-                        <div className="border rounded p-2 mt-3 bg-body-tertiary">
-                          <div className="small text-body-secondary">Affect Progression</div>
-                          <div className="small fw-semibold text-break">
-                            <span className="text-body-secondary">Observed: </span>
-                            {rec.emotional_state_observed}
-                            <span className="text-body-secondary"> → End: </span>
-                            {rec.emotional_state_end}
+                          <div className="mt-3">
+                            <div className="small text-body-secondary mb-1">Interventions Applied</div>
+                            <div className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                              {rec.interventions_applied}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="mt-3">
-                          <div className="small text-body-secondary mb-1">Session Narrative (summary)</div>
-                          <div className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
-                            {rec.session_narrative}
+                          <div className="mt-3">
+                            <div className="small text-body-secondary mb-1">Follow-up Actions</div>
+                            <div className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                              {rec.follow_up_actions}
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="mt-3">
-                          <div className="small text-body-secondary mb-1">Interventions Applied</div>
-                          <div className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
-                            {rec.interventions_applied}
-                          </div>
-                        </div>
-
-                        <div className="mt-3">
-                          <div className="small text-body-secondary mb-1">Follow-up Actions</div>
-                          <div className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
-                            {rec.follow_up_actions}
-                          </div>
-                        </div>
-
-                        <div className="pt-3 mt-3 border-top small text-body-secondary">
-                          Part of the resident’s process recording history (chronological timeline).
                         </div>
                       </div>
                     </div>
