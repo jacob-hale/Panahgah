@@ -65,27 +65,32 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(localFrontendCorsPolicy, policy =>
     {
-        var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?
+        // Always merge env-configured origins with these defaults. If Railway sets AllowedCorsOrigins
+        // to a partial list, the previous code replaced the whole default list and the production
+        // frontend (https://panahgah.up.railway.app) was missing — browsers then block with CORS.
+        var configuredOrigins = builder.Configuration["AllowedCorsOrigins"]?
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             ?? [];
 
-        if (allowedOrigins.Length == 0)
-        {
-            allowedOrigins =
-            [
-                "https://panahgah.up.railway.app",
-                "http://localhost:5173",
-                "https://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://127.0.0.1:5173",
-                "http://localhost:4173",
-                "https://localhost:4173",
-                "http://127.0.0.1:4173",
-                "https://127.0.0.1:4173",
-                "http://localhost:3000",
-                "https://localhost:3000"
-            ];
-        }
+        string[] defaultOrigins =
+        [
+            "https://panahgah.up.railway.app",
+            "http://localhost:5173",
+            "https://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://127.0.0.1:5173",
+            "http://localhost:4173",
+            "https://localhost:4173",
+            "http://127.0.0.1:4173",
+            "https://127.0.0.1:4173",
+            "http://localhost:3000",
+            "https://localhost:3000"
+        ];
+
+        var allowedOrigins = defaultOrigins
+            .Concat(configuredOrigins)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         // WithCredentials + cross-origin: browser sends Origin. Railway frontends often use a different
         // *.up.railway.app hostname than the single string in defaultOrigins; allow any HTTPS Railway app.

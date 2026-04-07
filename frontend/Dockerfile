@@ -4,7 +4,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_BASE_URL
+# Default matches frontend/.env.production so Railway Docker builds still embed the API URL when no build arg is set.
+ARG VITE_API_BASE_URL=https://panahgah-backend-production.up.railway.app
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 

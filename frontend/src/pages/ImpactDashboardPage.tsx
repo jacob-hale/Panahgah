@@ -256,6 +256,12 @@ export function ImpactDashboardPage() {
   const heroProgressPct = useCountUp(((data?.hero.progress_rate ?? 0) * 100) || 0, { decimals: 0 });
   const heroReintegration = useCountUp(data?.hero.successful_reintegration_count ?? 0);
 
+  // Must run unconditionally (same hook order every render). Do not call useCountUp inside `data && ...` JSX.
+  const safetyIncidents = useCountUp(data?.safety.incident_count_total ?? 0);
+  const safetyResolvedPct = useCountUp((data?.safety.incident_resolved_rate ?? 0) * 100, { decimals: 0 });
+  const safetyHighSeverity = useCountUp(data?.safety.high_severity_incident_count ?? 0);
+  const safetyReferrals = useCountUp(data?.safety.referrals_made_count ?? 0);
+
   const allocationsTotal = useMemo(() => {
     const list = data?.donor_impact.allocations_by_program_area ?? [];
     return list.reduce((sum, x) => sum + (Number.isFinite(x.amount_allocated) ? x.amount_allocated : 0), 0);
@@ -298,7 +304,7 @@ export function ImpactDashboardPage() {
           </p>
         </div>
         <div className="d-flex gap-2">
-          <Link to="/" className="btn btn-outline-secondary">
+          <Link to="/" className="btn btn-success">
             Learn more
           </Link>
           <a href="#donor-impact" className="btn btn-primary">
@@ -421,7 +427,7 @@ export function ImpactDashboardPage() {
             <div className="col-12 col-md-6 col-lg-3">
               <StatCard
                 title="Incidents reported"
-                value={formatCompactNumber(useCountUp(data.safety.incident_count_total))}
+                value={formatCompactNumber(safetyIncidents)}
                 subtext="All categories, anonymized"
                 icon={<IconShield />}
               />
@@ -429,7 +435,7 @@ export function ImpactDashboardPage() {
             <div className="col-12 col-md-6 col-lg-3">
               <StatCard
                 title="Resolved"
-                value={`${useCountUp((data.safety.incident_resolved_rate ?? 0) * 100, { decimals: 0 })}%`}
+                value={`${safetyResolvedPct.toFixed(0)}%`}
                 subtext="Incidents marked resolved"
                 icon={<IconCheck />}
                 accentClassName="bg-success-subtle"
@@ -438,7 +444,7 @@ export function ImpactDashboardPage() {
             <div className="col-12 col-md-6 col-lg-3">
               <StatCard
                 title="High-severity cases"
-                value={formatCompactNumber(useCountUp(data.safety.high_severity_incident_count))}
+                value={formatCompactNumber(safetyHighSeverity)}
                 subtext="Incidents labeled “High” severity"
                 icon={<IconShield />}
                 accentClassName="bg-warning-subtle"
@@ -447,7 +453,7 @@ export function ImpactDashboardPage() {
             <div className="col-12 col-md-6 col-lg-3">
               <StatCard
                 title="Referrals made"
-                value={formatCompactNumber(useCountUp(data.safety.referrals_made_count))}
+                value={formatCompactNumber(safetyReferrals)}
                 subtext="Sessions resulting in referrals"
                 icon={<IconHeart />}
                 accentClassName="bg-info-subtle"
