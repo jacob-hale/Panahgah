@@ -20,14 +20,22 @@ TestResults/
 node_modules/
 frontend/dist/
 frontend/dist-ssr/
+**/.vite/
+**/dist/
+**/dist-ssr/
 *.tsbuildinfo
 
 # --- Local env & secrets ---
 .env
+.env.*
 .env.local
 .env.*.local
 !.env.example
 !**/.env.example
+
+# ASP.NET Core local overrides (may contain secrets)
+**/appsettings.Development.json
+**/appsettings.*.local.json
 
 # --- Logs ---
 logs/
