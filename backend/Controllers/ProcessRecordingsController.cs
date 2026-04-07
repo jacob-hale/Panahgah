@@ -14,10 +14,107 @@ public class ProcessRecordingsController(ApplicationDbContext dbContext) : Contr
 {
     [HttpGet]
     [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] ProcessRecordingsQueryDto query)
     {
-        var recordings = await dbContext.process_recordings.AsNoTracking().ToListAsync();
-        return Ok(recordings);
+        var q = dbContext.process_recordings.AsNoTracking().AsQueryable();
+
+        if (query.resident_id.HasValue)
+        {
+            q = q.Where(p => p.resident_id == query.resident_id.Value);
+        }
+
+        if (query.session_type is { Length: > 0 })
+        {
+            var allowed = query.session_type
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim())
+                .ToArray();
+            if (allowed.Length > 0)
+            {
+                q = q.Where(p => allowed.Contains(p.session_type));
+            }
+        }
+
+        if (query.progress_noted == true)
+        {
+            q = q.Where(p => p.progress_noted);
+        }
+        if (query.concerns_flagged == true)
+        {
+            q = q.Where(p => p.concerns_flagged);
+        }
+        if (query.referral_made == true)
+        {
+            q = q.Where(p => p.referral_made);
+        }
+
+        if (query.from_date.HasValue)
+        {
+            q = q.Where(p => p.session_date >= query.from_date.Value);
+        }
+        if (query.to_date.HasValue)
+        {
+            q = q.Where(p => p.session_date <= query.to_date.Value);
+        }
+
+        var sortOrder = (query.sort_order ?? "desc").Trim().ToLowerInvariant();
+        q = sortOrder == "asc"
+            ? q.OrderBy(p => p.session_date).ThenBy(p => p.recording_id)
+            : q.OrderByDescending(p => p.session_date).ThenByDescending(p => p.recording_id);
+
+        var totalRecords = await q.CountAsync();
+
+        var pageSize = query.page_size < 0 ? 10 : query.page_size;
+
+        // "Max" behavior: page_size=0 returns all filtered records.
+        if (pageSize == 0)
+        {
+            var all = await q.ToListAsync();
+            return Ok(new PagedResponseDto<ProcessRecording>
+            {
+                items = all,
+                total_records = totalRecords,
+                total_pages = 1,
+                current_page = 1,
+                page_size = 0
+            });
+        }
+
+        // Guardrails
+        if (pageSize < 1)
+        {
+            pageSize = 10;
+        }
+        if (pageSize > 500)
+        {
+            pageSize = 500;
+        }
+
+        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+        if (totalPages <= 0)
+        {
+            totalPages = 1;
+        }
+
+        var currentPage = query.page < 1 ? 1 : query.page;
+        if (currentPage > totalPages)
+        {
+            currentPage = totalPages;
+        }
+
+        var items = await q
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new PagedResponseDto<ProcessRecording>
+        {
+            items = items,
+            total_records = totalRecords,
+            total_pages = totalPages,
+            current_page = currentPage,
+            page_size = pageSize
+        });
     }
 
     [HttpGet("{id:int}")]
