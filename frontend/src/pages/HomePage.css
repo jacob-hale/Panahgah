@@ -164,31 +164,6 @@ body.theme-dark .pg-hero-visual__caption {
   letter-spacing: -0.02em;
 }
 
-.pg-home__brand {
-  opacity: 0.96;
-}
-
-.pg-home__brand-logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--pg-blue) 45%, transparent);
-  background: rgba(255, 255, 255, 0.72);
-  object-fit: contain;
-  box-shadow: 0 16px 30px rgba(74, 104, 172, 0.18);
-}
-
-body.theme-dark .pg-home__brand-logo {
-  background: rgba(22, 27, 37, 0.55);
-}
-
-.pg-home__brand-name {
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--pg-ink);
-  font-size: 1.15rem;
-}
-
 .pg-gradient-text {
   background: linear-gradient(90deg, var(--pg-navy), color-mix(in srgb, var(--pg-blue) 70%, var(--pg-navy)));
   -webkit-background-clip: text;

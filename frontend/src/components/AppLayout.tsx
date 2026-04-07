@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { CookieConsentBanner } from './CookieConsentBanner';
@@ -6,6 +6,8 @@ import { CookieConsentBanner } from './CookieConsentBanner';
 export function AppLayout() {
   const { isAuthenticated, authSession, isLoading, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
 
   const handleLogout = async () => {
     await logout();
@@ -15,17 +17,23 @@ export function AppLayout() {
     <div className="d-flex flex-column min-vh-100">
       <nav className="navbar navbar-expand-lg bg-body-tertiary border-bottom">
         <div className="container">
-          <Link className="navbar-brand fw-semibold d-inline-flex align-items-center gap-2" to="/">
+          <Link
+            className="navbar-brand d-inline-flex align-items-center gap-3"
+            to="/"
+            style={{ position: 'relative', top: 6 }}
+          >
             <img
               src="/panahgah-logo.png"
               alt="Panahgah"
-              width={28}
-              height={28}
-              style={{ borderRadius: 8, objectFit: 'contain' }}
+              width={104}
+              height={104}
+              style={{ borderRadius: 16, objectFit: 'contain', display: 'block' }}
               loading="eager"
               decoding="async"
             />
-            <span>Panahgah</span>
+            <span className="fw-bold" style={{ fontSize: 32, letterSpacing: '-0.02em' }}>
+              Panahgah
+            </span>
           </Link>
           <button
             className="navbar-toggler"
@@ -40,7 +48,7 @@ export function AppLayout() {
           </button>
 
           <div className="collapse navbar-collapse" id="mainNav">
-            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul className="navbar-nav mx-auto mb-2 mb-lg-0">
               <li className="nav-item">
                 <NavLink className="nav-link" to="/">
                   Home
@@ -81,11 +89,6 @@ export function AppLayout() {
                   </ul>
                 </li>
               )}
-              <li className="nav-item">
-                <NavLink className="nav-link" to="/privacy">
-                  Privacy
-                </NavLink>
-              </li>
             </ul>
 
             <div className="d-flex align-items-center gap-2">
@@ -113,13 +116,13 @@ export function AppLayout() {
         </div>
       </nav>
 
-      <main className="container py-4 flex-grow-1">
+      <main className={isHomePage ? 'flex-grow-1' : 'container py-4 flex-grow-1'}>
         <Outlet />
       </main>
 
       <footer className="border-top py-3 bg-body-tertiary">
         <div className="container d-flex justify-content-between align-items-center small">
-          <span>Panahgah Frontend</span>
+          <span>Panahgah</span>
           <Link to="/privacy">Privacy Policy</Link>
         </div>
       </footer>
