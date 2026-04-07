@@ -69,6 +69,11 @@ export function AppLayout() {
                         Process recordings
                       </NavLink>
                     </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/social-insights">
+                        Social media insights
+                      </NavLink>
+                    </li>
                   </ul>
                 </li>
               )}

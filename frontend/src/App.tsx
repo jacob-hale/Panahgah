@@ -8,6 +8,7 @@ import { ImpactDashboardPage } from './pages/ImpactDashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { ProcessRecordingPage } from './pages/ProcessRecordingPage';
+import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route index element={<AdminDashboardPage />} />
           <Route path="caseload" element={<CaseloadInventoryPage />} />
           <Route path="process-recordings" element={<ProcessRecordingPage />} />
+          <Route path="social-insights" element={<SocialMediaInsightsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

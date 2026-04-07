@@ -152,3 +152,27 @@ export type ProcessRecordingUpsertPayload = {
   referral_made: boolean;
   notes_restricted: string;
 };
+
+export type SocialMediaPost = {
+  post_id: number;
+  platform: string;
+  day_of_week: string;
+  post_hour: number;
+  post_type: string;
+  media_type: string;
+  caption: string;
+  hashtags: string;
+  num_hashtags: number;
+  mentions_count: number;
+  has_call_to_action: boolean;
+  call_to_action_type: string | null;
+  content_topic: string;
+  sentiment_tone: string;
+  caption_length: number;
+  features_resident_story: boolean;
+  campaign_name: string | null;
+  is_boosted: boolean;
+  boost_budget_php: number | null;
+  donation_referrals: number;
+  created_at: string;
+};
