@@ -8,17 +8,6 @@ export function HomePage() {
         <div className="container py-5">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-9">
-              <div className="d-flex align-items-center gap-3 mb-3 pg-home__brand">
-                <img
-                  className="pg-home__brand-logo"
-                  src="/panahgah-logo.png"
-                  alt="Panahgah"
-                  loading="eager"
-                  decoding="async"
-                />
-                <div className="pg-home__brand-name">Panahgah</div>
-              </div>
-
               <div className="d-inline-flex align-items-center gap-2 pg-pill">
                 <span className="pg-pill__dot" aria-hidden="true" />
                 <span className="small fw-semibold">Creating safer spaces for healing</span>
