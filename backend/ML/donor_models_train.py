@@ -106,6 +106,7 @@ def summarize_scores(scored: pd.DataFrame, score_col: str, top_n: int = 20):
             }
             for _, row in seg.iterrows()
         ],
+        "top_donors": [],
     }
 
 
@@ -165,7 +166,23 @@ def train_lapse(donations: pd.DataFrame, supporters: pd.DataFrame):
     scored = m.copy()
     features = [c for c in scored.columns if c not in ["label", "snapshot_date"]]
     scored["score"] = predictive.predict_proba(scored[features])[:, 1]
+    top_donors = scored.sort_values("score", ascending=False).head(20)
     summary = summarize_scores(scored, "score")
+    summary["top_donors"] = [
+        {
+            "supporter_id": int(row["supporter_id"]),
+            "score": safe_float(row["score"]),
+            "supporter_type": str(row["supporter_type"]) if pd.notna(row["supporter_type"]) else "Unknown",
+            "acquisition_channel": str(row["acquisition_channel"]) if pd.notna(row["acquisition_channel"]) else "Unknown",
+            "days_since_last_donation": safe_float(row["days_since_last_donation"], None),
+            "donation_count_hist": safe_float(row["donation_count_hist"], None),
+            "avg_estimated_value_hist": safe_float(row["avg_estimated_value_hist"], None),
+            "hist_median_amount": None,
+            "suggested_ask_floor": None,
+            "suggested_ask_ceiling": None,
+        }
+        for _, row in top_donors.iterrows()
+    ]
     summary["metrics"] = safe_metric_block(y_test, prob, pred, len(train_df), len(test_df))
     summary["key_features"] = top_feature_block(predictive, x_test, y_test)
     summary["ask_ladder_summary"] = {"suggested_ask_floor_avg": 0.0, "suggested_ask_ceiling_avg": 0.0}
@@ -234,6 +251,21 @@ def train_upgrade(donations: pd.DataFrame, supporters: pd.DataFrame):
     cands["ask_ceiling"] = cands["hist_median_amount"] * 1.30
 
     summary = summarize_scores(scored, "score")
+    summary["top_donors"] = [
+        {
+            "supporter_id": int(row["supporter_id"]),
+            "score": safe_float(row["score"]),
+            "supporter_type": str(row["supporter_type"]) if pd.notna(row["supporter_type"]) else "Unknown",
+            "acquisition_channel": str(row["acquisition_channel"]) if pd.notna(row["acquisition_channel"]) else "Unknown",
+            "days_since_last_donation": None,
+            "donation_count_hist": safe_float(row["gift_count_hist"], None),
+            "avg_estimated_value_hist": None,
+            "hist_median_amount": safe_float(row["hist_median_amount"], None),
+            "suggested_ask_floor": safe_float(row["ask_floor"], None),
+            "suggested_ask_ceiling": safe_float(row["ask_ceiling"], None),
+        }
+        for _, row in cands.iterrows()
+    ]
     summary["metrics"] = safe_metric_block(y_test, prob, pred, len(train_df), len(test_df))
     summary["key_features"] = top_feature_block(predictive, x_test, y_test)
     summary["ask_ladder_summary"] = {

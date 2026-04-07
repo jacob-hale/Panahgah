@@ -6,6 +6,8 @@ import { CaseloadInventoryPage } from './pages/CaseloadInventoryPage';
 import { HomePage } from './pages/HomePage';
 import { ImpactDashboardPage } from './pages/ImpactDashboardPage';
 import { LoginPage } from './pages/LoginPage';
+import { DonorLapseInsightsPage } from './pages/DonorLapseInsightsPage';
+import { DonorUpgradeInsightsPage } from './pages/DonorUpgradeInsightsPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { ProcessRecordingPage } from './pages/ProcessRecordingPage';
 import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
@@ -23,6 +25,8 @@ function App() {
           <Route path="caseload" element={<CaseloadInventoryPage />} />
           <Route path="process-recordings" element={<ProcessRecordingPage />} />
           <Route path="social-insights" element={<SocialMediaInsightsPage />} />
+          <Route path="donor-lapse-insights" element={<DonorLapseInsightsPage />} />
+          <Route path="donor-upgrade-insights" element={<DonorUpgradeInsightsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

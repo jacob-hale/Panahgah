@@ -134,6 +134,7 @@ export function AdminDashboardPage() {
   const upcomingConferenceCount = metrics?.upcoming_case_conferences.length ?? 0;
   const topLapseSegment = metrics?.donor_ml?.donor_lapse?.top_segments?.[0];
   const topUpgradeSegment = metrics?.donor_ml?.donor_upgrade?.top_segments?.[0];
+  const donorNotTrained = metrics?.donor_ml?.pipeline_health?.status !== 'ok';
 
   return (
     <div>
@@ -146,103 +147,95 @@ export function AdminDashboardPage() {
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
       {!loading && !error && metrics ? (
-      <div className="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mb-4">
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <h2 className="h6 text-body-secondary">Caseload snapshot</h2>
-              <p className="display-6 mb-2">{metrics.kpis.active_residents_total}</p>
-              <p className="small text-body-secondary mb-3 flex-grow-1">
-                Active residents based on open/active case statuses.
-              </p>
-              <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/caseload">
-                Open caseload inventory
-              </Link>
+        <>
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h6 text-body-secondary">Caseload snapshot</h2>
+                  <p className="display-6 mb-2">{metrics.kpis.active_residents_total}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {metrics.kpis.safehouse_count} safehouses active. Top load: {safehousePreview[0]?.safehouse_name ?? 'N/A'}.
+                  </p>
+                  <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/caseload">
+                    Open caseload inventory
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h6 text-body-secondary">Sessions & process</h2>
+                  <p className="display-6 mb-2">{metrics.progress_summary.total_sessions}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {metrics.kpis.progress_noted_rate_percent.toFixed(1)}% sessions with progress noted.
+                  </p>
+                  <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/process-recordings">
+                    Open process recordings
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body">
+                  <h2 className="h6 text-body-secondary">Donations pipeline</h2>
+                  <p className="display-6 mb-2">{metrics.kpis.recent_donations_count}</p>
+                  <p className="small text-body-secondary mb-0">
+                    Recent donations total PHP {metrics.kpis.recent_donations_estimated_total.toLocaleString()}.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body">
+                  <h2 className="h6 text-body-secondary">Upcoming case conferences</h2>
+                  <p className="display-6 mb-2">{upcomingConferenceCount}</p>
+                  <p className="small text-body-secondary mb-0">Scheduled in the next 7 days.</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <h2 className="h6 text-body-secondary">Sessions & process</h2>
-              <p className="display-6 mb-2">{metrics.progress_summary.total_sessions}</p>
-              <p className="small text-body-secondary mb-3 flex-grow-1">
-                {metrics.kpis.progress_noted_rate_percent.toFixed(1)}% sessions with progress noted.
-              </p>
-              <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/process-recordings">
-                Open process recordings
-              </Link>
+
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-xl-6">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h5 mb-1">Donor lapse risk</h2>
+                  <p className="small text-body-secondary mb-3">High-risk donor prioritization and retention segments.</p>
+                  <p className="display-6 mb-2">{metrics.donor_ml.donor_lapse.high_count}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {donorNotTrained
+                      ? 'Model not trained yet. Retrain to generate ranked donor worklists.'
+                      : `Top segment: ${topLapseSegment ? `${topLapseSegment.supporter_type} / ${topLapseSegment.acquisition_channel}` : 'N/A'}`}
+                  </p>
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/donor-lapse-insights">
+                    View lapse details
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-xl-6">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h5 mb-1">Donor upgrade potential</h2>
+                  <p className="small text-body-secondary mb-3">High-potential upgrade candidates and ask-ladder guidance.</p>
+                  <p className="display-6 mb-2">{metrics.donor_ml.donor_upgrade.high_count}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {donorNotTrained
+                      ? 'Model not trained yet. Retrain to generate upgrade opportunity rankings.'
+                      : `Suggested ask avg: ${metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_floor_avg.toLocaleString()}-${metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_ceiling_avg.toLocaleString()}`}
+                  </p>
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/donor-upgrade-insights">
+                    View upgrade details
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <h2 className="h6 text-body-secondary">Safehouses & capacity</h2>
-              <p className="display-6 mb-2">{metrics.kpis.safehouse_count}</p>
-              <p className="small text-body-secondary mb-3 flex-grow-1">Active residents by safehouse:</p>
-              {safehousePreview.length > 0 ? (
-                <ul className="small ps-3 mb-0">
-                  {safehousePreview.map((item) => (
-                    <li key={item.safehouse_id}>
-                      {item.safehouse_name}: {item.active_residents_count}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="small text-body-secondary">No safehouse data available.</span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h2 className="h6 text-body-secondary">Donations pipeline</h2>
-              <p className="display-6 mb-2">{metrics.kpis.recent_donations_count}</p>
-              <p className="small text-body-secondary mb-0">
-                Recent donations total PHP {metrics.kpis.recent_donations_estimated_total.toLocaleString()}.
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h2 className="h6 text-body-secondary">Upcoming case conferences</h2>
-              <p className="display-6 mb-2">{upcomingConferenceCount}</p>
-              <p className="small text-body-secondary mb-0">Scheduled in the next 7 days.</p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h2 className="h6 text-body-secondary">Donor lapse risk</h2>
-              <p className="display-6 mb-2">{metrics.donor_ml.donor_lapse.high_count}</p>
-              <p className="small text-body-secondary mb-0">
-                High-risk donors. Top segment:{' '}
-                {topLapseSegment
-                  ? `${topLapseSegment.supporter_type} / ${topLapseSegment.acquisition_channel}`
-                  : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h2 className="h6 text-body-secondary">Donor upgrade potential</h2>
-              <p className="display-6 mb-2">{metrics.donor_ml.donor_upgrade.high_count}</p>
-              <p className="small text-body-secondary mb-0">
-                Top candidates. Suggested ask avg:{' '}
-                {metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_floor_avg.toLocaleString()}-
-                {metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_ceiling_avg.toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+        </>
       ) : null}
 
       {!loading && !error && metrics ? (
