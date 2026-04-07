@@ -1,11 +1,9 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { CookieConsentBanner } from './CookieConsentBanner';
 
 export function AppLayout() {
   const { isAuthenticated, authSession, isLoading, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const isHomePage = location.pathname === '/';
 
@@ -97,9 +95,6 @@ export function AppLayout() {
             </ul>
 
             <div className="d-flex align-items-center gap-2">
-              <button type="button" className="btn btn-outline-secondary btn-sm" onClick={toggleTheme}>
-                Theme: {theme === 'light' ? 'Light' : 'Dark'}
-              </button>
               {isLoading ? (
                 <span className="text-body-secondary small">Checking session...</span>
               ) : isAuthenticated ? (
