@@ -14,9 +14,24 @@ public sealed class DonorMlModelSummaryDto
     public int high_count { get; set; }
     public int top_count { get; set; }
     public List<DonorMlSegmentDto> top_segments { get; set; } = [];
+    public List<DonorMlDonorRowDto> top_donors { get; set; } = [];
     public List<DonorMlFeatureDto> key_features { get; set; } = [];
     public DonorMlMetricsDto metrics { get; set; } = new();
     public DonorMlAskLadderDto ask_ladder_summary { get; set; } = new();
+}
+
+public sealed class DonorMlDonorRowDto
+{
+    public int supporter_id { get; set; }
+    public double score { get; set; }
+    public string supporter_type { get; set; } = string.Empty;
+    public string acquisition_channel { get; set; } = string.Empty;
+    public double? days_since_last_donation { get; set; }
+    public double? donation_count_hist { get; set; }
+    public double? avg_estimated_value_hist { get; set; }
+    public double? hist_median_amount { get; set; }
+    public double? suggested_ask_floor { get; set; }
+    public double? suggested_ask_ceiling { get; set; }
 }
 
 public sealed class DonorMlSegmentDto
