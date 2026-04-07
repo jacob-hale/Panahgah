@@ -184,3 +184,27 @@ export type SocialMediaPost = {
   donation_referrals: number;
   created_at: string;
 };
+
+export type SocialPostGenerateRequest = {
+  platform: string;
+  goal: string;
+  post_type: string;
+  post_topic: string;
+  include_resident_story: boolean;
+  tone: string;
+  key_details: string | null;
+};
+
+export type GeneratedSocialPost = {
+  variant_name: string;
+  caption: string;
+  hashtags: string[];
+};
+
+export type SocialPostGenerateResponse = {
+  recommended_day_of_week: string;
+  recommended_post_hour: number | null;
+  recommended_post_type: string;
+  rationale: string;
+  generated_posts: GeneratedSocialPost[];
+};

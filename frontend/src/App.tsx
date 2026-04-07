@@ -8,6 +8,7 @@ import { ImpactDashboardPage } from './pages/ImpactDashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { ProcessRecordingPage } from './pages/ProcessRecordingPage';
+import { SocialPostStudioPage } from './pages/SocialPostStudioPage';
 import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="caseload" element={<CaseloadInventoryPage />} />
           <Route path="process-recordings" element={<ProcessRecordingPage />} />
           <Route path="social-insights" element={<SocialMediaInsightsPage />} />
+          <Route path="social-post-studio" element={<SocialPostStudioPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
