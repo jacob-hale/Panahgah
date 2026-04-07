@@ -303,6 +303,27 @@ export function ProcessRecordingPage() {
 
   const canPaginate = useMemo(() => pageSize !== 'Max' && totalPages > 1, [pageSize, totalPages]);
 
+  const paginationModel = useMemo(() => {
+    if (!canPaginate) {
+      return { pages: [] as number[], showLeftEllipsis: false, showRightEllipsis: false };
+    }
+
+    const neighbors = 3;
+    const start = Math.max(1, page - neighbors);
+    const end = Math.min(totalPages, page + neighbors);
+
+    const pages: number[] = [];
+    for (let p = start; p <= end; p += 1) {
+      pages.push(p);
+    }
+
+    return {
+      pages,
+      showLeftEllipsis: start > 1,
+      showRightEllipsis: end < totalPages,
+    };
+  }, [canPaginate, page, totalPages]);
+
   const handleUpsertSession = async (event: React.FormEvent) => {
     event.preventDefault();
     if (selectedResidentId === '') {
@@ -914,9 +935,35 @@ export function ProcessRecordingPage() {
                             Prev
                           </button>
                         </li>
-                        <li className="page-item active" aria-current="page">
-                          <span className="page-link">{page}</span>
-                        </li>
+
+                        {paginationModel.showLeftEllipsis && (
+                          <li className="page-item disabled" aria-hidden="true">
+                            <span className="page-link">…</span>
+                          </li>
+                        )}
+
+                        {paginationModel.pages.map((p) => (
+                          <li
+                            key={p}
+                            className={`page-item ${p === page ? 'active' : ''}`}
+                            aria-current={p === page ? 'page' : undefined}
+                          >
+                            {p === page ? (
+                              <span className="page-link">{p}</span>
+                            ) : (
+                              <button type="button" className="page-link" onClick={() => setPage(p)} disabled={!canPaginate}>
+                                {p}
+                              </button>
+                            )}
+                          </li>
+                        ))}
+
+                        {paginationModel.showRightEllipsis && (
+                          <li className="page-item disabled" aria-hidden="true">
+                            <span className="page-link">…</span>
+                          </li>
+                        )}
+
                         <li className={`page-item ${!canPaginate || page + 1 > totalPages ? 'disabled' : ''}`}>
                           <button
                             type="button"
