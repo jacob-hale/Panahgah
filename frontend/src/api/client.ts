@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7270';
+const envUrl = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL =
+  typeof envUrl === 'string' && envUrl.trim().length > 0 ? envUrl.trim() : 'https://localhost:7270';
 
 type ApiFetchOptions = RequestInit & {
   jsonBody?: unknown;

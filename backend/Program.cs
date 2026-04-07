@@ -88,8 +88,23 @@ builder.Services.AddCors(options =>
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        // WithCredentials + cross-origin: browser sends Origin. Railway frontends often use a different
+        // *.up.railway.app hostname than the single string in defaultOrigins; allow any HTTPS Railway app.
+        static bool IsOriginAllowed(string? origin, string[] allowList)
+        {
+            if (string.IsNullOrWhiteSpace(origin)) return false;
+            foreach (var o in allowList)
+            {
+                if (string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+            if (uri.Scheme != Uri.UriSchemeHttps) return false;
+            return uri.Host.EndsWith(".up.railway.app", StringComparison.OrdinalIgnoreCase);
+        }
+
         policy
-            .WithOrigins(allowedOrigins)
+            .SetIsOriginAllowed(origin => IsOriginAllowed(origin, allowedOrigins))
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
