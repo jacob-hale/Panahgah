@@ -15,8 +15,17 @@ export function AppLayout() {
     <div className="d-flex flex-column min-vh-100">
       <nav className="navbar navbar-expand-lg bg-body-tertiary border-bottom">
         <div className="container">
-          <Link className="navbar-brand fw-semibold" to="/">
-            Panahgah
+          <Link className="navbar-brand fw-semibold d-inline-flex align-items-center gap-2" to="/">
+            <img
+              src="/panahgah-logo.png"
+              alt="Panahgah"
+              width={28}
+              height={28}
+              style={{ borderRadius: 8, objectFit: 'contain' }}
+              loading="eager"
+              decoding="async"
+            />
+            <span>Panahgah</span>
           </Link>
           <button
             className="navbar-toggler"
