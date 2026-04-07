@@ -118,8 +118,9 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Run CORS early so error responses (e.g. 500) still get Access-Control-Allow-Origin when possible.
 app.UseCors(localFrontendCorsPolicy);
+app.UseHttpsRedirection();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
 app.UseAuthentication();
