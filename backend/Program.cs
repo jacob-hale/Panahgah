@@ -5,6 +5,7 @@ using Panahgah.Api.Auth;
 using Panahgah.Api.Data;
 using Panahgah.Api.Middleware;
 using Panahgah.Api.Models;
+using Panahgah.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahAppConnection")));
 builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahIdentityConnection")));
+builder.Services.AddSingleton<DonorMlPipelineService>();
+builder.Services.AddHostedService<DonorMlSchedulerService>();
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
     {

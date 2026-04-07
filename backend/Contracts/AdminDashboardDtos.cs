@@ -7,6 +7,7 @@ public sealed class AdminDashboardMetricsDto
     public List<RecentDonationDto> recent_donations { get; set; } = [];
     public List<UpcomingCaseConferenceDto> upcoming_case_conferences { get; set; } = [];
     public ProgressSummaryDto progress_summary { get; set; } = new();
+    public DonorMlInsightsResponseDto donor_ml { get; set; } = new();
 }
 
 public sealed class AdminDashboardKpisDto
