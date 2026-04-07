@@ -21,6 +21,15 @@ public static class AuthIdentityGenerator
             }
         }
 
+        if (!await roleManager.RoleExistsAsync(AuthRoles.Donor))
+        {
+            var createDonorRole = await roleManager.CreateAsync(new IdentityRole(AuthRoles.Donor));
+            if (!createDonorRole.Succeeded)
+            {
+                throw new InvalidOperationException("Failed to create Donor role.");
+            }
+        }
+
         var adminEmail = configuration["AuthSeed:AdminEmail"] ?? "admin@panahgah.local";
         var adminPassword = configuration["AuthSeed:AdminPassword"] ?? "change-this-admin-password";
 

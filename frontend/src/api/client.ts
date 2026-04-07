@@ -32,8 +32,22 @@ export async function apiFetch<T>(
   return (await response.json()) as T;
 }
 
+export type SupporterProfileDto = {
+  supporter_id: number;
+  display_name: string;
+  status: string;
+  supporter_type: string;
+  email: string;
+  phone: string;
+  region: string;
+  country: string;
+  contribution_interests: string[] | null;
+};
+
 export type AuthMeResponse = {
   isAuthenticated: boolean;
   email: string | null;
   roles: string[];
+  supporterId: number | null;
+  supporterProfile: SupporterProfileDto | null;
 };
