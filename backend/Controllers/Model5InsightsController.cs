@@ -7,13 +7,18 @@ using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
 using Panahgah.Api.Contracts;
 using Panahgah.Api.Data;
+using Panahgah.Api.Services;
 
 namespace Panahgah.Api.Controllers;
 
 [ApiController]
 [Route("api/ml/model5")]
 [Authorize(Policy = AuthPolicies.RequireAdmin)]
-public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEnvironment environment, IConfiguration configuration) : ControllerBase
+public class Model5InsightsController(
+    ApplicationDbContext dbContext,
+    IWebHostEnvironment environment,
+    IConfiguration configuration,
+    ISocialPostGenerator socialPostGenerator) : ControllerBase
 {
     [HttpPost("train")]
     public async Task<IActionResult> TrainFromDatabase()
@@ -54,7 +59,7 @@ public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEn
             var defaultTrainScriptPath = Path.Combine(contentRoot, "ML", "model_5_train.py");
             var defaultArtifactsDir = Path.Combine(contentRoot, "ML", "artifacts");
 
-            var pythonExecutable = configuration["Ml:PythonExecutable"] ?? "/opt/venv/bin/python";
+            var pythonExecutable = ResolvePythonExecutable();
             var trainScriptPath = configuration["Ml:Model5TrainScriptPath"] ?? defaultTrainScriptPath;
             var artifactsDir = configuration["Ml:Model5ArtifactsDir"] ?? defaultArtifactsDir;
 
@@ -104,6 +109,58 @@ public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEn
     [HttpGet("insights")]
     public async Task<IActionResult> GetInsights()
     {
+        var insightsResult = await TryScoreInsightsAsync();
+        if (insightsResult is null)
+        {
+            return Ok(new Model5InsightsResponseDto());
+        }
+
+        var resolvedInsights = insightsResult.Value;
+        if (!resolvedInsights.isSuccess)
+        {
+            return Problem(resolvedInsights.errorMessage, statusCode: 500);
+        }
+
+        return Ok(resolvedInsights.data);
+    }
+
+    [HttpPost("generate-post")]
+    public async Task<IActionResult> GeneratePost([FromBody] SocialPostGenerateRequestDto request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.platform) ||
+            string.IsNullOrWhiteSpace(request.goal) ||
+            string.IsNullOrWhiteSpace(request.post_type) ||
+            string.IsNullOrWhiteSpace(request.post_topic) ||
+            string.IsNullOrWhiteSpace(request.tone))
+        {
+            return BadRequest("platform, goal, post_type, post_topic, and tone are required.");
+        }
+
+        var insightsResult = await TryScoreInsightsAsync();
+        if (insightsResult is null)
+        {
+            return BadRequest("No social media posts were found to derive recommendations.");
+        }
+
+        var resolvedInsights = insightsResult.Value;
+        if (!resolvedInsights.isSuccess || resolvedInsights.data is null)
+        {
+            return Problem(resolvedInsights.errorMessage, statusCode: 500);
+        }
+
+        try
+        {
+            var generated = await socialPostGenerator.GenerateAsync(request, resolvedInsights.data, cancellationToken);
+            return Ok(generated);
+        }
+        catch (Exception ex)
+        {
+            return Problem($"Social post generation failed: {ex.Message}", statusCode: 500);
+        }
+    }
+
+    private async Task<(bool isSuccess, string? errorMessage, Model5InsightsResponseDto? data)?> TryScoreInsightsAsync()
+    {
         var posts = await dbContext.social_media_posts
             .AsNoTracking()
             .Select(p => new
@@ -129,25 +186,24 @@ public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEn
 
         if (posts.Count == 0)
         {
-            return Ok(new Model5InsightsResponseDto());
+            return null;
         }
 
         var contentRoot = environment.ContentRootPath;
         var defaultScriptPath = Path.Combine(contentRoot, "ML", "model_5_score.py");
         var defaultModelPath = Path.Combine(contentRoot, "ML", "artifacts", "model5_predictive.joblib");
-
-            var pythonExecutable = configuration["Ml:PythonExecutable"] ?? "/opt/venv/bin/python";
+        var pythonExecutable = ResolvePythonExecutable();
         var scriptPath = configuration["Ml:Model5ScriptPath"] ?? defaultScriptPath;
         var modelPath = configuration["Ml:Model5ModelPath"] ?? defaultModelPath;
 
         if (!System.IO.File.Exists(scriptPath))
         {
-            return Problem($"Model 5 scoring script not found: {scriptPath}", statusCode: 500);
+            return (false, $"Model 5 scoring script not found: {scriptPath}", null);
         }
 
         if (!System.IO.File.Exists(modelPath))
         {
-            return Problem($"Model 5 model artifact not found: {modelPath}", statusCode: 500);
+            return (false, $"Model 5 model artifact not found: {modelPath}", null);
         }
 
         var inputJson = JsonSerializer.Serialize(new { posts });
@@ -177,7 +233,7 @@ public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEn
 
         if (process.ExitCode != 0)
         {
-            return Problem($"Model 5 scoring failed: {stderr}", statusCode: 500);
+            return (false, $"Model 5 scoring failed: {stderr}", null);
         }
 
         try
@@ -185,15 +241,25 @@ public class Model5InsightsController(ApplicationDbContext dbContext, IWebHostEn
             var result = JsonSerializer.Deserialize<Model5InsightsResponseDto>(stdout);
             if (result is null)
             {
-                return Problem("Model 5 scorer returned empty payload.", statusCode: 500);
+                return (false, "Model 5 scorer returned empty payload.", null);
             }
 
-            return Ok(result);
+            return (true, null, result);
         }
         catch (JsonException)
         {
             var preview = stdout.Length > 500 ? stdout[..500] : stdout;
-            return Problem($"Model 5 scorer returned invalid JSON: {preview}", statusCode: 500);
+            return (false, $"Model 5 scorer returned invalid JSON: {preview}", null);
         }
+    }
+    private string ResolvePythonExecutable()
+    {
+        var configured = configuration["Ml:PythonExecutable"];
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured;
+        }
+
+        return OperatingSystem.IsWindows() ? "python" : "/opt/venv/bin/python";
     }
 }

@@ -5,6 +5,7 @@ using Panahgah.Api.Auth;
 using Panahgah.Api.Data;
 using Panahgah.Api.Middleware;
 using Panahgah.Api.Models;
+using Panahgah.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +54,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AuthPolicies.RequireDonorOrAdmin, policy =>
         policy.RequireRole(AuthRoles.Donor, AuthRoles.Admin));
 });
+
+builder.Services.AddHttpClient<AnthropicSocialPostGenerator>();
+builder.Services.AddHttpClient<GeminiSocialPostGenerator>();
+builder.Services.AddScoped<ISocialPostGenerator, ConfigurableSocialPostGenerator>();
 
 builder.Services.AddCors(options =>
 {

@@ -21,4 +21,19 @@ public class SocialMediaPostsController(ApplicationDbContext dbContext) : Contro
 
         return Ok(posts);
     }
+
+    [HttpGet("post-types")]
+    [Authorize(Policy = AuthPolicies.RequireAdmin)]
+    public async Task<IActionResult> GetPostTypes()
+    {
+        var postTypes = await dbContext.social_media_posts
+            .AsNoTracking()
+            .Select(p => p.post_type)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct()
+            .OrderBy(p => p)
+            .ToListAsync();
+
+        return Ok(postTypes);
+    }
 }
