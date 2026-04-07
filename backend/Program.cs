@@ -60,15 +60,21 @@ builder.Services.AddCors(options =>
     {
         var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            ?? new[]
-            {
+            ?? [];
+
+        if (allowedOrigins.Length == 0)
+        {
+            allowedOrigins =
+            [
+                "https://panahgah.up.railway.app",
                 "http://localhost:5173",
                 "https://localhost:5173",
                 "http://localhost:4173",
                 "https://localhost:4173",
                 "http://localhost:3000",
                 "https://localhost:3000"
-            };
+            ];
+        }
 
         policy
             .WithOrigins(allowedOrigins)
