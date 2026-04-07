@@ -153,6 +153,14 @@ export type ProcessRecordingUpsertPayload = {
   notes_restricted: string;
 };
 
+export type PagedResponse<T> = {
+  items: T[];
+  total_records: number;
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+};
+
 export type SocialMediaPost = {
   post_id: number;
   platform: string;
