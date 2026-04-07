@@ -298,7 +298,7 @@ export function ImpactDashboardPage() {
           </p>
         </div>
         <div className="d-flex gap-2">
-          <Link to="/" className="btn btn-outline-secondary">
+          <Link to="/" className="btn btn-success">
             Learn more
           </Link>
           <a href="#donor-impact" className="btn btn-primary">
