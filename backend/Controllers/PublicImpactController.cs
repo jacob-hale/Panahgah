@@ -14,20 +14,19 @@ public sealed class PublicImpactController(ApplicationDbContext dbContext) : Con
     [AllowAnonymous]
     public async Task<ActionResult<PublicImpactSummaryDto>> GetSummary()
     {
-        var safehouseCountTask = dbContext.safehouses.AsNoTracking().CountAsync();
-        var residentCountTask = dbContext.residents.AsNoTracking().CountAsync();
-        var donationCountTask = dbContext.donations.AsNoTracking().CountAsync();
-        var estimatedDonationTotalTask = dbContext.donations.AsNoTracking()
+        // EF Core DbContext is not thread-safe; don't run concurrent queries on the same instance.
+        var safehouseCount = await dbContext.safehouses.AsNoTracking().CountAsync();
+        var residentCount = await dbContext.residents.AsNoTracking().CountAsync();
+        var donationCount = await dbContext.donations.AsNoTracking().CountAsync();
+        var estimatedDonationTotal = await dbContext.donations.AsNoTracking()
             .SumAsync(d => (decimal?)d.estimated_value);
-
-        await Task.WhenAll(safehouseCountTask, residentCountTask, donationCountTask, estimatedDonationTotalTask);
 
         return Ok(new PublicImpactSummaryDto
         {
-            safehouse_count = safehouseCountTask.Result,
-            resident_count = residentCountTask.Result,
-            donation_count = donationCountTask.Result,
-            estimated_donation_total_php = estimatedDonationTotalTask.Result ?? 0m
+            safehouse_count = safehouseCount,
+            resident_count = residentCount,
+            donation_count = donationCount,
+            estimated_donation_total_php = estimatedDonationTotal ?? 0m
         });
     }
 }
