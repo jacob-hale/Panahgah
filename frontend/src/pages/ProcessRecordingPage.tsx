@@ -806,10 +806,7 @@ export function ProcessRecordingPage() {
                   {recordings.map((rec) => (
                     <div key={rec.recording_id} className="card shadow-sm">
                       <div className="card-body">
-                        <div
-                          className="border-start border-4 ps-3"
-                          style={{ borderLeftColor: highlightColor(rec) }}
-                        >
+                        <div className="ps-3" style={{ borderLeft: `4px solid ${highlightColor(rec)}` }}>
                           <div className="d-flex align-items-start justify-content-between gap-3">
                             <div className="flex-grow-1" style={{ minWidth: 0 }}>
                               <div className="d-flex flex-wrap align-items-baseline gap-2">
@@ -990,7 +987,7 @@ export function ProcessRecordingPage() {
                       </ul>
                     </nav>
                     <span className="small text-body-secondary">
-                      {pageSize === 'Max' ? 'Max returns all filtered records.' : 'Pagination applies after filtering.'}
+                      {pageSize === 'Max' ? 'Max returns all filtered records.' : ''}
                     </span>
                   </div>
                 </div>
