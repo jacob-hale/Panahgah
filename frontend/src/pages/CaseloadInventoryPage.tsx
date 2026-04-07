@@ -112,7 +112,8 @@ export function CaseloadInventoryPage() {
   const [createSubmitting, setCreateSubmitting] = useState(false);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [expandedResidentId, setExpandedResidentId] = useState<number | null>(null);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [selectedResidentForDetails, setSelectedResidentForDetails] = useState<Resident | null>(null);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<'5' | '10' | '20' | '50' | 'Max'>('10');
@@ -175,7 +176,7 @@ export function CaseloadInventoryPage() {
       setTotalRecords(res.total_records);
       setTotalPages(res.total_pages);
       setPage(res.current_page);
-      setExpandedResidentId(null);
+      setSelectedResidentForDetails(null);
     } catch {
       setListError('Could not load residents. Ensure you are signed in as Admin or Donor for reads.');
     } finally {
@@ -229,6 +230,33 @@ export function CaseloadInventoryPage() {
     setForm((f) => ({ ...f, [key]: value === '' ? null : value }));
   };
 
+  const closeDetails = () => {
+    setSelectedResidentForDetails(null);
+  };
+
+  const canPaginate = useMemo(() => pageSize !== 'Max' && totalPages > 1, [pageSize, totalPages]);
+
+  const paginationModel = useMemo(() => {
+    if (!canPaginate) {
+      return { pages: [] as number[], showLeftEllipsis: false, showRightEllipsis: false };
+    }
+
+    const neighbors = 3;
+    const start = Math.max(1, page - neighbors);
+    const end = Math.min(totalPages, page + neighbors);
+
+    const pages: number[] = [];
+    for (let p = start; p <= end; p += 1) {
+      pages.push(p);
+    }
+
+    return {
+      pages,
+      showLeftEllipsis: start > 1,
+      showRightEllipsis: end < totalPages,
+    };
+  }, [canPaginate, page, totalPages]);
+
   return (
     <div>
       <nav aria-label="breadcrumb" className="mb-3">
@@ -255,26 +283,9 @@ export function CaseloadInventoryPage() {
       ) : (
         <>
           <div className="row g-4">
-            {/* Left column: actions + add accordion */}
+            {/* Left column: add + filters accordion */}
             <div className="col-12 col-lg-3 order-1 order-lg-1">
-              <div className="card shadow-sm mb-4">
-                <div className="card-body">
-                  <h2 className="h6 card-title panahgah-heading">Resident actions</h2>
-                  <div className="d-grid gap-2">
-                    <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setIsAddOpen(true)}>
-                      Add new resident
-                    </button>
-                    <button type="button" className="btn btn-outline-secondary btn-sm" disabled>
-                      Export (coming soon)
-                    </button>
-                  </div>
-                  <p className="small text-body-secondary mb-0 mt-2">
-                    Use the table to scan and expand rows for full case details.
-                  </p>
-                </div>
-              </div>
-
-              <div className="accordion" id="addResidentAccordion">
+              <div className="accordion" id="caseloadAccordion">
                 <div className="accordion-item">
                   <h2 className="accordion-header" id="addResidentHeading">
                     <button
@@ -802,204 +813,215 @@ export function CaseloadInventoryPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Right column: filters UI only */}
-            <div className="col-12 col-lg-3 order-2 order-lg-3">
-              <div className="card shadow-sm">
-                <div className="card-body">
-                  <h2 className="h6 card-title panahgah-heading">Filters</h2>
-                  <p className="small text-body-secondary mb-3">UI only (not wired yet).</p>
-
-                  <div className="d-grid gap-3">
-                    <div>
-                      <label className="form-label" htmlFor="search">
-                        Search
-                      </label>
-                      <input
-                        id="search"
-                        className="form-control"
-                        placeholder="case control, internal code, social worker…"
-                        value={filters.search}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, search: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_case_status">
-                        Case status
-                      </label>
-                      <input
-                        id="f_case_status"
-                        className="form-control"
-                        placeholder="e.g., Active"
-                        value={filters.case_status}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, case_status: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_safehouse">
-                        Safehouse
-                      </label>
-                      <select
-                        id="f_safehouse"
-                        className="form-select"
-                        value={filters.safehouse_id}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, safehouse_id: e.target.value }));
-                        }}
-                      >
-                        <option value="">All safehouses</option>
-                        {safehouses.map((sh) => (
-                          <option key={sh.safehouse_id} value={sh.safehouse_id}>
-                            {sh.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_case_category">
-                        Case category
-                      </label>
-                      <input
-                        id="f_case_category"
-                        className="form-control"
-                        placeholder="e.g., Trafficked"
-                        value={filters.case_category}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, case_category: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_sw">
-                        Assigned social worker
-                      </label>
-                      <input
-                        id="f_sw"
-                        className="form-control"
-                        placeholder="e.g., SW-01"
-                        value={filters.assigned_social_worker}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, assigned_social_worker: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_reintegration">
-                        Reintegration status
-                      </label>
-                      <input
-                        id="f_reintegration"
-                        className="form-control"
-                        placeholder="e.g., In progress"
-                        value={filters.reintegration_status}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, reintegration_status: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_risk">
-                        Risk level
-                      </label>
-                      <input
-                        id="f_risk"
-                        className="form-control"
-                        placeholder="initial or current"
-                        value={filters.current_risk_level}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, current_risk_level: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" htmlFor="f_referral">
-                        Referral source
-                      </label>
-                      <input
-                        id="f_referral"
-                        className="form-control"
-                        placeholder="e.g., Agency"
-                        value={filters.referral_source}
-                        onChange={(e) => {
-                          setPage(1);
-                          setFilters((f) => ({ ...f, referral_source: e.target.value }));
-                        }}
-                      />
-                    </div>
-                    <div className="row g-2">
-                      <div className="col-6">
-                        <label className="form-label" htmlFor="f_doa_from">
-                          Admission from
-                        </label>
-                        <input
-                          id="f_doa_from"
-                          type="date"
-                          className="form-control"
-                          value={filters.date_of_admission_from}
-                          onChange={(e) => {
-                            setPage(1);
-                            setFilters((f) => ({ ...f, date_of_admission_from: e.target.value }));
-                          }}
-                        />
-                      </div>
-                      <div className="col-6">
-                        <label className="form-label" htmlFor="f_doa_to">
-                          Admission to
-                        </label>
-                        <input
-                          id="f_doa_to"
-                          type="date"
-                          className="form-control"
-                          value={filters.date_of_admission_to}
-                          onChange={(e) => {
-                            setPage(1);
-                            setFilters((f) => ({ ...f, date_of_admission_to: e.target.value }));
-                          }}
-                        />
-                      </div>
-                    </div>
-
+                <div className="accordion-item">
+                  <h2 className="accordion-header" id="filtersHeading">
                     <button
+                      className={`accordion-button panahgah-heading ${isFiltersOpen ? '' : 'collapsed'}`}
                       type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={() => {
-                        setPage(1);
-                        setFilters({
-                          search: '',
-                          case_status: '',
-                          safehouse_id: '',
-                          case_category: '',
-                          assigned_social_worker: '',
-                          reintegration_status: '',
-                          current_risk_level: '',
-                          referral_source: '',
-                          date_of_admission_from: '',
-                          date_of_admission_to: '',
-                        });
-                      }}
+                      aria-expanded={isFiltersOpen}
+                      aria-controls="filtersCollapse"
+                      onClick={() => setIsFiltersOpen((v) => !v)}
                     >
-                      Clear filters
+                      Filters
                     </button>
+                  </h2>
+                  <div
+                    id="filtersCollapse"
+                    className={`accordion-collapse collapse ${isFiltersOpen ? 'show' : ''}`}
+                    aria-labelledby="filtersHeading"
+                  >
+                    <div className="accordion-body">
+                      <div className="d-grid gap-3">
+                        <div>
+                          <label className="form-label" htmlFor="search">
+                            Search
+                          </label>
+                          <input
+                            id="search"
+                            className="form-control"
+                            placeholder="case control, internal code, social worker…"
+                            value={filters.search}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, search: e.target.value }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" htmlFor="f_case_status">
+                            Case status
+                          </label>
+                          <input
+                            id="f_case_status"
+                            className="form-control"
+                            placeholder="e.g., Active"
+                            value={filters.case_status}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, case_status: e.target.value }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" htmlFor="f_safehouse">
+                            Safehouse
+                          </label>
+                          <select
+                            id="f_safehouse"
+                            className="form-select"
+                            value={filters.safehouse_id}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, safehouse_id: e.target.value }));
+                            }}
+                          >
+                            <option value="">All safehouses</option>
+                            {safehouses.map((sh) => (
+                              <option key={sh.safehouse_id} value={sh.safehouse_id}>
+                                {sh.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="form-label" htmlFor="f_case_category">
+                            Case category
+                          </label>
+                          <input
+                            id="f_case_category"
+                            className="form-control"
+                            placeholder="e.g., Trafficked"
+                            value={filters.case_category}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, case_category: e.target.value }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" htmlFor="f_sw">
+                            Assigned social worker
+                          </label>
+                          <input
+                            id="f_sw"
+                            className="form-control"
+                            placeholder="e.g., SW-01"
+                            value={filters.assigned_social_worker}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, assigned_social_worker: e.target.value }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" htmlFor="f_reintegration">
+                            Reintegration status
+                          </label>
+                          <input
+                            id="f_reintegration"
+                            className="form-control"
+                            placeholder="e.g., In progress"
+                            value={filters.reintegration_status}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, reintegration_status: e.target.value }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" htmlFor="f_risk">
+                            Risk level
+                          </label>
+                          <input
+                            id="f_risk"
+                            className="form-control"
+                            placeholder="initial or current"
+                            value={filters.current_risk_level}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, current_risk_level: e.target.value }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" htmlFor="f_referral">
+                            Referral source
+                          </label>
+                          <input
+                            id="f_referral"
+                            className="form-control"
+                            placeholder="e.g., Agency"
+                            value={filters.referral_source}
+                            onChange={(e) => {
+                              setPage(1);
+                              setFilters((f) => ({ ...f, referral_source: e.target.value }));
+                            }}
+                          />
+                        </div>
+                        <div className="row g-2">
+                          <div className="col-6">
+                            <label className="form-label" htmlFor="f_doa_from">
+                              Admission from
+                            </label>
+                            <input
+                              id="f_doa_from"
+                              type="date"
+                              className="form-control"
+                              value={filters.date_of_admission_from}
+                              onChange={(e) => {
+                                setPage(1);
+                                setFilters((f) => ({ ...f, date_of_admission_from: e.target.value }));
+                              }}
+                            />
+                          </div>
+                          <div className="col-6">
+                            <label className="form-label" htmlFor="f_doa_to">
+                              Admission to
+                            </label>
+                            <input
+                              id="f_doa_to"
+                              type="date"
+                              className="form-control"
+                              value={filters.date_of_admission_to}
+                              onChange={(e) => {
+                                setPage(1);
+                                setFilters((f) => ({ ...f, date_of_admission_to: e.target.value }));
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm"
+                          onClick={() => {
+                            setPage(1);
+                            setFilters({
+                              search: '',
+                              case_status: '',
+                              safehouse_id: '',
+                              case_category: '',
+                              assigned_social_worker: '',
+                              reintegration_status: '',
+                              current_risk_level: '',
+                              referral_source: '',
+                              date_of_admission_from: '',
+                              date_of_admission_to: '',
+                            });
+                          }}
+                        >
+                          Clear filters
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Center column: residents table */}
-            <div className="col-12 col-lg-6 order-3 order-lg-2">
+            <div className="col-12 col-lg-9 order-3 order-lg-2">
               <div className="card shadow-sm">
                 <div className="card-body">
                   <div className="d-flex align-items-baseline justify-content-between gap-3 mb-2">
@@ -1053,177 +1075,50 @@ export function CaseloadInventoryPage() {
                           </tr>
                         ) : (
                           residents.map((r) => {
-                            const isOpen = expandedResidentId === r.resident_id;
                             return (
-                              <>
-                                <tr key={r.resident_id}>
-                                  <td>
+                              <tr key={r.resident_id}>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="btn btn-link p-0 text-decoration-none"
+                                    onClick={() => setSelectedResidentForDetails(r)}
+                                  >
+                                    {r.case_control_no}
+                                  </button>
+                                </td>
+                                <td>{r.internal_code}</td>
+                                <td>{r.case_status}</td>
+                                <td>{r.case_category}</td>
+                                <td>{safehouseNameById.get(r.safehouse_id) ?? r.safehouse_id}</td>
+                                <td>{r.assigned_social_worker}</td>
+                                <td>{r.date_of_admission}</td>
+                                <td>{r.reintegration_status ?? ''}</td>
+                                <td className="text-end">
+                                  <div className="dropdown">
                                     <button
                                       type="button"
-                                      className="btn btn-link p-0 text-decoration-none"
-                                      onClick={() =>
-                                        setExpandedResidentId((cur) => (cur === r.resident_id ? null : r.resident_id))
-                                      }
-                                      aria-expanded={isOpen}
-                                      aria-controls={`resident-details-${r.resident_id}`}
+                                      className="btn btn-outline-secondary btn-sm"
+                                      data-bs-toggle="dropdown"
+                                      aria-expanded="false"
+                                      aria-label="Actions menu"
                                     >
-                                      {r.case_control_no}
+                                      ⋮
                                     </button>
-                                  </td>
-                                  <td>{r.internal_code}</td>
-                                  <td>{r.case_status}</td>
-                                  <td>{r.case_category}</td>
-                                  <td>{safehouseNameById.get(r.safehouse_id) ?? r.safehouse_id}</td>
-                                  <td>{r.assigned_social_worker}</td>
-                                  <td>{r.date_of_admission}</td>
-                                  <td>{r.reintegration_status ?? ''}</td>
-                                  <td className="text-end">
-                                    <div className="dropdown">
-                                      <button
-                                        type="button"
-                                        className="btn btn-outline-secondary btn-sm"
-                                        data-bs-toggle="dropdown"
-                                        aria-expanded="false"
-                                        aria-label="Actions menu"
-                                      >
-                                        ⋮
-                                      </button>
-                                      <ul className="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                          <button className="dropdown-item" type="button" disabled>
-                                            Edit (coming soon)
-                                          </button>
-                                        </li>
-                                        <li>
-                                          <button className="dropdown-item text-danger" type="button" disabled>
-                                            Delete (coming soon)
-                                          </button>
-                                        </li>
-                                      </ul>
-                                    </div>
-                                  </td>
-                                </tr>
-                                {isOpen && (
-                                  <tr key={`${r.resident_id}-details`} id={`resident-details-${r.resident_id}`}>
-                                    <td colSpan={9}>
-                                      <div className="border rounded p-3 bg-body-tertiary">
-                                        <div className="row g-3">
-                                          <div className="col-12 col-md-6">
-                                            <h3 className="h6 panahgah-heading mb-2">Demographics</h3>
-                                            <div className="row g-2 small">
-                                              <div className="col-6 text-body-secondary">Sex</div>
-                                              <div className="col-6">{r.sex}</div>
-                                              <div className="col-6 text-body-secondary">Date of birth</div>
-                                              <div className="col-6">{r.date_of_birth}</div>
-                                              <div className="col-6 text-body-secondary">Birth status</div>
-                                              <div className="col-6">{r.birth_status}</div>
-                                              <div className="col-6 text-body-secondary">Place of birth</div>
-                                              <div className="col-6">{r.place_of_birth}</div>
-                                              <div className="col-6 text-body-secondary">Religion</div>
-                                              <div className="col-6">{r.religion}</div>
-                                            </div>
-                                          </div>
-
-                                          <div className="col-12 col-md-6">
-                                            <h3 className="h6 panahgah-heading mb-2">Case category & sub-categories</h3>
-                                            <div className="small text-body-secondary mb-2">{r.case_category}</div>
-                                            <div className="d-flex flex-wrap gap-2">
-                                              {r.sub_cat_orphaned && <span className="badge text-bg-light border">Orphaned</span>}
-                                              {r.sub_cat_trafficked && <span className="badge text-bg-light border">Trafficked</span>}
-                                              {r.sub_cat_child_labor && <span className="badge text-bg-light border">Child labor</span>}
-                                              {r.sub_cat_physical_abuse && <span className="badge text-bg-light border">Physical abuse</span>}
-                                              {r.sub_cat_sexual_abuse && <span className="badge text-bg-light border">Sexual abuse</span>}
-                                              {r.sub_cat_osaec && <span className="badge text-bg-light border">OSAEC</span>}
-                                              {r.sub_cat_cicl && <span className="badge text-bg-light border">CICL</span>}
-                                              {r.sub_cat_at_risk && <span className="badge text-bg-light border">At risk</span>}
-                                              {r.sub_cat_street_child && <span className="badge text-bg-light border">Street child</span>}
-                                              {r.sub_cat_child_with_hiv && <span className="badge text-bg-light border">Child with HIV</span>}
-                                            </div>
-                                          </div>
-
-                                          <div className="col-12 col-md-6">
-                                            <h3 className="h6 panahgah-heading mb-2">Disability / special needs</h3>
-                                            <div className="d-flex flex-wrap gap-2 mb-2">
-                                              <span className={`badge ${r.is_pwd ? 'text-bg-info' : 'text-bg-light border'}`}>
-                                                PWD: {r.is_pwd ? 'Yes' : 'No'}
-                                              </span>
-                                              <span className={`badge ${r.has_special_needs ? 'text-bg-info' : 'text-bg-light border'}`}>
-                                                Special needs: {r.has_special_needs ? 'Yes' : 'No'}
-                                              </span>
-                                            </div>
-                                            <div className="row g-2 small">
-                                              <div className="col-6 text-body-secondary">PWD type</div>
-                                              <div className="col-6">{r.pwd_type ?? ''}</div>
-                                              <div className="col-6 text-body-secondary">Diagnosis</div>
-                                              <div className="col-6">{r.special_needs_diagnosis ?? ''}</div>
-                                            </div>
-                                          </div>
-
-                                          <div className="col-12 col-md-6">
-                                            <h3 className="h6 panahgah-heading mb-2">Family socio-demographic profile</h3>
-                                            <div className="d-flex flex-wrap gap-2">
-                                              {r.family_is_4ps && <span className="badge text-bg-light border">4Ps</span>}
-                                              {r.family_solo_parent && <span className="badge text-bg-light border">Solo parent</span>}
-                                              {r.family_indigenous && <span className="badge text-bg-light border">Indigenous</span>}
-                                              {r.family_parent_pwd && <span className="badge text-bg-light border">Parent PWD</span>}
-                                              {r.family_informal_settler && <span className="badge text-bg-light border">Informal settler</span>}
-                                              {!r.family_is_4ps &&
-                                                !r.family_solo_parent &&
-                                                !r.family_indigenous &&
-                                                !r.family_parent_pwd &&
-                                                !r.family_informal_settler && (
-                                                  <span className="small text-body-secondary">No flags recorded.</span>
-                                                )}
-                                            </div>
-                                          </div>
-
-                                          <div className="col-12">
-                                            <h3 className="h6 panahgah-heading mb-2">Admission and referral details</h3>
-                                            <div className="row g-2 small">
-                                              <div className="col-12 col-md-3 text-body-secondary">Date of admission</div>
-                                              <div className="col-12 col-md-3">{r.date_of_admission}</div>
-                                              <div className="col-12 col-md-3 text-body-secondary">Referral source</div>
-                                              <div className="col-12 col-md-3">{r.referral_source}</div>
-                                              <div className="col-12 col-md-3 text-body-secondary">Referring agency/person</div>
-                                              <div className="col-12 col-md-9">{r.referring_agency_person}</div>
-                                              <div className="col-12 col-md-3 text-body-secondary">Initial assessment</div>
-                                              <div className="col-12 col-md-9">{r.initial_case_assessment}</div>
-                                              <div className="col-12 col-md-3 text-body-secondary">Initial risk</div>
-                                              <div className="col-12 col-md-3">{r.initial_risk_level}</div>
-                                              <div className="col-12 col-md-3 text-body-secondary">Current risk</div>
-                                              <div className="col-12 col-md-3">{r.current_risk_level}</div>
-                                            </div>
-                                          </div>
-
-                                          <div className="col-12 col-md-6">
-                                            <h3 className="h6 panahgah-heading mb-2">Social worker and case tracking</h3>
-                                            <div className="row g-2 small">
-                                              <div className="col-6 text-body-secondary">Assigned social worker</div>
-                                              <div className="col-6">{r.assigned_social_worker}</div>
-                                              <div className="col-6 text-body-secondary">Case study prepared</div>
-                                              <div className="col-6">{r.date_case_study_prepared ?? ''}</div>
-                                              <div className="col-6 text-body-secondary">Case status</div>
-                                              <div className="col-6">{r.case_status}</div>
-                                            </div>
-                                          </div>
-
-                                          <div className="col-12 col-md-6">
-                                            <h3 className="h6 panahgah-heading mb-2">Reintegration tracking</h3>
-                                            <div className="row g-2 small">
-                                              <div className="col-6 text-body-secondary">Type</div>
-                                              <div className="col-6">{r.reintegration_type ?? ''}</div>
-                                              <div className="col-6 text-body-secondary">Status</div>
-                                              <div className="col-6">{r.reintegration_status ?? ''}</div>
-                                              <div className="col-6 text-body-secondary">Date closed</div>
-                                              <div className="col-6">{r.date_closed ?? ''}</div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
-                              </>
+                                    <ul className="dropdown-menu dropdown-menu-end">
+                                      <li>
+                                        <button className="dropdown-item" type="button" disabled>
+                                          Edit (coming soon)
+                                        </button>
+                                      </li>
+                                      <li>
+                                        <button className="dropdown-item text-danger" type="button" disabled>
+                                          Delete (coming soon)
+                                        </button>
+                                      </li>
+                                    </ul>
+                                  </div>
+                                </td>
+                              </tr>
                             );
                           })
                         )}
@@ -1234,25 +1129,51 @@ export function CaseloadInventoryPage() {
                   <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3">
                     <nav aria-label="Caseload pagination">
                       <ul className="pagination pagination-sm mb-0">
-                        <li className={`page-item ${pageSize === 'Max' || page <= 1 ? 'disabled' : ''}`}>
+                        <li className={`page-item ${!canPaginate || page <= 1 ? 'disabled' : ''}`}>
                           <button
                             type="button"
                             className="page-link"
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={pageSize === 'Max' || page <= 1}
+                            disabled={!canPaginate || page <= 1}
                           >
                             Prev
                           </button>
                         </li>
-                        <li className="page-item active" aria-current="page">
-                          <span className="page-link">{page}</span>
-                        </li>
-                        <li className={`page-item ${pageSize === 'Max' || page >= totalPages ? 'disabled' : ''}`}>
+
+                        {paginationModel.showLeftEllipsis && (
+                          <li className="page-item disabled" aria-hidden="true">
+                            <span className="page-link">…</span>
+                          </li>
+                        )}
+
+                        {paginationModel.pages.map((p) => (
+                          <li
+                            key={p}
+                            className={`page-item ${p === page ? 'active' : ''}`}
+                            aria-current={p === page ? 'page' : undefined}
+                          >
+                            {p === page ? (
+                              <span className="page-link">{p}</span>
+                            ) : (
+                              <button type="button" className="page-link" onClick={() => setPage(p)} disabled={!canPaginate}>
+                                {p}
+                              </button>
+                            )}
+                          </li>
+                        ))}
+
+                        {paginationModel.showRightEllipsis && (
+                          <li className="page-item disabled" aria-hidden="true">
+                            <span className="page-link">…</span>
+                          </li>
+                        )}
+
+                        <li className={`page-item ${!canPaginate || page >= totalPages ? 'disabled' : ''}`}>
                           <button
                             type="button"
                             className="page-link"
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={pageSize === 'Max' || page >= totalPages}
+                            disabled={!canPaginate || page >= totalPages}
                           >
                             Next
                           </button>
@@ -1267,6 +1188,179 @@ export function CaseloadInventoryPage() {
               </div>
             </div>
           </div>
+        </>
+      )}
+
+      {selectedResidentForDetails && (
+        <>
+          <div
+            className="modal fade show d-block"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Resident details"
+            tabIndex={-1}
+          >
+            <div className="modal-dialog modal-dialog-scrollable modal-lg modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h2 className="modal-title h5 panahgah-heading mb-0">
+                    {selectedResidentForDetails.case_control_no} · {selectedResidentForDetails.internal_code}
+                  </h2>
+                  <button type="button" className="btn-close" aria-label="Close" onClick={closeDetails} />
+                </div>
+                <div className="modal-body">
+                  <div className="row g-3">
+                    <div className="col-12 col-md-6">
+                      <h3 className="h6 panahgah-heading mb-2">Demographics</h3>
+                      <div className="row g-2 small">
+                        <div className="col-6 text-body-secondary">Sex</div>
+                        <div className="col-6">{selectedResidentForDetails.sex}</div>
+                        <div className="col-6 text-body-secondary">Date of birth</div>
+                        <div className="col-6">{selectedResidentForDetails.date_of_birth}</div>
+                        <div className="col-6 text-body-secondary">Birth status</div>
+                        <div className="col-6">{selectedResidentForDetails.birth_status}</div>
+                        <div className="col-6 text-body-secondary">Place of birth</div>
+                        <div className="col-6">{selectedResidentForDetails.place_of_birth}</div>
+                        <div className="col-6 text-body-secondary">Religion</div>
+                        <div className="col-6">{selectedResidentForDetails.religion}</div>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <h3 className="h6 panahgah-heading mb-2">Case category & sub-categories</h3>
+                      <div className="small text-body-secondary mb-2">{selectedResidentForDetails.case_category}</div>
+                      <div className="d-flex flex-wrap gap-2">
+                        {selectedResidentForDetails.sub_cat_orphaned && (
+                          <span className="badge text-bg-light border">Orphaned</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_trafficked && (
+                          <span className="badge text-bg-light border">Trafficked</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_child_labor && (
+                          <span className="badge text-bg-light border">Child labor</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_physical_abuse && (
+                          <span className="badge text-bg-light border">Physical abuse</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_sexual_abuse && (
+                          <span className="badge text-bg-light border">Sexual abuse</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_osaec && (
+                          <span className="badge text-bg-light border">OSAEC</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_cicl && (
+                          <span className="badge text-bg-light border">CICL</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_at_risk && (
+                          <span className="badge text-bg-light border">At risk</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_street_child && (
+                          <span className="badge text-bg-light border">Street child</span>
+                        )}
+                        {selectedResidentForDetails.sub_cat_child_with_hiv && (
+                          <span className="badge text-bg-light border">Child with HIV</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <h3 className="h6 panahgah-heading mb-2">Disability / special needs</h3>
+                      <div className="d-flex flex-wrap gap-2 mb-2">
+                        <span className={`badge ${selectedResidentForDetails.is_pwd ? 'text-bg-info' : 'text-bg-light border'}`}>
+                          PWD: {selectedResidentForDetails.is_pwd ? 'Yes' : 'No'}
+                        </span>
+                        <span
+                          className={`badge ${selectedResidentForDetails.has_special_needs ? 'text-bg-info' : 'text-bg-light border'}`}
+                        >
+                          Special needs: {selectedResidentForDetails.has_special_needs ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      <div className="row g-2 small">
+                        <div className="col-6 text-body-secondary">PWD type</div>
+                        <div className="col-6">{selectedResidentForDetails.pwd_type ?? ''}</div>
+                        <div className="col-6 text-body-secondary">Diagnosis</div>
+                        <div className="col-6">{selectedResidentForDetails.special_needs_diagnosis ?? ''}</div>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <h3 className="h6 panahgah-heading mb-2">Family socio-demographic profile</h3>
+                      <div className="d-flex flex-wrap gap-2">
+                        {selectedResidentForDetails.family_is_4ps && <span className="badge text-bg-light border">4Ps</span>}
+                        {selectedResidentForDetails.family_solo_parent && (
+                          <span className="badge text-bg-light border">Solo parent</span>
+                        )}
+                        {selectedResidentForDetails.family_indigenous && (
+                          <span className="badge text-bg-light border">Indigenous</span>
+                        )}
+                        {selectedResidentForDetails.family_parent_pwd && (
+                          <span className="badge text-bg-light border">Parent PWD</span>
+                        )}
+                        {selectedResidentForDetails.family_informal_settler && (
+                          <span className="badge text-bg-light border">Informal settler</span>
+                        )}
+                        {!selectedResidentForDetails.family_is_4ps &&
+                          !selectedResidentForDetails.family_solo_parent &&
+                          !selectedResidentForDetails.family_indigenous &&
+                          !selectedResidentForDetails.family_parent_pwd &&
+                          !selectedResidentForDetails.family_informal_settler && (
+                            <span className="small text-body-secondary">No flags recorded.</span>
+                          )}
+                      </div>
+                    </div>
+
+                    <div className="col-12">
+                      <h3 className="h6 panahgah-heading mb-2">Admission and referral details</h3>
+                      <div className="row g-2 small">
+                        <div className="col-12 col-md-3 text-body-secondary">Date of admission</div>
+                        <div className="col-12 col-md-3">{selectedResidentForDetails.date_of_admission}</div>
+                        <div className="col-12 col-md-3 text-body-secondary">Referral source</div>
+                        <div className="col-12 col-md-3">{selectedResidentForDetails.referral_source}</div>
+                        <div className="col-12 col-md-3 text-body-secondary">Referring agency/person</div>
+                        <div className="col-12 col-md-9">{selectedResidentForDetails.referring_agency_person}</div>
+                        <div className="col-12 col-md-3 text-body-secondary">Initial assessment</div>
+                        <div className="col-12 col-md-9">{selectedResidentForDetails.initial_case_assessment}</div>
+                        <div className="col-12 col-md-3 text-body-secondary">Initial risk</div>
+                        <div className="col-12 col-md-3">{selectedResidentForDetails.initial_risk_level}</div>
+                        <div className="col-12 col-md-3 text-body-secondary">Current risk</div>
+                        <div className="col-12 col-md-3">{selectedResidentForDetails.current_risk_level}</div>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <h3 className="h6 panahgah-heading mb-2">Social worker and case tracking</h3>
+                      <div className="row g-2 small">
+                        <div className="col-6 text-body-secondary">Assigned social worker</div>
+                        <div className="col-6">{selectedResidentForDetails.assigned_social_worker}</div>
+                        <div className="col-6 text-body-secondary">Case study prepared</div>
+                        <div className="col-6">{selectedResidentForDetails.date_case_study_prepared ?? ''}</div>
+                        <div className="col-6 text-body-secondary">Case status</div>
+                        <div className="col-6">{selectedResidentForDetails.case_status}</div>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <h3 className="h6 panahgah-heading mb-2">Reintegration tracking</h3>
+                      <div className="row g-2 small">
+                        <div className="col-6 text-body-secondary">Type</div>
+                        <div className="col-6">{selectedResidentForDetails.reintegration_type ?? ''}</div>
+                        <div className="col-6 text-body-secondary">Status</div>
+                        <div className="col-6">{selectedResidentForDetails.reintegration_status ?? ''}</div>
+                        <div className="col-6 text-body-secondary">Date closed</div>
+                        <div className="col-6">{selectedResidentForDetails.date_closed ?? ''}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-outline-secondary" onClick={closeDetails}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-backdrop fade show" aria-hidden="true" onClick={closeDetails} />
         </>
       )}
     </div>
