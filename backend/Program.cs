@@ -20,6 +20,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahAppConnection")));
 builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahIdentityConnection")));
+builder.Services.AddSingleton<DonorMlPipelineService>();
+builder.Services.AddHostedService<DonorMlSchedulerService>();
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
     {

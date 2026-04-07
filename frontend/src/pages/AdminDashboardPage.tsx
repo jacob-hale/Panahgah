@@ -36,6 +36,40 @@ type AdminDashboardMetrics = {
     progress_noted_count: number;
     concerns_flagged_count: number;
   };
+  donor_ml: {
+    donor_lapse: {
+      low_count: number;
+      medium_count: number;
+      high_count: number;
+      top_count: number;
+      top_segments: {
+        supporter_type: string;
+        acquisition_channel: string;
+        avg_score: number;
+      }[];
+    };
+    donor_upgrade: {
+      low_count: number;
+      medium_count: number;
+      high_count: number;
+      top_count: number;
+      ask_ladder_summary: {
+        suggested_ask_floor_avg: number;
+        suggested_ask_ceiling_avg: number;
+      };
+      top_segments: {
+        supporter_type: string;
+        acquisition_channel: string;
+        avg_score: number;
+      }[];
+    };
+    pipeline_health: {
+      status: string;
+      last_trained_at_utc?: string | null;
+      rows_used_lapse: number;
+      rows_used_upgrade: number;
+    };
+  };
 };
 
 function formatDateOnly(value: string): string {
@@ -60,26 +94,46 @@ export function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null);
+  const [training, setTraining] = useState(false);
+  const [trainError, setTrainError] = useState<string | null>(null);
+  const [trainMessage, setTrainMessage] = useState<string | null>(null);
+
+  const loadMetrics = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiFetch<AdminDashboardMetrics>('/api/admin/dashboard-metrics');
+      setMetrics(response);
+    } catch {
+      setError('Unable to load admin metrics. Ensure you are logged in with the required role.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadMetrics = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await apiFetch<AdminDashboardMetrics>('/api/admin/dashboard-metrics');
-        setMetrics(response);
-      } catch {
-        setError('Unable to load admin metrics. Ensure you are logged in with the required role.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     void loadMetrics();
   }, []);
 
+  const handleRetrainDonorModels = async () => {
+    setTraining(true);
+    setTrainError(null);
+    setTrainMessage(null);
+    try {
+      await apiFetch('/api/ml/donor/train', { method: 'POST' });
+      setTrainMessage('Donor models retrained successfully. Dashboard metrics refreshed.');
+      await loadMetrics();
+    } catch (e) {
+      setTrainError(e instanceof Error ? e.message : 'Donor model training failed.');
+    } finally {
+      setTraining(false);
+    }
+  };
+
   const safehousePreview = metrics?.safehouse_resident_breakdown.slice(0, 3) ?? [];
   const upcomingConferenceCount = metrics?.upcoming_case_conferences.length ?? 0;
+  const topLapseSegment = metrics?.donor_ml?.donor_lapse?.top_segments?.[0];
+  const topUpgradeSegment = metrics?.donor_ml?.donor_upgrade?.top_segments?.[0];
 
   return (
     <div>
@@ -164,9 +218,27 @@ export function AdminDashboardPage() {
         <div className="col">
           <div className="card shadow-sm h-100">
             <div className="card-body">
-              <h2 className="h6 text-body-secondary">Progress concerns</h2>
-              <p className="display-6 mb-2">{metrics.progress_summary.concerns_flagged_count}</p>
-              <p className="small text-body-secondary mb-0">Sessions currently flagged for concerns.</p>
+              <h2 className="h6 text-body-secondary">Donor lapse risk</h2>
+              <p className="display-6 mb-2">{metrics.donor_ml.donor_lapse.high_count}</p>
+              <p className="small text-body-secondary mb-0">
+                High-risk donors. Top segment:{' '}
+                {topLapseSegment
+                  ? `${topLapseSegment.supporter_type} / ${topLapseSegment.acquisition_channel}`
+                  : 'N/A'}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="col">
+          <div className="card shadow-sm h-100">
+            <div className="card-body">
+              <h2 className="h6 text-body-secondary">Donor upgrade potential</h2>
+              <p className="display-6 mb-2">{metrics.donor_ml.donor_upgrade.high_count}</p>
+              <p className="small text-body-secondary mb-0">
+                Top candidates. Suggested ask avg:{' '}
+                {metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_floor_avg.toLocaleString()}-
+                {metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_ceiling_avg.toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
@@ -253,6 +325,34 @@ export function AdminDashboardPage() {
                   </table>
                 </div>
               )}
+            </div>
+            <div className="col-12">
+              <h2 className="h6 mb-2">Donor MLR pipeline status</h2>
+              <div className="small text-body-secondary">
+                Status: {metrics.donor_ml.pipeline_health.status} | Rows used (lapse/upgrade):{' '}
+                {metrics.donor_ml.pipeline_health.rows_used_lapse}/{metrics.donor_ml.pipeline_health.rows_used_upgrade}
+                {metrics.donor_ml.pipeline_health.last_trained_at_utc
+                  ? ` | Last trained: ${new Date(metrics.donor_ml.pipeline_health.last_trained_at_utc).toLocaleString()}`
+                  : ''}
+              </div>
+              <div className="small text-body-secondary">
+                Top upgrade segment:{' '}
+                {topUpgradeSegment
+                  ? `${topUpgradeSegment.supporter_type} / ${topUpgradeSegment.acquisition_channel}`
+                  : 'N/A'}
+              </div>
+              <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={handleRetrainDonorModels}
+                  disabled={training}
+                >
+                  {training ? 'Retraining donor models...' : 'Retrain donor models'}
+                </button>
+                {trainMessage ? <span className="small text-success">{trainMessage}</span> : null}
+                {trainError ? <span className="small text-danger">{trainError}</span> : null}
+              </div>
             </div>
           </div>
         </div>

@@ -4,12 +4,13 @@ using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
 using Panahgah.Api.Contracts;
 using Panahgah.Api.Data;
+using Panahgah.Api.Services;
 
 namespace Panahgah.Api.Controllers;
 
 [ApiController]
 [Route("api/admin/dashboard-metrics")]
-public class AdminDashboardController(ApplicationDbContext dbContext) : ControllerBase
+public class AdminDashboardController(ApplicationDbContext dbContext, DonorMlPipelineService donorMlPipelineService) : ControllerBase
 {
     private const int RecentDonationLimit = 5;
     private const int UpcomingConferenceLimit = 10;
@@ -128,7 +129,8 @@ public class AdminDashboardController(ApplicationDbContext dbContext) : Controll
             safehouse_resident_breakdown = safehouseResidentBreakdown,
             recent_donations = recentDonations,
             upcoming_case_conferences = upcomingCaseConferences,
-            progress_summary = processTotals
+            progress_summary = processTotals,
+            donor_ml = await donorMlPipelineService.GetLatestInsightsAsync() ?? new DonorMlInsightsResponseDto()
         };
 
         return Ok(response);
