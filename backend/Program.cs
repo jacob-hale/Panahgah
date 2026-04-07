@@ -34,12 +34,9 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    // Dev: Vite is usually http://localhost:5173 while the API is https://localhost:7270.
-    // Different schemes are cross-site; Lax cookies are not sent on fetch(), so /api/auth/me
-    // never sees the session. None + Secure allows credentialed cross-origin API calls locally.
-    options.Cookie.SameSite = builder.Environment.IsDevelopment()
-        ? SameSiteMode.None
-        : SameSiteMode.Lax;
+    // Frontend and API are on different origins in deployment, so auth cookie must allow
+    // cross-site credentialed requests.
+    options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
     options.SlidingExpiration = true;
