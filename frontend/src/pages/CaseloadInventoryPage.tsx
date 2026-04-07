@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 import type { PagedResponse, Resident, ResidentUpsertPayload, Safehouse } from '../api/types';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -101,6 +102,58 @@ function optionalDateString(value: string | null | undefined): string {
   return value ?? '';
 }
 
+function residentToUpsertPayload(r: Resident): ResidentUpsertPayload {
+  return {
+    case_control_no: r.case_control_no,
+    internal_code: r.internal_code,
+    safehouse_id: r.safehouse_id,
+    case_status: r.case_status,
+    sex: r.sex,
+    date_of_birth: r.date_of_birth,
+    birth_status: r.birth_status,
+    place_of_birth: r.place_of_birth,
+    religion: r.religion,
+    case_category: r.case_category,
+    sub_cat_orphaned: r.sub_cat_orphaned,
+    sub_cat_trafficked: r.sub_cat_trafficked,
+    sub_cat_child_labor: r.sub_cat_child_labor,
+    sub_cat_physical_abuse: r.sub_cat_physical_abuse,
+    sub_cat_sexual_abuse: r.sub_cat_sexual_abuse,
+    sub_cat_osaec: r.sub_cat_osaec,
+    sub_cat_cicl: r.sub_cat_cicl,
+    sub_cat_at_risk: r.sub_cat_at_risk,
+    sub_cat_street_child: r.sub_cat_street_child,
+    sub_cat_child_with_hiv: r.sub_cat_child_with_hiv,
+    is_pwd: r.is_pwd,
+    pwd_type: r.pwd_type,
+    has_special_needs: r.has_special_needs,
+    special_needs_diagnosis: r.special_needs_diagnosis,
+    family_is_4ps: r.family_is_4ps,
+    family_solo_parent: r.family_solo_parent,
+    family_indigenous: r.family_indigenous,
+    family_parent_pwd: r.family_parent_pwd,
+    family_informal_settler: r.family_informal_settler,
+    date_of_admission: r.date_of_admission,
+    age_upon_admission: r.age_upon_admission,
+    present_age: r.present_age,
+    length_of_stay: r.length_of_stay,
+    referral_source: r.referral_source,
+    referring_agency_person: r.referring_agency_person,
+    date_colb_registered: r.date_colb_registered,
+    date_colb_obtained: r.date_colb_obtained,
+    assigned_social_worker: r.assigned_social_worker,
+    initial_case_assessment: r.initial_case_assessment,
+    date_case_study_prepared: r.date_case_study_prepared,
+    reintegration_type: r.reintegration_type,
+    reintegration_status: r.reintegration_status,
+    initial_risk_level: r.initial_risk_level,
+    current_risk_level: r.current_risk_level,
+    date_enrolled: r.date_enrolled,
+    date_closed: r.date_closed,
+    notes_restricted: r.notes_restricted,
+  };
+}
+
 export function CaseloadInventoryPage() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [safehouses, setSafehouses] = useState<Safehouse[]>([]);
@@ -110,6 +163,11 @@ export function CaseloadInventoryPage() {
   const [form, setForm] = useState<ResidentUpsertPayload>(() => emptyResidentForm(0));
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [editingResidentId, setEditingResidentId] = useState<number | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<Resident | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -212,17 +270,55 @@ export function CaseloadInventoryPage() {
     setCreateSubmitting(true);
     try {
       const payload = toPayload(form);
-      await apiFetch<Resident>('/api/residents', {
-        method: 'POST',
-        jsonBody: payload,
-      });
-      setForm(emptyResidentForm(safehouses[0]?.safehouse_id ?? 0));
-      setPage(1);
-      await loadResidents();
+      if (editingResidentId !== null) {
+        await apiFetch<Resident>(`/api/residents/${editingResidentId}`, {
+          method: 'PUT',
+          jsonBody: payload,
+        });
+        await loadResidents();
+        setEditingResidentId(null);
+        setIsAddOpen(false);
+      } else {
+        await apiFetch<Resident>('/api/residents', {
+          method: 'POST',
+          jsonBody: payload,
+        });
+        setForm(emptyResidentForm(safehouses[0]?.safehouse_id ?? 0));
+        setPage(1);
+        await loadResidents();
+        setIsAddOpen(false);
+      }
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : 'Create failed.');
+      setCreateError(e instanceof Error ? e.message : editingResidentId !== null ? 'Update failed.' : 'Create failed.');
     } finally {
       setCreateSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+    setDeleteError(null);
+    setDeleteSubmitting(true);
+    try {
+      await apiFetch<unknown>(`/api/residents/${deleteTarget.resident_id}`, {
+        method: 'DELETE',
+        jsonBody: { confirmDelete: true },
+      });
+      setDeleteTarget(null);
+
+      // If we removed the last item on the current page, step back a page if possible.
+      if (pageSize !== 'Max' && page > 1 && residents.length <= 1) {
+        setPage((p) => Math.max(1, p - 1));
+        return;
+      }
+
+      await loadResidents();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Delete failed.');
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -305,6 +401,25 @@ export function CaseloadInventoryPage() {
                   >
                     <div className="accordion-body">
                       {createError && <div className="alert alert-danger py-2 small">{createError}</div>}
+
+                      <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
+                        <div className="small text-body-secondary">
+                          {editingResidentId !== null ? `Editing resident #${editingResidentId}.` : 'Create a new resident profile.'}
+                        </div>
+                        {editingResidentId !== null && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => {
+                              setEditingResidentId(null);
+                              setForm(emptyResidentForm(safehouses[0]?.safehouse_id ?? 0));
+                            }}
+                            disabled={createSubmitting}
+                          >
+                            Cancel edit
+                          </button>
+                        )}
+                      </div>
 
                       <form onSubmit={handleCreate} className="d-grid gap-4">
                 <fieldset className="border rounded-3 p-3">
@@ -806,7 +921,7 @@ export function CaseloadInventoryPage() {
 
                 <div className="d-flex gap-2 justify-content-end">
                   <button type="submit" className="btn btn-primary" disabled={createSubmitting || !safehouses.length}>
-                    {createSubmitting ? 'Creating…' : 'Create resident'}
+                    {createSubmitting ? 'Saving…' : editingResidentId !== null ? 'Update resident' : 'Create resident'}
                   </button>
                 </div>
                       </form>
@@ -1106,13 +1221,30 @@ export function CaseloadInventoryPage() {
                                     </button>
                                     <ul className="dropdown-menu dropdown-menu-end">
                                       <li>
-                                        <button className="dropdown-item" type="button" disabled>
-                                          Edit (coming soon)
+                                        <button
+                                          className="dropdown-item"
+                                          type="button"
+                                          onClick={() => {
+                                            setCreateError(null);
+                                            setEditingResidentId(r.resident_id);
+                                            setForm(residentToUpsertPayload(r));
+                                            setIsAddOpen(true);
+                                            document.getElementById('caseloadAccordion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                          }}
+                                        >
+                                          Edit
                                         </button>
                                       </li>
                                       <li>
-                                        <button className="dropdown-item text-danger" type="button" disabled>
-                                          Delete (coming soon)
+                                        <button
+                                          className="dropdown-item text-danger"
+                                          type="button"
+                                          onClick={() => {
+                                            setDeleteError(null);
+                                            setDeleteTarget(r);
+                                          }}
+                                        >
+                                          Delete
                                         </button>
                                       </li>
                                     </ul>
@@ -1363,6 +1495,26 @@ export function CaseloadInventoryPage() {
           <div className="modal-backdrop fade show" aria-hidden="true" onClick={closeDetails} />
         </>
       )}
+
+      <ConfirmDeleteModal
+        show={deleteTarget !== null}
+        title="Delete resident"
+        description="This permanently removes the resident record from the caseload. This cannot be undone."
+        itemLabel={
+          deleteTarget
+            ? `${deleteTarget.case_control_no} · ${deleteTarget.internal_code} (ID ${deleteTarget.resident_id})`
+            : ''
+        }
+        isSubmitting={deleteSubmitting}
+        error={deleteError}
+        onClose={() => {
+          if (!deleteSubmitting) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
