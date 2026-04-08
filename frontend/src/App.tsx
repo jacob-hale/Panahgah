@@ -9,6 +9,7 @@ import { ImpactDashboardPage } from './pages/ImpactDashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AccountPage } from './pages/AccountPage';
+import { DonatePage } from './pages/DonatePage';
 import { AdminSupportersPage } from './pages/AdminSupportersPage';
 import { AdminSupporterDetailPage } from './pages/AdminSupporterDetailPage';
 import { DonorLapseInsightsPage } from './pages/DonorLapseInsightsPage';
@@ -26,6 +27,7 @@ function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="account" element={<AccountPage />} />
+        <Route path="donate" element={<DonatePage />} />
         <Route path="impact-dashboard" element={<ImpactDashboardPage />} />
         <Route path="privacy" element={<PrivacyPolicyPage />} />
         <Route path="admin" element={<AdminRoute />}>

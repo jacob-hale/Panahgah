@@ -30,9 +30,9 @@ export function HomePage() {
               </div>
 
               <div className="d-flex flex-wrap gap-2 pg-hero-ctas">
-                <a className="btn btn-primary btn-lg" href="#donate">
+                <Link className="btn btn-primary btn-lg" to="/donate">
                   Donate now
-                </a>
+                </Link>
                 <a className="btn btn-primary btn-lg" href="#impact">
                   See what your gift does
                 </a>
@@ -45,7 +45,7 @@ export function HomePage() {
         </div>
       </header>
 
-      <section id="donate" className="pg-fullbleed pg-donate-band py-5">
+      <section className="pg-fullbleed pg-donate-band py-5">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-8">
@@ -54,9 +54,9 @@ export function HomePage() {
                 Your donation helps support safehousing, essentials, counseling, and recovery services for girls who are
                 rebuilding their lives.
               </p>
-              <a className="btn btn-primary btn-lg" href="#donate">
+              <Link className="btn btn-primary btn-lg" to="/donate">
                 Donate now
-              </a>
+              </Link>
               <p className="small text-body-secondary mt-3 mb-0">
                 Every contribution helps keep safe places open and staffed.
               </p>
@@ -69,10 +69,33 @@ export function HomePage() {
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-8">
-              <h2 className="h2 fw-semibold mb-2">See the impact your support creates.</h2>
+              <h2 className="h2 fw-semibold mb-2">What your gift helps provide.</h2>
               <p className="text-body-secondary mb-4">
-                Explore our impact dashboard to view updates, outcomes, and the story your support helps write.
+                Donations directly support the daily needs and long-term recovery of girls living in Panahgah
+                safehouses.
               </p>
+              <div className="row g-3 mb-4">
+                <div className="col-md-6">
+                  <div className="pg-impact-item h-100">
+                    Safe shelter, meals, and essential supplies.
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="pg-impact-item h-100">
+                    Education support, school access, and learning resources.
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="pg-impact-item h-100">
+                    Counseling, trauma-informed care, and emotional healing support.
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="pg-impact-item h-100">
+                    Life-skills training and pathways to long-term independence.
+                  </div>
+                </div>
+              </div>
               <Link className="btn btn-outline-secondary btn-lg" to="/impact-dashboard">
                 Open impact dashboard
               </Link>
@@ -81,25 +104,6 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="pg-fullbleed pg-cta py-5">
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-10 col-xl-8">
-              <div className="d-flex flex-wrap gap-2">
-                <a className="btn btn-primary btn-lg" href="#donate">
-                  Donate now
-                </a>
-                <a className="btn btn-primary btn-lg" href="#impact">
-                  See what your gift does
-                </a>
-                <Link className="btn btn-primary btn-lg" to="/impact-dashboard">
-                  View impact dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
