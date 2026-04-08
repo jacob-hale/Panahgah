@@ -28,8 +28,6 @@ function getResolvedApiPath(path: string): string {
   return `${base}/${path}`;
 }
 
-const API_BASE_URL = resolveApiBaseUrl();
-
 type ApiFetchOptions = RequestInit & {
   jsonBody?: unknown;
 };
