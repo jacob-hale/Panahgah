@@ -1,9 +1,9 @@
 function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
   if (explicit) return explicit;
-  // Dev: same-origin `/api` is proxied by Vite to the backend (see vite.config.ts).
-  if (import.meta.env.DEV) return '';
-  // Prod: prefer same-origin `/api` so Nginx can reverse-proxy without CORS/cookie issues.
+  // Default to same-origin `/api` in both dev and production.
+  // - Dev: Vite proxy forwards `/api` to the backend target.
+  // - Prod: keeps requests on the deployed origin unless an explicit API base is configured.
   return '';
 }
 
@@ -34,8 +34,7 @@ export async function apiFetch<T>(
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'Failed to fetch' || err instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. Start the backend (e.g. `dotnet run` in /backend), keep `npm run dev` for the frontend, ' +
-          'and in dev use the Vite proxy (leave VITE_API_BASE_URL unset). If you use a full API URL instead, fix CORS and HTTPS (or set VITE_DEV_API_PROXY_TARGET to http://localhost:5238 and run the API HTTP profile).',
+        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure /api is routed to the live backend, or set VITE_API_BASE_URL to the backend URL with correct CORS/HTTPS.',
       );
     }
     throw err;
