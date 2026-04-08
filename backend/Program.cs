@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
@@ -10,6 +11,27 @@ using Panahgah.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 const string localFrontendCorsPolicy = "LocalFrontendCorsPolicy";
+
+// Railway (and most PaaS) front apps reverse-proxy to the container.
+// Respect X-Forwarded-* so HTTPS redirection and scheme detection behave correctly.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    // In container/PaaS environments, proxy IPs are not known ahead of time.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// Railway expects the app to bind to the port it provides.
+// If PORT is present, bind to 0.0.0.0:$PORT (otherwise use framework defaults).
+var portEnv = Environment.GetEnvironmentVariable("PORT");
+if (int.TryParse(portEnv, out var port) && port is > 0 and < 65536)
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -118,6 +140,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -126,6 +150,16 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("{\"error\":\"An unexpected error occurred.\"}");
+        });
+    });
+
     app.UseHsts();
 }
 
