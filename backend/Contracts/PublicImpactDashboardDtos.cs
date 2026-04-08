@@ -46,7 +46,8 @@ public sealed class PublicImpactProgramAllocationDto
 
 public sealed class PublicImpactTrendPointDto
 {
-    public required DateOnly month_start { get; init; }
+    // Some prod rows may have NULL month_start; keep this nullable to avoid 500s.
+    public DateOnly? month_start { get; init; }
     public decimal avg_health_score { get; init; }
     public decimal avg_education_progress { get; init; }
     public int sessions_count { get; init; }
