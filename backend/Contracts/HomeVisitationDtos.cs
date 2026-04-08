@@ -16,3 +16,19 @@ public sealed class HomeVisitationListItemDto
     public required string social_worker { get; init; }
 }
 
+public static class HomeVisitationCatalog
+{
+    public static readonly string[] AllowedVisitTypes =
+    [
+        "Initial assessment",
+        "Routine follow-up",
+        "Reintegration assessment",
+        "Post-placement monitoring",
+        "Emergency"
+    ];
+
+    public static bool IsAllowedVisitType(string value) =>
+        AllowedVisitTypes.Contains(value, StringComparer.OrdinalIgnoreCase);
+}
+
+

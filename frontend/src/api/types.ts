@@ -223,3 +223,27 @@ export type HomeVisitationListItem = {
   visit_outcome: string;
   social_worker: string;
 };
+
+export type HomeVisitationUpsertPayload = {
+  resident_id: number;
+  visit_date: string;
+  social_worker: string;
+  visit_type: string;
+  location_visited: string;
+  family_members_present: string;
+  purpose: string;
+  observations: string;
+  family_cooperation_level: string;
+  safety_concerns_noted: boolean;
+  follow_up_needed: boolean;
+  follow_up_notes: string;
+  visit_outcome: string;
+};
+
+export type UpcomingCaseConferenceListItem = {
+  plan_id: number;
+  case_conference_date: string;
+  resident_id: number;
+  resident_case_code: string;
+  plan_status: string | null;
+};
