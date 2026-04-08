@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
- 
-type WindowInsight = { day_of_week: string; post_hour: number | null; avg_referrals: number; uplift_pct: number };
-type PlatformPostTypeInsight = { platform: string; post_type: string; avg_referrals: number; uplift_pct: number };
-type StoryEffect = { with_story_avg: number; without_story_avg: number; with_story_count: number; without_story_count: number };
-type Model5InsightsResponse = {
-  baseline_expected_referrals: number;
-  best_windows: WindowInsight[];
-  best_post_type_by_platform: PlatformPostTypeInsight[];
-  story_effect: StoryEffect;
-};
+import type { Model5InsightsResponse } from '../api/types';
 type Model5TrainResponse = {
   rows_used: number;
   train_rows: number;

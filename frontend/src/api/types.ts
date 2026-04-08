@@ -185,6 +185,34 @@ export type SocialMediaPost = {
   created_at: string;
 };
 
+export type Model5PostingWindow = {
+  day_of_week: string;
+  post_hour: number | null;
+  avg_referrals: number;
+  uplift_pct: number;
+};
+
+export type Model5PostTypeByPlatform = {
+  platform: string;
+  post_type: string;
+  avg_referrals: number;
+  uplift_pct: number;
+};
+
+export type Model5StoryEffect = {
+  with_story_avg: number;
+  without_story_avg: number;
+  with_story_count: number;
+  without_story_count: number;
+};
+
+export type Model5InsightsResponse = {
+  baseline_expected_referrals: number;
+  best_windows: Model5PostingWindow[];
+  best_post_type_by_platform: Model5PostTypeByPlatform[];
+  story_effect: Model5StoryEffect;
+};
+
 export type SocialPostGenerateRequest = {
   platform: string;
   goal: string;
@@ -207,4 +235,106 @@ export type SocialPostGenerateResponse = {
   recommended_post_type: string;
   rationale: string;
   generated_posts: GeneratedSocialPost[];
+};
+
+export type SocialCampaign = {
+  campaign_id: number;
+  campaign_name: string;
+  platform: string;
+  objective: string;
+  start_utc: string;
+  end_utc: string | null;
+  status: string;
+  created_at_utc: string;
+};
+
+export type SocialCampaignCreatePayload = {
+  campaign_name: string;
+  platform: string;
+  objective: string;
+  start_utc: string;
+  end_utc: string | null;
+};
+
+export type ScheduledSocialPost = {
+  scheduled_post_id: number;
+  campaign_id: number | null;
+  platform: string;
+  scheduled_for_utc: string;
+  caption: string;
+  media_url: string | null;
+  status: string;
+  attempt_count: number;
+  error_message: string | null;
+  platform_post_id: string | null;
+  created_at_utc: string;
+  published_at_utc: string | null;
+};
+
+export type ScheduledSocialPostCreatePayload = {
+  campaign_id: number | null;
+  platform: string;
+  scheduled_for_utc: string;
+  caption: string;
+  media_url: string | null;
+};
+
+export type SocialPlatformConnection = {
+  connection_id: number;
+  platform: string;
+  account_label: string;
+  page_id: string;
+  instagram_business_account_id: string | null;
+  access_token_encrypted: string | null;
+  is_active: boolean;
+  is_placeholder: boolean;
+  created_at_utc: string;
+  updated_at_utc: string;
+};
+
+export type SocialPlatformConnectionUpsertPayload = {
+  platform: string;
+  account_label: string;
+  page_id: string;
+  instagram_business_account_id: string | null;
+  is_placeholder: boolean;
+};
+
+export type HomeVisitationListItem = {
+  visitation_id: number;
+  resident_id: number;
+  resident_case_control_no: string;
+  resident_internal_code: string;
+  visit_date: string;
+  visit_type: string;
+  location_visited: string;
+  family_cooperation_level: string;
+  safety_concerns_noted: boolean;
+  follow_up_needed: boolean;
+  visit_outcome: string;
+  social_worker: string;
+};
+
+export type HomeVisitationUpsertPayload = {
+  resident_id: number;
+  visit_date: string;
+  social_worker: string;
+  visit_type: string;
+  location_visited: string;
+  family_members_present: string;
+  purpose: string;
+  observations: string;
+  family_cooperation_level: string;
+  safety_concerns_noted: boolean;
+  follow_up_needed: boolean;
+  follow_up_notes: string;
+  visit_outcome: string;
+};
+
+export type UpcomingCaseConferenceListItem = {
+  plan_id: number;
+  case_conference_date: string;
+  resident_id: number;
+  resident_case_code: string;
+  plan_status: string | null;
 };

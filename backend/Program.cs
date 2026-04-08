@@ -99,7 +99,12 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddHttpClient<AnthropicSocialPostGenerator>();
 builder.Services.AddHttpClient<GeminiSocialPostGenerator>();
+builder.Services.AddHttpClient<ISocialPublishingService, SocialPublishingService>();
 builder.Services.AddScoped<ISocialPostGenerator, ConfigurableSocialPostGenerator>();
+builder.Services.AddScoped<ISocialConnectionSecretResolver, SocialConnectionSecretResolver>();
+builder.Services.AddHttpClient<MetaGraphSocialPublisher>();
+builder.Services.AddScoped<ISocialPublisher, MetaGraphSocialPublisher>();
+builder.Services.AddHostedService<SocialPublishWorker>();
 
 builder.Services.AddCors(options =>
 {

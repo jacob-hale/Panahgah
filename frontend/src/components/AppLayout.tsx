@@ -81,6 +81,11 @@ export function AppLayout() {
                       </NavLink>
                     </li>
                     <li>
+                      <NavLink className="dropdown-item" to="/admin/visits-and-conferences">
+                        Home visitations &amp; case conferences
+                      </NavLink>
+                    </li>
+                    <li>
                       <NavLink className="dropdown-item" to="/admin/social-insights">
                         Social media insights
                       </NavLink>

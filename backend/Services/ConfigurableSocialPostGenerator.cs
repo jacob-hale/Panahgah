@@ -24,7 +24,9 @@ public sealed class ConfigurableSocialPostGenerator(
 
     private ISocialPostGenerator AutoSelectGenerator()
     {
-        var hasGeminiKey = !string.IsNullOrWhiteSpace(configuration["Llms:GeminiApiKey"] ?? configuration["GEMINI_API_KEY"]);
+        var hasGeminiKey = !string.IsNullOrWhiteSpace(
+            EnvConfigResolver.Resolve("Llms:GeminiApiKey", configuration)
+            ?? EnvConfigResolver.Resolve("GEMINI_API_KEY", configuration));
         if (hasGeminiKey)
         {
             return geminiGenerator;
