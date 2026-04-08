@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -52,8 +53,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(appConnection));
 builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
     options.UseNpgsql(identityConnection));
+builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
+    options.UseNpgsql(identityConnection));
 builder.Services.AddSingleton<DonorMlPipelineService>();
 builder.Services.AddHostedService<DonorMlSchedulerService>();
+
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToDbContext<DataProtectionKeyContext>()
+    .SetApplicationName("Panahgah.Api");
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
     {
@@ -182,6 +190,7 @@ app.UseHttpsRedirection();
 
 app.UseRouting();
 
+// Run CORS early so error responses (e.g. 500) still get Access-Control-Allow-Origin when possible.
 app.UseCors(localFrontendCorsPolicy);
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -215,10 +224,11 @@ END $$;
 
     var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
     await identityDb.Database.MigrateAsync();
+
+    var dataProtectionDb = scope.ServiceProvider.GetRequiredService<DataProtectionKeyContext>();
+    await dataProtectionDb.Database.MigrateAsync();
 }
 
 await AuthIdentityGenerator.SeedAsync(app.Services, app.Configuration);
 
 app.Run();
-
-// Round 2 attempt

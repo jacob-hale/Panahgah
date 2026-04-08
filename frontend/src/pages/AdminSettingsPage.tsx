@@ -20,6 +20,7 @@ type SupporterMe = {
 export function AdminSettingsPage() {
   const { isAuthenticated, isLoading, authSession, refreshSession } = useAuth();
   const [profile, setProfile] = useState<SupporterMe | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     display_name: '',
     first_name: '',
@@ -44,6 +45,7 @@ export function AdminSettingsPage() {
       try {
         const me = await apiFetch<SupporterMe>('/api/supporters/me');
         setProfile(me);
+        setIsEditing(false);
         setForm({
           display_name: me.display_name ?? '',
           first_name: me.first_name ?? '',
@@ -81,6 +83,7 @@ export function AdminSettingsPage() {
         },
       });
       setProfile(updated);
+      setIsEditing(false);
       await refreshSession();
       setSuccess('Settings updated.');
     } catch (e) {
@@ -141,78 +144,106 @@ export function AdminSettingsPage() {
             </div>
             {error && <div className="alert alert-danger">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
-            <form className="d-grid gap-3" onSubmit={handleSave}>
-              <div>
-                <label className="form-label">Display name</label>
-                <input
-                  className="form-control"
-                  value={form.display_name}
-                  onChange={(e) => setForm((p) => ({ ...p, display_name: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="row g-2">
-                <div className="col-md-6">
-                  <label className="form-label">First name</label>
-                  <input
-                    className="form-control"
-                    value={form.first_name}
-                    onChange={(e) => setForm((p) => ({ ...p, first_name: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Last name</label>
-                  <input
-                    className="form-control"
-                    value={form.last_name}
-                    onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="form-label">Phone</label>
-                <input
-                  className="form-control"
-                  value={form.phone}
-                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="form-label">Supporter type</label>
-                <select
-                  className="form-select"
-                  value={form.supporter_type}
-                  onChange={(e) => setForm((p) => ({ ...p, supporter_type: e.target.value }))}
-                >
-                  {PRIMARY_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t.replace('_', ' ')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="row g-2">
-                <div className="col-md-6">
-                  <label className="form-label">Region</label>
-                  <input
-                    className="form-control"
-                    value={form.region}
-                    onChange={(e) => setForm((p) => ({ ...p, region: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Country</label>
-                  <input
-                    className="form-control"
-                    value={form.country}
-                    onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <button className="btn btn-primary" type="submit" disabled={saving}>
-                {saving ? 'Saving…' : 'Save settings'}
+            {!isEditing ? (
+              <button className="btn btn-outline-primary" type="button" onClick={() => setIsEditing(true)}>
+                Edit admin profile
               </button>
-            </form>
+            ) : (
+              <form className="d-grid gap-3" onSubmit={handleSave}>
+                <div>
+                  <label className="form-label">Display name</label>
+                  <input
+                    className="form-control"
+                    value={form.display_name}
+                    onChange={(e) => setForm((p) => ({ ...p, display_name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <label className="form-label">First name</label>
+                    <input
+                      className="form-control"
+                      value={form.first_name}
+                      onChange={(e) => setForm((p) => ({ ...p, first_name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Last name</label>
+                    <input
+                      className="form-control"
+                      value={form.last_name}
+                      onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Phone</label>
+                  <input
+                    className="form-control"
+                    value={form.phone}
+                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Supporter type</label>
+                  <select
+                    className="form-select"
+                    value={form.supporter_type}
+                    onChange={(e) => setForm((p) => ({ ...p, supporter_type: e.target.value }))}
+                  >
+                    {PRIMARY_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t.replace('_', ' ')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <label className="form-label">Region</label>
+                    <input
+                      className="form-control"
+                      value={form.region}
+                      onChange={(e) => setForm((p) => ({ ...p, region: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Country</label>
+                    <input
+                      className="form-control"
+                      value={form.country}
+                      onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="d-flex gap-2">
+                  <button className="btn btn-primary" type="submit" disabled={saving}>
+                    {saving ? 'Saving…' : 'Save settings'}
+                  </button>
+                  <button
+                    className="btn btn-outline-secondary"
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setForm({
+                        display_name: profile.display_name ?? '',
+                        first_name: profile.first_name ?? '',
+                        last_name: profile.last_name ?? '',
+                        phone: profile.phone ?? '',
+                        supporter_type: profile.supporter_type ?? 'individual',
+                        region: profile.region ?? '',
+                        country: profile.country ?? '',
+                      });
+                      setError(null);
+                      setSuccess(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
