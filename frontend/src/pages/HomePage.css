@@ -1,4 +1,4 @@
-.pg-home {
+﻿.pg-home {
   --pg-blue: var(--pg-color-blue);
   --pg-navy: var(--pg-color-navy);
   --pg-gold: var(--pg-color-gold);
@@ -43,13 +43,7 @@
   box-shadow: 0 22px 55px rgba(21, 34, 55, 0.12);
 }
 
-body.theme-dark .pg-hero-visual {
-  background:
-    radial-gradient(1000px 600px at 65% 25%, color-mix(in srgb, var(--pg-blue) 22%, rgba(22, 27, 37, 0.95)) 0%, transparent 62%),
-    radial-gradient(850px 560px at 55% 70%, color-mix(in srgb, var(--pg-pink) 14%, rgba(22, 27, 37, 0.95)) 0%, transparent 66%),
-    radial-gradient(850px 560px at 85% 85%, color-mix(in srgb, var(--pg-gold) 12%, rgba(22, 27, 37, 0.95)) 0%, transparent 70%),
-    linear-gradient(180deg, rgba(22, 27, 37, 0.62) 0%, rgba(22, 27, 37, 0.38) 100%);
-}
+
 
 .pg-hero-visual--uniform {
   width: 100%;
@@ -110,10 +104,7 @@ body.theme-dark .pg-hero-visual {
   padding: 16px 16px 14px;
 }
 
-body.theme-dark .pg-hero-tile {
-  background: rgba(22, 27, 37, 0.62);
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.32);
-}
+
 
 .pg-hero-tile--primary {
   border-color: color-mix(in srgb, var(--pg-blue) 60%, var(--pg-navy));
@@ -124,13 +115,7 @@ body.theme-dark .pg-hero-tile {
   );
 }
 
-body.theme-dark .pg-hero-tile--primary {
-  background: linear-gradient(
-    135deg,
-    rgba(22, 27, 37, 0.72),
-    color-mix(in srgb, var(--pg-blue) 14%, rgba(22, 27, 37, 0.72))
-  );
-}
+
 
 .pg-hero-tile__kpi {
   font-weight: 950;
@@ -156,9 +141,7 @@ body.theme-dark .pg-hero-tile--primary {
   box-shadow: 0 22px 55px rgba(21, 34, 55, 0.12);
 }
 
-body.theme-dark .pg-hero-visual__caption {
-  background: rgba(22, 27, 37, 0.58);
-}
+
 
 .pg-home__headline {
   letter-spacing: -0.02em;
@@ -180,10 +163,7 @@ body.theme-dark .pg-hero-visual__caption {
   backdrop-filter: blur(10px);
 }
 
-body.theme-dark .pg-pill {
-  background: rgba(22, 27, 37, 0.65);
-  border-color: color-mix(in srgb, var(--pg-blue) 32%, transparent);
-}
+
 
 .pg-pill__dot {
   width: 0.5rem;
@@ -228,11 +208,7 @@ body.theme-dark .pg-pill {
   border: 1px solid color-mix(in srgb, var(--pg-sand) 35%, transparent);
 }
 
-body.theme-dark .pg-btn-soft {
-  background: rgba(22, 27, 37, 0.55);
-  border-color: color-mix(in srgb, var(--pg-sand) 18%, transparent);
-  color: var(--bs-body-color);
-}
+
 
 .pg-trust__item {
   min-width: 140px;
@@ -243,9 +219,7 @@ body.theme-dark .pg-btn-soft {
   backdrop-filter: blur(10px);
 }
 
-body.theme-dark .pg-trust__item {
-  background: rgba(22, 27, 37, 0.6);
-}
+
 
 .pg-trust__kpi {
   font-weight: 700;
@@ -265,9 +239,7 @@ body.theme-dark .pg-trust__item {
   height: 100%;
 }
 
-body.theme-dark .pg-hero-image {
-  filter: saturate(1.03) contrast(1.02) brightness(0.95);
-}
+
 
 .pg-hero-image-panel__caption {
   position: absolute;
@@ -282,9 +254,7 @@ body.theme-dark .pg-hero-image {
   box-shadow: 0 22px 55px rgba(21, 34, 55, 0.18);
 }
 
-body.theme-dark .pg-hero-image-panel__caption {
-  background: rgba(22, 27, 37, 0.62);
-}
+
 
 .pg-hero-card {
   border-radius: 22px;
@@ -295,9 +265,7 @@ body.theme-dark .pg-hero-image-panel__caption {
   overflow: hidden;
 }
 
-body.theme-dark .pg-hero-card {
-  background: rgba(22, 27, 37, 0.65);
-}
+
 
 .pg-donate-card {
   border-radius: 24px;
@@ -311,12 +279,7 @@ body.theme-dark .pg-hero-card {
   overflow: hidden;
 }
 
-body.theme-dark .pg-donate-card {
-  background:
-    radial-gradient(700px 420px at 20% 20%, color-mix(in srgb, var(--pg-blue) 20%, rgba(22, 27, 37, 0.95)) 0%, transparent 62%),
-    radial-gradient(700px 420px at 90% 60%, color-mix(in srgb, var(--pg-pink) 12%, rgba(22, 27, 37, 0.95)) 0%, transparent 62%),
-    rgba(22, 27, 37, 0.62);
-}
+
 
 .pg-badge {
   display: inline-flex;
@@ -332,9 +295,7 @@ body.theme-dark .pg-donate-card {
   white-space: nowrap;
 }
 
-body.theme-dark .pg-badge {
-  background: color-mix(in srgb, var(--pg-gold) 14%, rgba(22, 27, 37, 0.8));
-}
+
 
 .pg-donate-band {
   border-top: 1px solid var(--pg-border);
@@ -365,9 +326,7 @@ body.theme-dark .pg-badge {
     border-color 150ms ease;
 }
 
-body.theme-dark .pg-amount {
-  background: rgba(22, 27, 37, 0.52);
-}
+
 
 .pg-amount:hover {
   transform: translateY(-1px);
@@ -387,13 +346,7 @@ body.theme-dark .pg-amount {
     0 0 0 10px color-mix(in srgb, var(--pg-blue) 14%, transparent);
 }
 
-body.theme-dark .pg-amount--active {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--pg-blue) 12%, rgba(22, 27, 37, 0.85)),
-    color-mix(in srgb, var(--pg-sand) 8%, rgba(22, 27, 37, 0.85))
-  );
-}
+
 
 .pg-amount__value {
   font-weight: 900;
@@ -427,9 +380,7 @@ body.theme-dark .pg-amount--active {
   padding: 12px 12px;
 }
 
-body.theme-dark .pg-donate-note {
-  background: rgba(22, 27, 37, 0.52);
-}
+
 
 .pg-donate-note__dot {
   width: 10px;
@@ -447,9 +398,7 @@ body.theme-dark .pg-donate-note {
   box-shadow: 0 14px 30px rgba(21, 34, 55, 0.06);
 }
 
-body.theme-dark .pg-stat-card {
-  background: rgba(22, 27, 37, 0.55);
-}
+
 
 .pg-stat-card__icon {
   width: 40px;
@@ -496,9 +445,7 @@ body.theme-dark .pg-stat-card {
   box-shadow: 0 16px 30px rgba(21, 34, 55, 0.06);
 }
 
-body.theme-dark .pg-highlight {
-  background: rgba(22, 27, 37, 0.55);
-}
+
 
 .pg-feature {
   border-radius: 18px;
@@ -508,9 +455,7 @@ body.theme-dark .pg-highlight {
   box-shadow: 0 14px 30px rgba(21, 34, 55, 0.06);
 }
 
-body.theme-dark .pg-feature {
-  background: rgba(22, 27, 37, 0.55);
-}
+
 
 .pg-feature__step {
   display: inline-flex;
@@ -538,12 +483,7 @@ body.theme-dark .pg-feature {
   box-shadow: var(--pg-shadow);
 }
 
-body.theme-dark .pg-callout {
-  background:
-    radial-gradient(600px 320px at 10% 20%, color-mix(in srgb, var(--pg-blue) 12%, rgba(22, 27, 37, 0.9)) 0%, transparent 62%),
-    radial-gradient(600px 320px at 90% 70%, color-mix(in srgb, var(--pg-pink) 10%, rgba(22, 27, 37, 0.9)) 0%, transparent 62%),
-    rgba(22, 27, 37, 0.55);
-}
+
 
 .pg-testimonials {
   border-radius: 22px;
@@ -555,9 +495,7 @@ body.theme-dark .pg-callout {
   gap: 12px;
 }
 
-body.theme-dark .pg-testimonials {
-  background: rgba(22, 27, 37, 0.55);
-}
+
 
 .pg-quote {
   border-radius: 18px;
@@ -566,9 +504,7 @@ body.theme-dark .pg-testimonials {
   padding: 16px;
 }
 
-body.theme-dark .pg-quote {
-  background: rgba(22, 27, 37, 0.45);
-}
+
 
 .pg-cta {
   border-top: 1px solid var(--pg-border);
@@ -591,3 +527,5 @@ body.theme-dark .pg-quote {
     grid-template-columns: 1fr;
   }
 }
+
+

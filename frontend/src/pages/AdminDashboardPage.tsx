@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 
@@ -157,7 +157,7 @@ export function AdminDashboardPage() {
                   <p className="small text-body-secondary mb-3 flex-grow-1">
                     {metrics.kpis.safehouse_count} safehouses active. Top load: {safehousePreview[0]?.safehouse_name ?? 'N/A'}.
                   </p>
-                  <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/caseload">
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/caseload">
                     Open caseload inventory
                   </Link>
                 </div>
@@ -171,7 +171,7 @@ export function AdminDashboardPage() {
                   <p className="small text-body-secondary mb-3 flex-grow-1">
                     {metrics.kpis.progress_noted_rate_percent.toFixed(1)}% sessions with progress noted.
                   </p>
-                  <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/process-recordings">
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/process-recordings">
                     Open process recordings
                   </Link>
                 </div>
@@ -318,7 +318,7 @@ export function AdminDashboardPage() {
               <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-primary btn-sm"
                   onClick={handleRetrainDonorModels}
                   disabled={training}
                 >
@@ -335,3 +335,6 @@ export function AdminDashboardPage() {
     </div>
   );
 }
+
+
+

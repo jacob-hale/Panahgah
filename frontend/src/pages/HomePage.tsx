@@ -1,4 +1,4 @@
-// recovery
+﻿// recovery
 
 import { Link } from 'react-router-dom';
 import './HomePage.css';
@@ -28,10 +28,10 @@ export function HomePage() {
                 <a className="btn btn-primary btn-lg pg-btn-donate" href="#donate">
                   Donate now
                 </a>
-                <a className="btn btn-outline-primary btn-lg pg-btn-outline" href="#impact">
+                <a className="btn btn-outline-secondary btn-lg pg-btn-outline" href="#impact">
                   See what your gift does
                 </a>
-                <Link className="btn btn-light btn-lg pg-btn-soft" to="/impact-dashboard">
+                <Link className="btn btn-outline-secondary btn-lg pg-btn-soft" to="/impact-dashboard">
                   View impact dashboard
                 </Link>
               </div>
@@ -127,7 +127,7 @@ export function HomePage() {
             <div className="col-md-6 col-lg-3">
               <div className="pg-stat-card h-100">
                 <div className="pg-stat-card__icon pg-icon--gold" aria-hidden="true" />
-                <div className="pg-stat-card__value">3.2×</div>
+                <div className="pg-stat-card__value">3.2Ã—</div>
                 <div className="pg-stat-card__label text-body-secondary">Clearer insights</div>
               </div>
             </div>
@@ -148,7 +148,7 @@ export function HomePage() {
             <div className="col-lg-7">
               <h2 className="h1 fw-semibold mb-2">Donate in seconds.</h2>
               <p className="text-body-secondary mb-0">
-                Choose an amount below — your gift helps fund safe housing, essentials, and recovery support.
+                Choose an amount below â€” your gift helps fund safe housing, essentials, and recovery support.
               </p>
             </div>
             <div className="col-lg-5 text-lg-end">
@@ -192,7 +192,7 @@ export function HomePage() {
                   <div className="pg-donate-note">
                     <div className="pg-donate-note__dot" aria-hidden="true" />
                     <div className="small">
-                      Donations help keep safehouses running — and help residents rebuild.
+                      Donations help keep safehouses running â€” and help residents rebuild.
                     </div>
                   </div>
                 </div>
@@ -260,7 +260,7 @@ export function HomePage() {
               <div className="pg-callout h-100">
                 <h2 className="h3 fw-semibold mb-2">Designed to feel calm and professional.</h2>
                 <p className="text-body-secondary mb-4">
-                  A modern interface with thoughtful spacing, gentle color, and clear hierarchy — so users can move
+                  A modern interface with thoughtful spacing, gentle color, and clear hierarchy â€” so users can move
                   quickly without feeling overwhelmed.
                 </p>
                 <div className="d-flex flex-wrap gap-2">
@@ -278,16 +278,16 @@ export function HomePage() {
               <div className="pg-testimonials h-100">
                 <div className="pg-quote">
                   <p className="mb-2">
-                    “The clearest reporting we’ve ever had — without sacrificing privacy.”
+                    â€œThe clearest reporting weâ€™ve ever had â€” without sacrificing privacy.â€
                   </p>
                   <div className="text-body-secondary small">Program coordinator</div>
                 </div>
                 <div className="pg-quote">
-                  <p className="mb-2">“Simple workflow. Beautiful dashboards. Faster decisions.”</p>
+                  <p className="mb-2">â€œSimple workflow. Beautiful dashboards. Faster decisions.â€</p>
                   <div className="text-body-secondary small">Operations lead</div>
                 </div>
                 <div className="pg-quote">
-                  <p className="mb-2">“Finally, a system that feels modern and trustworthy.”</p>
+                  <p className="mb-2">â€œFinally, a system that feels modern and trustworthy.â€</p>
                   <div className="text-body-secondary small">Partner organization</div>
                 </div>
               </div>
@@ -310,7 +310,7 @@ export function HomePage() {
                 <a className="btn btn-primary btn-lg pg-btn-donate" href="#donate">
                   Donate now
                 </a>
-                <Link className="btn btn-outline-primary btn-lg pg-btn-outline" to="/impact-dashboard">
+                <Link className="btn btn-outline-secondary btn-lg pg-btn-outline" to="/impact-dashboard">
                   View impact
                 </Link>
               </div>
@@ -321,3 +321,5 @@ export function HomePage() {
     </div>
   );
 }
+
+
