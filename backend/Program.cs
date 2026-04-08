@@ -146,6 +146,22 @@ using (var scope = app.Services.CreateScope())
     var appDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await appDb.Database.MigrateAsync();
 
+    // Guardrail: fix Postgres identity/sequence drift that can cause
+    // "23505 duplicate key value violates unique constraint PK_process_recordings"
+    // on inserts (when the sequence lags behind existing rows).
+    await appDb.Database.ExecuteSqlRawAsync(@"
+DO $$
+DECLARE seq text;
+DECLARE max_id bigint;
+BEGIN
+  SELECT pg_get_serial_sequence('process_recordings', 'recording_id') INTO seq;
+  IF seq IS NOT NULL THEN
+    SELECT COALESCE(MAX(recording_id), 0) INTO max_id FROM process_recordings;
+    PERFORM setval(seq, GREATEST(max_id, 1), max_id > 0);
+  END IF;
+END $$;
+");
+
     var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
     await identityDb.Database.MigrateAsync();
 }

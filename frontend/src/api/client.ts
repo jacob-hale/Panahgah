@@ -1,17 +1,31 @@
 function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
-  if (explicit) return explicit;
-  // Dev uses same-origin `/api` via Vite proxy.
-  if (import.meta.env.DEV) return '';
-  // Production fallback: call Railway backend directly.
-  // This avoids broken frontend `/api` reverse-proxy routing.
-  return 'https://panahgah-backend-production.up.railway.app';
+  if (explicit) {
+    // Guardrail: on Railway, prefer same-origin `/api` (reverse-proxied by Nginx).
+    // If someone bakes a different Railway backend URL into the build, browsers may block with CORS.
+    try {
+      if (typeof window !== 'undefined') {
+        const uiHost = window.location.host;
+        const uiIsRailway = uiHost.endsWith('.up.railway.app');
+        const apiHost = new URL(explicit).host;
+        if (uiIsRailway && apiHost !== uiHost) return '';
+      }
+    } catch {
+      // If parsing fails, fall back to explicit.
+    }
+    return explicit;
+  }
+  // Default to same-origin `/api` in both dev and production.
+  // - Dev: Vite proxy forwards `/api` to backend.
+  // - Prod: Nginx proxies `/api` to backend.
+  return '';
 }
 
 function getResolvedApiPath(path: string): string {
-  if (!API_BASE_URL) return path;
-  if (path.startsWith('/')) return `${API_BASE_URL}${path}`;
-  return `${API_BASE_URL}/${path}`;
+  const base = resolveApiBaseUrl();
+  if (!base) return path;
+  if (path.startsWith('/')) return `${base}${path}`;
+  return `${base}/${path}`;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
