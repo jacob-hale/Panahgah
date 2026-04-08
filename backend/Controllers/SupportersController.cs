@@ -6,6 +6,7 @@ using Panahgah.Api.Auth;
 using Panahgah.Api.Contracts;
 using Panahgah.Api.Data;
 using Panahgah.Api.Models;
+using System.Text.Json;
 
 namespace Panahgah.Api.Controllers;
 
@@ -14,7 +15,7 @@ namespace Panahgah.Api.Controllers;
 public class SupportersController(ApplicationDbContext dbContext) : ControllerBase
 {
     [HttpGet("me")]
-    [Authorize(Policy = AuthPolicies.RequireDonor)]
+    [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
     public async Task<IActionResult> GetMyProfile()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -26,6 +27,38 @@ public class SupportersController(ApplicationDbContext dbContext) : ControllerBa
         var supporter = await dbContext.supporters.AsNoTracking()
             .FirstOrDefaultAsync(s => s.identity_user_id == userId);
         return supporter is null ? NotFound() : Ok(supporter);
+    }
+
+    [HttpPut("me")]
+    [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] SupporterSelfUpdateDto request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var supporter = await dbContext.supporters.FirstOrDefaultAsync(s => s.identity_user_id == userId);
+        if (supporter is null)
+        {
+            return NotFound("No supporter profile is linked to this account.");
+        }
+
+        var normalizedInterests = ContributionInterestCatalog.Normalize(request.contribution_interests);
+        var interestsJson = normalizedInterests.Length > 0 ? JsonSerializer.Serialize(normalizedInterests) : null;
+
+        supporter.display_name = request.display_name.Trim();
+        supporter.first_name = request.first_name?.Trim();
+        supporter.last_name = request.last_name?.Trim();
+        supporter.phone = request.phone?.Trim() ?? string.Empty;
+        supporter.supporter_type = request.supporter_type.Trim();
+        supporter.region = request.region?.Trim() ?? string.Empty;
+        supporter.country = request.country?.Trim() ?? string.Empty;
+        supporter.contribution_interests = interestsJson;
+
+        await dbContext.SaveChangesAsync();
+        return Ok(supporter);
     }
 
     [HttpGet]

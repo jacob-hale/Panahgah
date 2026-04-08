@@ -43,3 +43,29 @@ public sealed class SupporterUpsertDto
     /// <summary>Optional JSON array string of interest keys (same as self-signup).</summary>
     public string? contribution_interests { get; set; }
 }
+
+public sealed class SupporterSelfUpdateDto
+{
+    [Required, MaxLength(256)]
+    public string display_name { get; set; } = string.Empty;
+
+    [MaxLength(128)]
+    public string? first_name { get; set; }
+
+    [MaxLength(128)]
+    public string? last_name { get; set; }
+
+    [MaxLength(64)]
+    public string? phone { get; set; }
+
+    [Required, MaxLength(64)]
+    public string supporter_type { get; set; } = string.Empty;
+
+    [MaxLength(128)]
+    public string? region { get; set; }
+
+    [MaxLength(128)]
+    public string? country { get; set; }
+
+    public string[] contribution_interests { get; set; } = [];
+}

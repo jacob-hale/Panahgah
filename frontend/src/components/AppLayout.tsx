@@ -93,6 +93,11 @@ export function AppLayout() {
                         Supporters &amp; donations
                       </NavLink>
                     </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/settings">
+                        Admin settings
+                      </NavLink>
+                    </li>
                   </ul>
                 </li>
               )}
@@ -106,6 +111,11 @@ export function AppLayout() {
                   {authSession?.roles.includes('Donor') && (
                     <Link className="btn btn-outline-secondary btn-sm" to="/account">
                       My account
+                    </Link>
+                  )}
+                  {authSession?.roles.includes('Admin') && (
+                    <Link className="btn btn-outline-secondary btn-sm" to="/admin/settings">
+                      Admin settings
                     </Link>
                   )}
                   <span className="text-body-secondary small d-none d-md-inline">
