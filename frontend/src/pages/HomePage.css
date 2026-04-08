@@ -70,12 +70,11 @@
     linear-gradient(180deg, color-mix(in srgb, var(--pg-blue) 10%, white) 0%, transparent 75%);
 }
 
-.pg-cta {
-  border-top: 1px solid var(--pg-border);
-  background:
-    radial-gradient(900px 520px at 20% 50%, color-mix(in srgb, var(--pg-blue) 22%, white) 0%, transparent 60%),
-    radial-gradient(900px 520px at 80% 60%, color-mix(in srgb, var(--pg-gold) 18%, white) 0%, transparent 60%),
-    linear-gradient(180deg, var(--bs-body-bg) 0%, color-mix(in srgb, var(--pg-gold) 12%, var(--bs-body-bg)) 100%);
+.pg-impact-item {
+  border: 1px solid var(--pg-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 0.9rem 1rem;
 }
 
 @media (max-width: 575.98px) {
