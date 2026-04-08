@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Panahgah.Api.Data;
@@ -11,9 +12,11 @@ using Panahgah.Api.Data;
 namespace Panahgah.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260407213945_AddSocialScheduler")]
+    partial class AddSocialScheduler
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1166,55 +1169,6 @@ namespace Panahgah.Api.Migrations
                     b.HasKey("post_id");
 
                     b.ToTable("social_media_posts", (string)null);
-                });
-
-            modelBuilder.Entity("Panahgah.Api.Models.SocialPlatformConnection", b =>
-                {
-                    b.Property<int>("connection_id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("connection_id"));
-
-                    b.Property<string>("access_token_encrypted")
-                        .HasColumnType("text");
-
-                    b.Property<string>("account_label")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at_utc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("instagram_business_account_id")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("is_active")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("is_placeholder")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("page_id")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("platform")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("token_source")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("");
-
-                    b.Property<DateTime>("updated_at_utc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("connection_id");
-
-                    b.ToTable("social_platform_connections", (string)null);
                 });
 
             modelBuilder.Entity("Panahgah.Api.Models.Supporter", b =>

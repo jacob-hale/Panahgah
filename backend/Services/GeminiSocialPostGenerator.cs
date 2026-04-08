@@ -16,7 +16,8 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
         Model5InsightsResponseDto insights,
         CancellationToken cancellationToken = default)
     {
-        var apiKey = configuration["Llms:GeminiApiKey"] ?? configuration["GEMINI_API_KEY"];
+        var apiKey = EnvConfigResolver.Resolve("Llms:GeminiApiKey", configuration)
+            ?? EnvConfigResolver.Resolve("GEMINI_API_KEY", configuration);
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             throw new InvalidOperationException("Gemini API key is not configured.");

@@ -23,6 +23,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SafehouseMonthlyMetric> safehouse_monthly_metrics => Set<SafehouseMonthlyMetric>();
     public DbSet<PublicImpactSnapshot> public_impact_snapshots => Set<PublicImpactSnapshot>();
     public DbSet<MlInsight> ml_insights => Set<MlInsight>();
+    public DbSet<SocialCampaign> social_campaigns => Set<SocialCampaign>();
+    public DbSet<ScheduledSocialPost> scheduled_social_posts => Set<ScheduledSocialPost>();
+    public DbSet<SocialPlatformConnection> social_platform_connections => Set<SocialPlatformConnection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -147,5 +150,21 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<MlInsight>().HasKey(e => e.insight_id);
         modelBuilder.Entity<MlInsight>().ToTable("ml_insights");
+
+        modelBuilder.Entity<SocialCampaign>().HasKey(e => e.campaign_id);
+        modelBuilder.Entity<SocialCampaign>().ToTable("social_campaigns");
+
+        modelBuilder.Entity<ScheduledSocialPost>().HasKey(e => e.scheduled_post_id);
+        modelBuilder.Entity<ScheduledSocialPost>().ToTable("scheduled_social_posts");
+        modelBuilder.Entity<ScheduledSocialPost>()
+            .HasOne(e => e.campaign)
+            .WithMany(e => e.scheduled_posts)
+            .HasForeignKey(e => e.campaign_id);
+
+        modelBuilder.Entity<SocialPlatformConnection>().HasKey(e => e.connection_id);
+        modelBuilder.Entity<SocialPlatformConnection>().ToTable("social_platform_connections");
+        modelBuilder.Entity<SocialPlatformConnection>()
+            .Property(e => e.token_source)
+            .HasDefaultValue(string.Empty);
     }
 }

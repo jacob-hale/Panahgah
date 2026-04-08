@@ -10,6 +10,16 @@ using Panahgah.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 const string localFrontendCorsPolicy = "LocalFrontendCorsPolicy";
+var appConnection = builder.Configuration.GetConnectionString("PanahgahAppConnection");
+var identityConnection = builder.Configuration.GetConnectionString("PanahgahIdentityConnection");
+
+if (string.IsNullOrWhiteSpace(appConnection) || string.IsNullOrWhiteSpace(identityConnection))
+{
+    throw new InvalidOperationException(
+        "Missing DB connection strings. Set ConnectionStrings:PanahgahAppConnection and " +
+        "ConnectionStrings:PanahgahIdentityConnection in backend/appsettings.Development.json " +
+        "or environment variables.");
+}
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -17,9 +27,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahAppConnection")));
+    options.UseNpgsql(appConnection));
 builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahIdentityConnection")));
+    options.UseNpgsql(identityConnection));
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
     {
@@ -57,7 +67,12 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddHttpClient<AnthropicSocialPostGenerator>();
 builder.Services.AddHttpClient<GeminiSocialPostGenerator>();
+builder.Services.AddHttpClient<ISocialPublishingService, SocialPublishingService>();
 builder.Services.AddScoped<ISocialPostGenerator, ConfigurableSocialPostGenerator>();
+builder.Services.AddScoped<ISocialConnectionSecretResolver, SocialConnectionSecretResolver>();
+builder.Services.AddHttpClient<MetaGraphSocialPublisher>();
+builder.Services.AddScoped<ISocialPublisher, MetaGraphSocialPublisher>();
+builder.Services.AddHostedService<SocialPublishWorker>();
 
 builder.Services.AddCors(options =>
 {

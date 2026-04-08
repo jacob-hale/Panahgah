@@ -380,3 +380,50 @@ public class PublicImpactSnapshot
     public bool is_published { get; set; }
     public DateOnly published_at { get; set; }
 }
+
+public class SocialCampaign
+{
+    public int campaign_id { get; set; }
+    public string campaign_name { get; set; } = string.Empty;
+    public string platform { get; set; } = string.Empty;
+    public string objective { get; set; } = string.Empty;
+    public DateTime start_utc { get; set; }
+    public DateTime? end_utc { get; set; }
+    public string status { get; set; } = "draft";
+    public DateTime created_at_utc { get; set; }
+
+    public ICollection<ScheduledSocialPost> scheduled_posts { get; set; } = new List<ScheduledSocialPost>();
+}
+
+public class ScheduledSocialPost
+{
+    public int scheduled_post_id { get; set; }
+    public int? campaign_id { get; set; }
+    public string platform { get; set; } = string.Empty;
+    public DateTime scheduled_for_utc { get; set; }
+    public string caption { get; set; } = string.Empty;
+    public string? media_url { get; set; }
+    public string status { get; set; } = "scheduled";
+    public int attempt_count { get; set; }
+    public string? error_message { get; set; }
+    public string? platform_post_id { get; set; }
+    public DateTime created_at_utc { get; set; }
+    public DateTime? published_at_utc { get; set; }
+
+    public SocialCampaign? campaign { get; set; }
+}
+
+public class SocialPlatformConnection
+{
+    public int connection_id { get; set; }
+    public string platform { get; set; } = string.Empty;
+    public string account_label { get; set; } = string.Empty;
+    public string page_id { get; set; } = string.Empty;
+    public string? instagram_business_account_id { get; set; }
+    public string token_source { get; set; } = string.Empty;
+    public string? access_token_encrypted { get; set; }
+    public bool is_active { get; set; } = true;
+    public bool is_placeholder { get; set; } = true;
+    public DateTime created_at_utc { get; set; }
+    public DateTime updated_at_utc { get; set; }
+}
