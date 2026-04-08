@@ -66,42 +66,42 @@ export function AppLayout() {
                   </button>
                   <ul className="dropdown-menu" aria-labelledby="adminNavDropdown">
                     <li>
-                      <NavLink className="dropdown-item" to="/admin">
+                      <NavLink end className="dropdown-item staff-portal-dropdown-item" to="/admin">
                         Admin dashboard
                       </NavLink>
                     </li>
                     <li>
-                      <NavLink className="dropdown-item" to="/admin/caseload">
+                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/caseload">
                         Caseload inventory
                       </NavLink>
                     </li>
                     <li>
-                      <NavLink className="dropdown-item" to="/admin/process-recordings">
+                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/process-recordings">
                         Process recordings
                       </NavLink>
                     </li>
                     <li>
-                      <NavLink className="dropdown-item" to="/admin/visits-and-conferences">
+                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/visits-and-conferences">
                         Home visitations &amp; case conferences
                       </NavLink>
                     </li>
                     <li>
-                      <NavLink className="dropdown-item" to="/admin/social-insights">
+                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-insights">
                         Social media insights
                       </NavLink>
                     </li>
                     <li>
-                      <NavLink className="dropdown-item" to="/admin/social-post-studio">
+                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-post-studio">
                         Social post studio
                       </NavLink>
                     </li>
                     <li>
-                      <NavLink className="dropdown-item" to="/admin/supporters">
+                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/supporters">
                         Supporters &amp; donations
                       </NavLink>
                     </li>
                     <li>
-                      <NavLink className="dropdown-item" to="/admin/settings">
+                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/settings">
                         Admin settings
                       </NavLink>
                     </li>

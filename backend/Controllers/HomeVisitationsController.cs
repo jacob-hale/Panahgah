@@ -72,7 +72,7 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
 
     [HttpPost]
     [Authorize(Policy = AuthPolicies.RequireAdmin)]
-    public async Task<IActionResult> Create([FromBody] HomeVisitationUpsertDto request)
+    public async Task<IActionResult> Create([FromBody] HomeVisitationLogDto request)
     {
         var visitType = request.visit_type.Trim();
         if (!HomeVisitationCatalog.IsAllowedVisitType(visitType))
@@ -80,21 +80,97 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
             return BadRequest("Invalid visit_type.");
         }
 
+        var homeEnv = request.home_environment_observation.Trim();
+        if (!HomeVisitationCatalog.IsAllowedHomeEnvironmentObservation(homeEnv))
+        {
+            return BadRequest("Invalid home_environment_observation.");
+        }
+
+        var coop = request.family_cooperation_level.Trim();
+        if (!HomeVisitationCatalog.IsAllowedFamilyCooperationLevel(coop))
+        {
+            return BadRequest("Invalid family_cooperation_level.");
+        }
+
+        var followUp = request.follow_up_action.Trim();
+        if (!HomeVisitationCatalog.IsAllowedFollowUpAction(followUp))
+        {
+            return BadRequest("Invalid follow_up_action.");
+        }
+
+        const string homeOther = "Other (describe below)";
+        const string followOther = "Other (describe below)";
+
+        var homeOtherText = request.home_environment_other?.Trim() ?? string.Empty;
+        if (homeEnv.Equals(homeOther, StringComparison.Ordinal))
+        {
+            if (homeOtherText.Length < 3)
+            {
+                return BadRequest("home_environment_other is required when home_environment_observation is Other.");
+            }
+        }
+
+        var followOtherText = request.follow_up_other_details?.Trim() ?? string.Empty;
+        if (followUp.Equals(followOther, StringComparison.Ordinal))
+        {
+            if (followOtherText.Length < 3)
+            {
+                return BadRequest("follow_up_other_details is required when follow_up_action is Other.");
+            }
+        }
+
+        var residentExists = await dbContext.residents.AsNoTracking()
+            .AnyAsync(r => r.resident_id == request.resident_id);
+        if (!residentExists)
+        {
+            return NotFound("Resident not found.");
+        }
+
+        var observationsParts = new List<string> { $"Home environment: {homeEnv}" };
+        if (homeEnv.Equals(homeOther, StringComparison.Ordinal))
+        {
+            observationsParts.Add(homeOtherText);
+        }
+
+        var additional = request.observations_additional?.Trim() ?? string.Empty;
+        if (additional.Length > 0)
+        {
+            observationsParts.Add($"Additional notes: {additional}");
+        }
+
+        var observations = string.Join("\n\n", observationsParts);
+
+        var followUpNeeded = !followUp.Equals("None", StringComparison.Ordinal);
+        string? followUpNotes = null;
+        if (followUpNeeded)
+        {
+            if (followUp.Equals(followOther, StringComparison.Ordinal))
+            {
+                followUpNotes = followOtherText;
+            }
+            else
+            {
+                followUpNotes = followUp;
+            }
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
         var visitation = new HomeVisitation
         {
             resident_id = request.resident_id,
-            visit_date = request.visit_date,
-            social_worker = request.social_worker.Trim(),
+            visit_date = today,
+            social_worker = HomeVisitationCatalog.DefaultSocialWorker,
             visit_type = visitType,
-            location_visited = request.location_visited.Trim(),
-            family_members_present = request.family_members_present.Trim(),
-            purpose = request.purpose.Trim(),
-            observations = request.observations.Trim(),
-            family_cooperation_level = request.family_cooperation_level.Trim(),
+            location_visited = HomeVisitationCatalog.DefaultLocationVisited,
+            family_members_present = string.Empty,
+            purpose = HomeVisitationCatalog.DefaultPurpose,
+            observations = observations,
+            family_cooperation_level = coop,
             safety_concerns_noted = request.safety_concerns_noted,
-            follow_up_needed = request.follow_up_needed,
-            follow_up_notes = string.IsNullOrWhiteSpace(request.follow_up_notes) ? null : request.follow_up_notes.Trim(),
-            visit_outcome = request.visit_outcome.Trim()
+            follow_up_needed = followUpNeeded,
+            follow_up_notes = string.IsNullOrWhiteSpace(followUpNotes) ? null : followUpNotes,
+            visit_outcome = HomeVisitationCatalog.DefaultVisitOutcome
         };
 
         dbContext.home_visitations.Add(visitation);
@@ -119,4 +195,3 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
             social_worker = v.social_worker
         });
 }
-
