@@ -27,8 +27,56 @@ public static class HomeVisitationCatalog
         "Emergency"
     ];
 
+    /// <summary>Structured home-environment observation; stored in observations with optional additional notes.</summary>
+    public static readonly string[] AllowedHomeEnvironmentObservations =
+    [
+        "Stable, clean, and supportive",
+        "Adequate with minor concerns",
+        "Concerning conditions observed",
+        "Unsafe or unsuitable",
+        "Other (describe below)"
+    ];
+
+    public static readonly string[] AllowedFamilyCooperationLevels =
+    [
+        "Cooperative",
+        "Generally cooperative",
+        "Neutral",
+        "Uncooperative",
+        "Hostile or refused engagement",
+        "Not observed"
+    ];
+
+    /// <summary>Follow-up action presets; "None" maps to follow_up_needed = false.</summary>
+    public static readonly string[] AllowedFollowUpActions =
+    [
+        "None",
+        "Schedule follow-up visit",
+        "Refer to supervisor",
+        "Coordinate with safehouse staff",
+        "External referral",
+        "Emergency escalation",
+        "Other (describe below)"
+    ];
+
+    /// <summary>DB requires non-null strings for fields not collected on the streamlined form.</summary>
+    public const string DefaultSocialWorker = "Unspecified";
+
+    public const string DefaultLocationVisited = "Not specified on form";
+    public const string DefaultPurpose = "Home visitation log (staff portal)";
+    public const string DefaultVisitOutcome = "Recorded via staff portal";
+
     public static bool IsAllowedVisitType(string value) =>
         AllowedVisitTypes.Contains(value, StringComparer.OrdinalIgnoreCase);
+
+    public static bool IsAllowedHomeEnvironmentObservation(string value) =>
+        AllowedHomeEnvironmentObservations.Contains(value, StringComparer.Ordinal);
+
+    public static bool IsAllowedFamilyCooperationLevel(string value) =>
+        AllowedFamilyCooperationLevels.Contains(value, StringComparer.Ordinal);
+
+    public static bool IsAllowedFollowUpAction(string value) =>
+        AllowedFollowUpActions.Contains(value, StringComparer.Ordinal);
 }
 
 
