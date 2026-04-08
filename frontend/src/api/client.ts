@@ -3,7 +3,8 @@ function resolveApiBaseUrl(): string {
   if (explicit) return explicit;
   // Dev: same-origin `/api` is proxied by Vite to the backend (see vite.config.ts).
   if (import.meta.env.DEV) return '';
-  return 'https://localhost:7270';
+  // Prod: prefer same-origin `/api` so Nginx can reverse-proxy without CORS/cookie issues.
+  return '';
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
