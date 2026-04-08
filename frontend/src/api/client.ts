@@ -1,28 +1,31 @@
 function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
   if (explicit) {
-    // Guardrail: in production we strongly prefer same-origin `/api` (reverse-proxied by Nginx).
-    // If someone accidentally bakes a cross-origin Railway backend URL into the frontend build,
-    // browsers will often block cookie-auth requests with CORS. Force same-origin in that case.
+    // Guardrail: on Railway, prefer same-origin `/api` (reverse-proxied by Nginx).
+    // If someone bakes a different Railway backend URL into the build, browsers may block with CORS.
     try {
       if (typeof window !== 'undefined') {
         const uiHost = window.location.host;
         const uiIsRailway = uiHost.endsWith('.up.railway.app');
         const apiHost = new URL(explicit).host;
-        const isCrossOriginRailwayToRailway = uiIsRailway && apiHost !== uiHost;
-        if (isCrossOriginRailwayToRailway) {
-          return '';
-        }
+        if (uiIsRailway && apiHost !== uiHost) return '';
       }
     } catch {
-      // If URL parsing fails, fall back to explicit.
+      // If parsing fails, fall back to explicit.
     }
     return explicit;
   }
   // Default to same-origin `/api` in both dev and production.
-  // - Dev: Vite proxy forwards `/api` to the backend target.
-  // - Prod: keeps requests on the deployed origin unless an explicit API base is configured.
+  // - Dev: Vite proxy forwards `/api` to backend.
+  // - Prod: Nginx proxies `/api` to backend.
   return '';
+}
+
+function getResolvedApiPath(path: string): string {
+  const base = resolveApiBaseUrl();
+  if (!base) return path;
+  if (path.startsWith('/')) return `${base}${path}`;
+  return `${base}/${path}`;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -39,7 +42,7 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(getResolvedApiPath(path), {
       ...rest,
       credentials: 'include',
       headers: {
@@ -52,7 +55,7 @@ export async function apiFetch<T>(
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'Failed to fetch' || err instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure /api is routed to the live backend, or set VITE_API_BASE_URL to the backend URL with correct CORS/HTTPS.',
+        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure VITE_API_BASE_URL points to the live backend URL with correct CORS/HTTPS.',
       );
     }
     throw err;
