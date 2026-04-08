@@ -1,24 +1,11 @@
 function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
-  if (explicit) {
-    // Guardrail: on Railway, prefer same-origin `/api` (reverse-proxied by Nginx).
-    // If someone bakes a different Railway backend URL into the build, browsers may block with CORS.
-    try {
-      if (typeof window !== 'undefined') {
-        const uiHost = window.location.host;
-        const uiIsRailway = uiHost.endsWith('.up.railway.app');
-        const apiHost = new URL(explicit).host;
-        if (uiIsRailway && apiHost !== uiHost) return '';
-      }
-    } catch {
-      // If parsing fails, fall back to explicit.
-    }
-    return explicit;
-  }
-  // Default to same-origin `/api` in both dev and production.
-  // - Dev: Vite proxy forwards `/api` to backend.
-  // - Prod: Nginx proxies `/api` to backend.
-  return '';
+  if (explicit) return explicit;
+  // Dev uses same-origin `/api` via Vite proxy.
+  if (import.meta.env.DEV) return '';
+  // Production fallback: call Railway backend directly.
+  // This avoids relying on frontend `/api` reverse-proxy routing.
+  return 'https://panahgah-backend-production.up.railway.app';
 }
 
 function getResolvedApiPath(path: string): string {
@@ -53,7 +40,7 @@ export async function apiFetch<T>(
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'Failed to fetch' || err instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure VITE_API_BASE_URL points to the live backend URL with correct CORS/HTTPS.',
+        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure VITE_API_BASE_URL points to the live backend URL and that CORS/HTTPS are configured.',
       );
     }
     throw err;
