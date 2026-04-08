@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Panahgah.Api.Data;
 using Panahgah.Api.Models;
 
 namespace Panahgah.Api.Auth;
@@ -11,6 +13,7 @@ public static class AuthIdentityGenerator
 
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var appDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         if (!await roleManager.RoleExistsAsync(AuthRoles.Admin))
         {
@@ -73,5 +76,58 @@ public static class AuthIdentityGenerator
                 throw new InvalidOperationException("Failed to assign Admin role to default Admin user.");
             }
         }
+
+        var adminSupporter = await appDb.supporters.FirstOrDefaultAsync(s => s.identity_user_id == adminUser.Id);
+        if (adminSupporter is null)
+        {
+            adminSupporter = await appDb.supporters.FirstOrDefaultAsync(s => s.email.ToLower() == adminEmail.ToLower());
+        }
+
+        if (adminSupporter is null)
+        {
+            appDb.supporters.Add(new Supporter
+            {
+                identity_user_id = adminUser.Id,
+                supporter_type = "individual",
+                display_name = "Vikram Patel",
+                first_name = "Vikram",
+                last_name = "Patel",
+                relationship_type = "staff_admin",
+                region = "Tamil Nadu",
+                country = "India",
+                email = adminEmail.ToLowerInvariant(),
+                phone = "+91 98765 43210",
+                status = "active",
+                acquisition_channel = "system_seed",
+                created_at = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            adminSupporter.identity_user_id = adminUser.Id;
+            adminSupporter.display_name = "Vikram Patel";
+            adminSupporter.first_name = "Vikram";
+            adminSupporter.last_name = "Patel";
+            adminSupporter.supporter_type = string.IsNullOrWhiteSpace(adminSupporter.supporter_type) ? "individual" : adminSupporter.supporter_type;
+            adminSupporter.relationship_type = string.IsNullOrWhiteSpace(adminSupporter.relationship_type) ? "staff_admin" : adminSupporter.relationship_type;
+            adminSupporter.status = string.IsNullOrWhiteSpace(adminSupporter.status) ? "active" : adminSupporter.status;
+            adminSupporter.email = adminEmail.ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(adminSupporter.phone))
+            {
+                adminSupporter.phone = "+91 98765 43210";
+            }
+
+            if (string.IsNullOrWhiteSpace(adminSupporter.region))
+            {
+                adminSupporter.region = "Tamil Nadu";
+            }
+
+            if (string.IsNullOrWhiteSpace(adminSupporter.country))
+            {
+                adminSupporter.country = "India";
+            }
+        }
+
+        await appDb.SaveChangesAsync();
     }
 }

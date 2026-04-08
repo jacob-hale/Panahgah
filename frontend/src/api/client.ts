@@ -19,6 +19,22 @@ type ApiFetchOptions = RequestInit & {
   jsonBody?: unknown;
 };
 
+function parseApiErrorMessage(text: string, status: number): string {
+  const fallback = text || `Request failed with status ${status}`;
+  if (!text) return fallback;
+
+  try {
+    const parsed = JSON.parse(text) as { error?: unknown; message?: unknown; title?: unknown };
+    if (typeof parsed.error === 'string' && parsed.error.trim()) return parsed.error;
+    if (typeof parsed.message === 'string' && parsed.message.trim()) return parsed.message;
+    if (typeof parsed.title === 'string' && parsed.title.trim()) return parsed.title;
+  } catch {
+    // Not JSON, return text as-is.
+  }
+
+  return fallback;
+}
+
 export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {},
@@ -48,7 +64,7 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Request failed with status ${response.status}`);
+    throw new Error(parseApiErrorMessage(text, response.status));
   }
 
   if (response.status === 204) {
@@ -61,6 +77,8 @@ export async function apiFetch<T>(
 export type SupporterProfileDto = {
   supporter_id: number;
   display_name: string;
+  first_name: string | null;
+  last_name: string | null;
   status: string;
   supporter_type: string;
   email: string;
