@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,40 @@ namespace Panahgah.Api.Controllers;
 public class DonationsController(ApplicationDbContext dbContext) : ControllerBase
 {
     [HttpGet]
-    [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
+    [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public async Task<IActionResult> GetAll()
     {
-        var donations = await dbContext.donations.AsNoTracking().ToListAsync();
+        var donations = await dbContext.donations
+            .AsNoTracking()
+            .Include(d => d.donation_allocations)
+            .OrderByDescending(d => d.donation_date)
+            .ToListAsync();
+        return Ok(donations);
+    }
+
+    [HttpGet("mine")]
+    [Authorize(Policy = AuthPolicies.RequireDonor)]
+    public async Task<IActionResult> GetMine()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var supporter = await dbContext.supporters.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.identity_user_id == userId);
+        if (supporter is null)
+        {
+            return Ok(Array.Empty<Donation>());
+        }
+
+        var donations = await dbContext.donations
+            .AsNoTracking()
+            .Include(d => d.donation_allocations)
+            .Where(d => d.supporter_id == supporter.supporter_id)
+            .OrderByDescending(d => d.donation_date)
+            .ToListAsync();
         return Ok(donations);
     }
 
@@ -24,8 +55,32 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
     [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
     public async Task<IActionResult> GetById(int id)
     {
-        var donation = await dbContext.donations.AsNoTracking().FirstOrDefaultAsync(d => d.donation_id == id);
-        return donation is null ? NotFound() : Ok(donation);
+        var donation = await dbContext.donations
+            .AsNoTracking()
+            .Include(d => d.donation_allocations)
+            .FirstOrDefaultAsync(d => d.donation_id == id);
+        if (donation is null)
+        {
+            return NotFound();
+        }
+
+        if (!User.IsInRole(AuthRoles.Admin))
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Forbid();
+            }
+
+            var supporter = await dbContext.supporters.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.identity_user_id == userId);
+            if (supporter is null || supporter.supporter_id != donation.supporter_id)
+            {
+                return Forbid();
+            }
+        }
+
+        return Ok(donation);
     }
 
     [HttpPost]
@@ -47,6 +102,43 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
             notes = request.notes.Trim(),
             created_by_partner_id = request.created_by_partner_id,
             referral_post_id = request.referral_post_id
+        };
+
+        dbContext.donations.Add(donation);
+        await dbContext.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetById), new { id = donation.donation_id }, donation);
+    }
+
+    [HttpPost("mine")]
+    [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
+    public async Task<IActionResult> CreateMine([FromBody] DonorDonationCreateDto request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var supporter = await dbContext.supporters.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.identity_user_id == userId);
+        if (supporter is null)
+        {
+            return BadRequest("No supporter profile is linked to this account.");
+        }
+
+        var donation = new Donation
+        {
+            supporter_id = supporter.supporter_id,
+            donation_type = "monetary",
+            donation_date = DateOnly.FromDateTime(DateTime.UtcNow),
+            channel_source = "web_simulated_checkout",
+            currency_code = "USD",
+            amount = request.amount,
+            estimated_value = request.amount,
+            impact_unit = "USD",
+            is_recurring = request.is_recurring,
+            campaign_name = request.campaign_name?.Trim(),
+            notes = "Simulated checkout submission (payment processing not yet integrated)."
         };
 
         dbContext.donations.Add(donation);

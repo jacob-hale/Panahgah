@@ -1,0 +1,29 @@
+.pg-donate-page {
+  --pg-blue: var(--pg-color-blue);
+  --pg-navy: var(--pg-color-navy);
+  --pg-gold: var(--pg-color-gold);
+  --pg-border: color-mix(in srgb, var(--pg-navy) 18%, transparent);
+  min-height: 100%;
+}
+
+.pg-donate-panel {
+  border: 1px solid var(--pg-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 1rem;
+}
+
+.pg-amount-btn {
+  font-weight: 600;
+}
+
+.pg-donor-signin {
+  border-top: 1px solid var(--pg-border);
+  padding-top: 1rem;
+}
+
+@media (max-width: 575.98px) {
+  .pg-donate-panel .btn-lg {
+    width: 100%;
+  }
+}

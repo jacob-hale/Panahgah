@@ -4,7 +4,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_BASE_URL
+# Prefer same-origin `/api` in production (served via Nginx reverse proxy).
+# Keep the build arg for rare cases where you explicitly need a full URL.
+ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 

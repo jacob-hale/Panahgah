@@ -61,6 +61,13 @@ public class PartnerAssignment
 public class Supporter
 {
     public int supporter_id { get; set; }
+
+    /// <summary>ASP.NET Identity user id when this supporter has a login account (nullable for legacy/imported rows).</summary>
+    public string? identity_user_id { get; set; }
+
+    /// <summary>JSON array of interest keys from self-service signup (e.g. monetary, volunteer, skills).</summary>
+    public string? contribution_interests { get; set; }
+
     public string supporter_type { get; set; } = string.Empty;
     public string display_name { get; set; } = string.Empty;
     public string? organization_name { get; set; }

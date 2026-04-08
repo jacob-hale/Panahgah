@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
@@ -21,6 +22,27 @@ if (string.IsNullOrWhiteSpace(appConnection) || string.IsNullOrWhiteSpace(identi
         "or environment variables.");
 }
 
+// Railway (and most PaaS) front apps reverse-proxy to the container.
+// Respect X-Forwarded-* so HTTPS redirection and scheme detection behave correctly.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    // In container/PaaS environments, proxy IPs are not known ahead of time.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// Railway expects the app to bind to the port it provides.
+// If PORT is present, bind to 0.0.0.0:$PORT (otherwise use framework defaults).
+var portEnv = Environment.GetEnvironmentVariable("PORT");
+if (int.TryParse(portEnv, out var port) && port is > 0 and < 65536)
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -30,6 +52,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(appConnection));
 builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
     options.UseNpgsql(identityConnection));
+builder.Services.AddSingleton<DonorMlPipelineService>();
+builder.Services.AddHostedService<DonorMlSchedulerService>();
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
     {
@@ -78,26 +102,50 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(localFrontendCorsPolicy, policy =>
     {
-        var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?
+        // Always merge env-configured origins with these defaults. If Railway sets AllowedCorsOrigins
+        // to a partial list, the previous code replaced the whole default list and the production
+        // frontend (https://panahgah.up.railway.app) was missing — browsers then block with CORS.
+        var configuredOrigins = builder.Configuration["AllowedCorsOrigins"]?
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             ?? [];
 
-        if (allowedOrigins.Length == 0)
+        string[] defaultOrigins =
+        [
+            "https://panahgah.up.railway.app",
+            "http://localhost:5173",
+            "https://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://127.0.0.1:5173",
+            "http://localhost:4173",
+            "https://localhost:4173",
+            "http://127.0.0.1:4173",
+            "https://127.0.0.1:4173",
+            "http://localhost:3000",
+            "https://localhost:3000"
+        ];
+
+        var allowedOrigins = defaultOrigins
+            .Concat(configuredOrigins)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        // WithCredentials + cross-origin: browser sends Origin. Railway frontends often use a different
+        // *.up.railway.app hostname than the single string in defaultOrigins; allow any HTTPS Railway app.
+        static bool IsOriginAllowed(string? origin, string[] allowList)
         {
-            allowedOrigins =
-            [
-                "https://panahgah.up.railway.app",
-                "http://localhost:5173",
-                "https://localhost:5173",
-                "http://localhost:4173",
-                "https://localhost:4173",
-                "http://localhost:3000",
-                "https://localhost:3000"
-            ];
+            if (string.IsNullOrWhiteSpace(origin)) return false;
+            foreach (var o in allowList)
+            {
+                if (string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+            if (uri.Scheme != Uri.UriSchemeHttps) return false;
+            return uri.Host.EndsWith(".up.railway.app", StringComparison.OrdinalIgnoreCase);
         }
 
         policy
-            .WithOrigins(allowedOrigins)
+            .SetIsOriginAllowed(origin => IsOriginAllowed(origin, allowedOrigins))
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -107,6 +155,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -115,10 +165,23 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("{\"error\":\"An unexpected error occurred.\"}");
+        });
+    });
+
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+
 app.UseCors(localFrontendCorsPolicy);
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -133,6 +196,22 @@ using (var scope = app.Services.CreateScope())
 {
     var appDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await appDb.Database.MigrateAsync();
+
+    // Guardrail: fix Postgres identity/sequence drift that can cause
+    // "23505 duplicate key value violates unique constraint PK_process_recordings"
+    // on inserts (when the sequence lags behind existing rows).
+    await appDb.Database.ExecuteSqlRawAsync(@"
+DO $$
+DECLARE seq text;
+DECLARE max_id bigint;
+BEGIN
+  SELECT pg_get_serial_sequence('process_recordings', 'recording_id') INTO seq;
+  IF seq IS NOT NULL THEN
+    SELECT COALESCE(MAX(recording_id), 0) INTO max_id FROM process_recordings;
+    PERFORM setval(seq, GREATEST(max_id, 1), max_id > 0);
+  END IF;
+END $$;
+");
 
     var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
     await identityDb.Database.MigrateAsync();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 
@@ -36,6 +36,40 @@ type AdminDashboardMetrics = {
     progress_noted_count: number;
     concerns_flagged_count: number;
   };
+  donor_ml: {
+    donor_lapse: {
+      low_count: number;
+      medium_count: number;
+      high_count: number;
+      top_count: number;
+      top_segments: {
+        supporter_type: string;
+        acquisition_channel: string;
+        avg_score: number;
+      }[];
+    };
+    donor_upgrade: {
+      low_count: number;
+      medium_count: number;
+      high_count: number;
+      top_count: number;
+      ask_ladder_summary: {
+        suggested_ask_floor_avg: number;
+        suggested_ask_ceiling_avg: number;
+      };
+      top_segments: {
+        supporter_type: string;
+        acquisition_channel: string;
+        avg_score: number;
+      }[];
+    };
+    pipeline_health: {
+      status: string;
+      last_trained_at_utc?: string | null;
+      rows_used_lapse: number;
+      rows_used_upgrade: number;
+    };
+  };
 };
 
 function formatDateOnly(value: string): string {
@@ -60,26 +94,47 @@ export function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null);
+  const [training, setTraining] = useState(false);
+  const [trainError, setTrainError] = useState<string | null>(null);
+  const [trainMessage, setTrainMessage] = useState<string | null>(null);
+
+  const loadMetrics = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiFetch<AdminDashboardMetrics>('/api/admin/dashboard-metrics');
+      setMetrics(response);
+    } catch {
+      setError('Unable to load admin metrics. Ensure you are logged in with the required role.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadMetrics = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await apiFetch<AdminDashboardMetrics>('/api/admin/dashboard-metrics');
-        setMetrics(response);
-      } catch {
-        setError('Unable to load admin metrics. Ensure you are logged in with the required role.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     void loadMetrics();
   }, []);
 
+  const handleRetrainDonorModels = async () => {
+    setTraining(true);
+    setTrainError(null);
+    setTrainMessage(null);
+    try {
+      await apiFetch('/api/ml/donor/train', { method: 'POST' });
+      setTrainMessage('Donor models retrained successfully. Dashboard metrics refreshed.');
+      await loadMetrics();
+    } catch (e) {
+      setTrainError(e instanceof Error ? e.message : 'Donor model training failed.');
+    } finally {
+      setTraining(false);
+    }
+  };
+
   const safehousePreview = metrics?.safehouse_resident_breakdown.slice(0, 3) ?? [];
   const upcomingConferenceCount = metrics?.upcoming_case_conferences.length ?? 0;
+  const topLapseSegment = metrics?.donor_ml?.donor_lapse?.top_segments?.[0];
+  const topUpgradeSegment = metrics?.donor_ml?.donor_upgrade?.top_segments?.[0];
+  const donorNotTrained = metrics?.donor_ml?.pipeline_health?.status !== 'ok';
 
   return (
     <div>
@@ -92,104 +147,95 @@ export function AdminDashboardPage() {
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
       {!loading && !error && metrics ? (
-      <div className="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mb-4">
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <h2 className="h6 text-body-secondary">Caseload snapshot</h2>
-              <p className="display-6 mb-2">{metrics.kpis.active_residents_total}</p>
-              <p className="small text-body-secondary mb-3 flex-grow-1">
-                Active residents based on open/active case statuses.
-              </p>
-              <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/caseload">
-                Open caseload inventory
-              </Link>
+        <>
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h6 text-body-secondary">Caseload snapshot</h2>
+                  <p className="display-6 mb-2">{metrics.kpis.active_residents_total}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {metrics.kpis.safehouse_count} safehouses active. Top load: {safehousePreview[0]?.safehouse_name ?? 'N/A'}.
+                  </p>
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/caseload">
+                    Open caseload inventory
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <h2 className="h6 text-body-secondary">Sessions & process</h2>
-              <p className="display-6 mb-2">{metrics.progress_summary.total_sessions}</p>
-              <p className="small text-body-secondary mb-3 flex-grow-1">
-                {metrics.kpis.progress_noted_rate_percent.toFixed(1)}% sessions with progress noted.
-              </p>
-              <Link className="btn btn-outline-primary btn-sm align-self-start" to="/admin/process-recordings">
-                Open process recordings
-              </Link>
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h6 text-body-secondary">Sessions & process</h2>
+                  <p className="display-6 mb-2">{metrics.progress_summary.total_sessions}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {metrics.kpis.progress_noted_rate_percent.toFixed(1)}% sessions with progress noted.
+                  </p>
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/process-recordings">
+                    Open process recordings
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <h2 className="h6 text-body-secondary">Safehouses & capacity</h2>
-              <p className="display-6 mb-2">{metrics.kpis.safehouse_count}</p>
-              <p className="small text-body-secondary mb-3 flex-grow-1">Active residents by safehouse:</p>
-              {safehousePreview.length > 0 ? (
-                <ul className="small ps-3 mb-0">
-                  {safehousePreview.map((item) => (
-                    <li key={item.safehouse_id}>
-                      {item.safehouse_name}: {item.active_residents_count}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="small text-body-secondary">No safehouse data available.</span>
-              )}
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body">
+                  <h2 className="h6 text-body-secondary">Donations pipeline</h2>
+                  <p className="display-6 mb-2">{metrics.kpis.recent_donations_count}</p>
+                  <p className="small text-body-secondary mb-0">
+                    Recent donations total PHP {metrics.kpis.recent_donations_estimated_total.toLocaleString()}.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h2 className="h6 text-body-secondary">Donations pipeline</h2>
-              <p className="display-6 mb-2">{metrics.kpis.recent_donations_count}</p>
-              <p className="small text-body-secondary mb-0">
-                Recent donations total PHP {metrics.kpis.recent_donations_estimated_total.toLocaleString()}.
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h2 className="h6 text-body-secondary">Upcoming case conferences</h2>
-              <p className="display-6 mb-2">{upcomingConferenceCount}</p>
-              <p className="small text-body-secondary mb-0">Scheduled in the next 7 days.</p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h2 className="h6 text-body-secondary">Progress concerns</h2>
-              <p className="display-6 mb-2">{metrics.progress_summary.concerns_flagged_count}</p>
-              <p className="small text-body-secondary mb-0">Sessions currently flagged for concerns.</p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <h2 className="h6 text-body-secondary">ML insights</h2>
-              <p className="display-6 text-muted mb-2">—</p>
-              <p className="small text-body-secondary mb-3 flex-grow-1">
-                Model-backed social insights and AI-assisted post drafting.
-              </p>
-              <div className="d-flex gap-2">
-                <Link className="btn btn-outline-primary btn-sm" to="/admin/social-insights">
-                  Open insights
-                </Link>
-                <Link className="btn btn-primary btn-sm" to="/admin/social-post-studio">
-                  Open post studio
-                </Link>
+            <div className="col-12 col-md-6 col-xl-3">
+              <div className="card shadow-sm h-100">
+                <div className="card-body">
+                  <h2 className="h6 text-body-secondary">Upcoming case conferences</h2>
+                  <p className="display-6 mb-2">{upcomingConferenceCount}</p>
+                  <p className="small text-body-secondary mb-0">Scheduled in the next 7 days.</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-xl-6">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h5 mb-1">Donor lapse risk</h2>
+                  <p className="small text-body-secondary mb-3">High-risk donor prioritization and retention segments.</p>
+                  <p className="display-6 mb-2">{metrics.donor_ml.donor_lapse.high_count}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {donorNotTrained
+                      ? 'Model not trained yet. Retrain to generate ranked donor worklists.'
+                      : `Top segment: ${topLapseSegment ? `${topLapseSegment.supporter_type} / ${topLapseSegment.acquisition_channel}` : 'N/A'}`}
+                  </p>
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/donor-lapse-insights">
+                    View lapse details
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-xl-6">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h5 mb-1">Donor upgrade potential</h2>
+                  <p className="small text-body-secondary mb-3">High-potential upgrade candidates and ask-ladder guidance.</p>
+                  <p className="display-6 mb-2">{metrics.donor_ml.donor_upgrade.high_count}</p>
+                  <p className="small text-body-secondary mb-3 flex-grow-1">
+                    {donorNotTrained
+                      ? 'Model not trained yet. Retrain to generate upgrade opportunity rankings.'
+                      : `Suggested ask avg: ${metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_floor_avg.toLocaleString()}-${metrics.donor_ml.donor_upgrade.ask_ladder_summary.suggested_ask_ceiling_avg.toLocaleString()}`}
+                  </p>
+                  <Link className="btn btn-primary btn-sm align-self-start" to="/admin/donor-upgrade-insights">
+                    View upgrade details
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       ) : null}
 
       {!loading && !error && metrics ? (
@@ -254,6 +300,34 @@ export function AdminDashboardPage() {
                 </div>
               )}
             </div>
+            <div className="col-12">
+              <h2 className="h6 mb-2">Donor MLR pipeline status</h2>
+              <div className="small text-body-secondary">
+                Status: {metrics.donor_ml.pipeline_health.status} | Rows used (lapse/upgrade):{' '}
+                {metrics.donor_ml.pipeline_health.rows_used_lapse}/{metrics.donor_ml.pipeline_health.rows_used_upgrade}
+                {metrics.donor_ml.pipeline_health.last_trained_at_utc
+                  ? ` | Last trained: ${new Date(metrics.donor_ml.pipeline_health.last_trained_at_utc).toLocaleString()}`
+                  : ''}
+              </div>
+              <div className="small text-body-secondary">
+                Top upgrade segment:{' '}
+                {topUpgradeSegment
+                  ? `${topUpgradeSegment.supporter_type} / ${topUpgradeSegment.acquisition_channel}`
+                  : 'N/A'}
+              </div>
+              <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={handleRetrainDonorModels}
+                  disabled={training}
+                >
+                  {training ? 'Retraining donor models...' : 'Retrain donor models'}
+                </button>
+                {trainMessage ? <span className="small text-success">{trainMessage}</span> : null}
+                {trainError ? <span className="small text-danger">{trainError}</span> : null}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -261,3 +335,6 @@ export function AdminDashboardPage() {
     </div>
   );
 }
+
+
+

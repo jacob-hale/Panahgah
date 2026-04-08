@@ -100,8 +100,13 @@ export function ProcessRecordingPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const r = await apiFetch<Resident[]>('/api/residents');
-      setResidents(r);
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('page_size', '0');
+      params.set('sort_field', 'case_control_no');
+      params.set('sort_direction', 'asc');
+      const res = await apiFetch<PagedResponse<Resident>>(`/api/residents?${params.toString()}`);
+      setResidents(res.items);
     } catch {
       setLoadError('Could not load data. Check login and try again.');
     } finally {
@@ -550,14 +555,17 @@ export function ProcessRecordingPage() {
                                 <label className="form-label" htmlFor="stype">
                                   Session type *
                                 </label>
-                                <input
+                                <select
                                   id="stype"
-                                  className="form-control"
+                                  className="form-select"
                                   required
-                                  maxLength={64}
                                   value={sessionForm.session_type}
                                   onChange={(e) => setSessionForm({ ...sessionForm, session_type: e.target.value })}
-                                />
+                                >
+                                  <option value="">Choose…</option>
+                                  <option value="Individual">Individual</option>
+                                  <option value="Group">Group</option>
+                                </select>
                               </div>
                               <div className="col-12">
                                 <label className="form-label" htmlFor="dur">

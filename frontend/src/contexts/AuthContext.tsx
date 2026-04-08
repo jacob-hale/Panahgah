@@ -1,12 +1,31 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { apiFetch, type AuthMeResponse } from '../api/client';
+import { apiFetch, type AuthMeResponse, type SupporterProfileDto } from '../api/client';
+
+export type DonorRegisterPayload = {
+  email: string;
+  password: string;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  primarySupporterType: string;
+  region?: string;
+  country?: string;
+  contributionInterests: string[];
+};
 
 type AuthContextValue = {
   isAuthenticated: boolean;
-  authSession: { email: string | null; roles: string[] } | null;
+  authSession: {
+    email: string | null;
+    roles: string[];
+    supporterId: number | null;
+    supporterProfile: SupporterProfileDto | null;
+  } | null;
   isLoading: boolean;
   refreshSession: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  register: (payload: DonorRegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -22,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await apiFetch<AuthMeResponse>('/api/auth/me');
       setSession(me);
     } catch {
-      setSession({ isAuthenticated: false, email: null, roles: [] });
+      setSession({ isAuthenticated: false, email: null, roles: [], supporterId: null, supporterProfile: null });
     } finally {
       setIsLoading(false);
     }
@@ -43,6 +62,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [refreshSession],
   );
 
+  const register = useCallback(
+    async (payload: DonorRegisterPayload) => {
+      await apiFetch<unknown>('/api/auth/session/register', {
+        method: 'POST',
+        jsonBody: {
+          email: payload.email.trim(),
+          password: payload.password,
+          displayName: payload.displayName.trim(),
+          firstName: payload.firstName?.trim() || null,
+          lastName: payload.lastName?.trim() || null,
+          phone: payload.phone?.trim() || null,
+          primarySupporterType: payload.primarySupporterType.trim(),
+          region: payload.region?.trim() || null,
+          country: payload.country?.trim() || null,
+          contributionInterests: payload.contributionInterests,
+        },
+      });
+      await refreshSession();
+    },
+    [refreshSession],
+  );
+
   const logout = useCallback(async () => {
     try {
       await apiFetch<unknown>('/api/auth/session/logout', {
@@ -57,14 +98,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       isAuthenticated: session?.isAuthenticated ?? false,
       authSession: session
-        ? { email: session.email, roles: session.roles ?? [] }
+        ? {
+            email: session.email,
+            roles: session.roles ?? [],
+            supporterId: session.supporterId ?? null,
+            supporterProfile: session.supporterProfile ?? null,
+          }
         : null,
       isLoading,
       refreshSession,
       login,
+      register,
       logout,
     }),
-    [isLoading, login, logout, refreshSession, session],
+    [isLoading, login, logout, refreshSession, register, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -19,7 +19,6 @@ RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir -r /app/requirements.txt
 
 COPY --from=build /app/publish .
-ENV ASPNETCORE_URLS=http://+:8080
 ENV PATH="/opt/venv/bin:${PATH}"
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Panahgah.Api.dll"]

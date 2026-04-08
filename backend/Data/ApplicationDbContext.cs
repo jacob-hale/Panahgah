@@ -48,6 +48,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<Supporter>().HasKey(e => e.supporter_id);
         modelBuilder.Entity<Supporter>().ToTable("supporters");
+        modelBuilder.Entity<Supporter>()
+            .HasIndex(e => e.identity_user_id)
+            .IsUnique()
+            .HasFilter("identity_user_id IS NOT NULL");
+        modelBuilder.Entity<Supporter>()
+            .HasIndex(e => e.email)
+            .IsUnique();
 
         modelBuilder.Entity<Donation>().HasKey(e => e.donation_id);
         modelBuilder.Entity<Donation>().ToTable("donations");

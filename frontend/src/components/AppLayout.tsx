@@ -1,13 +1,13 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+﻿import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { CookieConsentBanner } from './CookieConsentBanner';
 
 export function AppLayout() {
   const { isAuthenticated, authSession, isLoading, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const profileName = authSession?.supporterProfile?.display_name?.trim();
+  const sessionIdentity = profileName || authSession?.email || 'Signed in';
 
   const handleLogout = async () => {
     await logout();
@@ -15,13 +15,9 @@ export function AppLayout() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      <nav className="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+      <nav className="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
         <div className="container">
-          <Link
-            className="navbar-brand d-inline-flex align-items-center gap-3"
-            to="/"
-            style={{ position: 'relative', top: 6 }}
-          >
+          <Link className="navbar-brand d-inline-flex align-items-center gap-3" to="/">
             <img
               src="/panahgah-logo.png"
               alt="Panahgah"
@@ -31,9 +27,7 @@ export function AppLayout() {
               loading="eager"
               decoding="async"
             />
-            <span className="fw-bold" style={{ fontSize: 32, letterSpacing: '-0.02em' }}>
-              Panahgah
-            </span>
+            <span className="brand-name">Panahgah</span>
           </Link>
           <button
             className="navbar-toggler"
@@ -87,6 +81,11 @@ export function AppLayout() {
                       </NavLink>
                     </li>
                     <li>
+                      <NavLink className="dropdown-item" to="/admin/visits-and-conferences">
+                        Home visitations &amp; case conferences
+                      </NavLink>
+                    </li>
+                    <li>
                       <NavLink className="dropdown-item" to="/admin/social-insights">
                         Social media insights
                       </NavLink>
@@ -96,30 +95,52 @@ export function AppLayout() {
                         Social post studio
                       </NavLink>
                     </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/supporters">
+                        Supporters &amp; donations
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/settings">
+                        Admin settings
+                      </NavLink>
+                    </li>
                   </ul>
                 </li>
               )}
             </ul>
 
             <div className="d-flex align-items-center gap-2">
-              <button type="button" className="btn btn-outline-secondary btn-sm" onClick={toggleTheme}>
-                Theme: {theme === 'light' ? 'Light' : 'Dark'}
-              </button>
               {isLoading ? (
                 <span className="text-body-secondary small">Checking session...</span>
               ) : isAuthenticated ? (
                 <>
-                  <span className="text-body-secondary small">
-                    {authSession?.email} ({authSession?.roles.join(', ') || 'No roles'})
+                  {authSession?.roles.includes('Donor') && (
+                    <Link className="btn btn-outline-secondary btn-sm" to="/account">
+                      My account
+                    </Link>
+                  )}
+                  {authSession?.roles.includes('Admin') && (
+                    <Link className="btn btn-outline-secondary btn-sm" to="/admin/settings">
+                      Admin settings
+                    </Link>
+                  )}
+                  <span className="text-body-secondary small d-none d-md-inline">
+                    {sessionIdentity} ({authSession?.roles.join(', ') || 'No roles'})
                   </span>
-                  <button type="button" className="btn btn-outline-danger btn-sm" onClick={handleLogout}>
+                  <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleLogout}>
                     Logout
                   </button>
                 </>
               ) : (
-                <Link className="btn btn-primary btn-sm" to="/login">
-                  Login
-                </Link>
+                <>
+                  <Link className="btn btn-outline-primary btn-sm" to="/register">
+                    Sign up
+                  </Link>
+                  <Link className="btn btn-primary btn-sm" to="/login">
+                    Login
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -130,10 +151,44 @@ export function AppLayout() {
         <Outlet />
       </main>
 
-      <footer className="border-top py-3 bg-body-tertiary">
-        <div className="container d-flex justify-content-between align-items-center small">
-          <span>Panahgah</span>
-          <Link to="/privacy">Privacy Policy</Link>
+      <footer className="border-top bg-white mt-auto">
+        <div className="container py-4">
+          <div className="row align-items-start g-4">
+            <div className="col-12 col-md-4">
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <img
+                  src="/panahgah-logo.png"
+                  alt="Panahgah"
+                  width={32}
+                  height={32}
+                  style={{ borderRadius: 6, objectFit: 'contain' }}
+                />
+                <span className="fw-bold" style={{ color: 'var(--pg-color-ink)' }}>Panahgah</span>
+              </div>
+              <p className="small text-body-secondary mb-0">
+                Protecting and empowering survivors through technology, data, and compassion.
+              </p>
+            </div>
+
+            <div className="col-6 col-md-4">
+              <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>Platform</p>
+              <ul className="list-unstyled small mb-0">
+                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/impact-dashboard">Impact Dashboard</Link></li>
+                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/admin">Staff Portal</Link></li>
+              </ul>
+            </div>
+
+            <div className="col-6 col-md-4">
+              <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>Legal</p>
+              <ul className="list-unstyled small mb-0">
+                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/privacy">Privacy Policy</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-top mt-4 pt-3">
+            <span className="small text-body-secondary">© {new Date().getFullYear()} Panahgah. All rights reserved.</span>
+          </div>
         </div>
       </footer>
 
@@ -141,3 +196,4 @@ export function AppLayout() {
     </div>
   );
 }
+

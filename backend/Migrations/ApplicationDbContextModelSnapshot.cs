@@ -1229,6 +1229,9 @@ namespace Panahgah.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("contribution_interests")
+                        .HasColumnType("text");
+
                     b.Property<string>("country")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1248,6 +1251,9 @@ namespace Panahgah.Api.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("first_name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("identity_user_id")
                         .HasColumnType("text");
 
                     b.Property<string>("last_name")
@@ -1277,6 +1283,13 @@ namespace Panahgah.Api.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("supporter_id");
+
+                    b.HasIndex("email")
+                        .IsUnique();
+
+                    b.HasIndex("identity_user_id")
+                        .IsUnique()
+                        .HasFilter("identity_user_id IS NOT NULL");
 
                     b.ToTable("supporters", (string)null);
                 });
