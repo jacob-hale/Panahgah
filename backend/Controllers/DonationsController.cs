@@ -109,6 +109,43 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
         return CreatedAtAction(nameof(GetById), new { id = donation.donation_id }, donation);
     }
 
+    [HttpPost("mine")]
+    [Authorize(Policy = AuthPolicies.RequireDonor)]
+    public async Task<IActionResult> CreateMine([FromBody] DonorDonationCreateDto request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var supporter = await dbContext.supporters.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.identity_user_id == userId);
+        if (supporter is null)
+        {
+            return BadRequest("No supporter profile is linked to this account.");
+        }
+
+        var donation = new Donation
+        {
+            supporter_id = supporter.supporter_id,
+            donation_type = "monetary",
+            donation_date = DateOnly.FromDateTime(DateTime.UtcNow),
+            channel_source = "web_simulated_checkout",
+            currency_code = "USD",
+            amount = request.amount,
+            estimated_value = request.amount,
+            impact_unit = "USD",
+            is_recurring = request.is_recurring,
+            campaign_name = request.campaign_name?.Trim(),
+            notes = "Simulated checkout submission (payment processing not yet integrated)."
+        };
+
+        dbContext.donations.Add(donation);
+        await dbContext.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetById), new { id = donation.donation_id }, donation);
+    }
+
     [HttpPut("{id:int}")]
     [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public async Task<IActionResult> Update(int id, [FromBody] DonationUpsertDto request)

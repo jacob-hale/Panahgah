@@ -28,3 +28,15 @@ public class DonationUpsertDto
     public int? created_by_partner_id { get; set; }
     public int? referral_post_id { get; set; }
 }
+
+public sealed class DonorDonationCreateDto
+{
+    [Required, Range(1, 1000000)]
+    public decimal amount { get; set; }
+
+    [Required]
+    public bool is_recurring { get; set; }
+
+    [MaxLength(256)]
+    public string? campaign_name { get; set; }
+}

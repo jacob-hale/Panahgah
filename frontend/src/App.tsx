@@ -10,6 +10,8 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AccountPage } from './pages/AccountPage';
 import { DonatePage } from './pages/DonatePage';
+import { DonateCheckoutPage } from './pages/DonateCheckoutPage';
+import { AdminSettingsPage } from './pages/AdminSettingsPage';
 import { AdminSupportersPage } from './pages/AdminSupportersPage';
 import { AdminSupporterDetailPage } from './pages/AdminSupporterDetailPage';
 import { DonorLapseInsightsPage } from './pages/DonorLapseInsightsPage';
@@ -28,7 +30,11 @@ function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="account" element={<AccountPage />} />
+        <Route path="admin/settings" element={<AdminRoute />}>
+          <Route index element={<AdminSettingsPage />} />
+        </Route>
         <Route path="donate" element={<DonatePage />} />
+        <Route path="donate/checkout" element={<DonateCheckoutPage />} />
         <Route path="impact-dashboard" element={<ImpactDashboardPage />} />
         <Route path="privacy" element={<PrivacyPolicyPage />} />
         <Route path="admin" element={<AdminRoute />}>
