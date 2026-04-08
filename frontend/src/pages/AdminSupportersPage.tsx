@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 
@@ -160,7 +160,7 @@ export function AdminSupportersPage() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       {rows === null ? (
-        <p className="text-body-secondary">Loading…</p>
+        <p className="text-body-secondary">Loadingâ€¦</p>
       ) : (
         <div className="table-responsive">
           <table className="table table-sm table-striped align-middle">
@@ -183,10 +183,10 @@ export function AdminSupportersPage() {
                   <td>{r.email}</td>
                   <td>{r.acquisition_channel}</td>
                   <td className="text-end text-nowrap">
-                    <Link className="btn btn-sm btn-outline-primary me-1" to={`/admin/supporters/${r.supporter_id}`}>
+                    <Link className="btn btn-outline-secondary btn-sm me-1" to={`/admin/supporters/${r.supporter_id}`}>
                       Donations
                     </Link>
-                    <button type="button" className="btn btn-sm btn-outline-secondary me-1" onClick={() => openEdit(r)}>
+                    <button type="button" className="btn btn-outline-secondary btn-sm me-1" onClick={() => openEdit(r)}>
                       Edit
                     </button>
                     <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => remove(r.supporter_id)}>
@@ -329,11 +329,11 @@ export function AdminSupportersPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setModal(null)}>
+                <button type="button" className="btn btn-outline-secondary" onClick={() => setModal(null)}>
                   Cancel
                 </button>
                 <button type="button" className="btn btn-primary" disabled={saving} onClick={() => void save()}>
-                  {saving ? 'Saving…' : 'Save'}
+                  {saving ? 'Savingâ€¦' : 'Save'}
                 </button>
               </div>
             </div>
@@ -343,3 +343,6 @@ export function AdminSupportersPage() {
     </section>
   );
 }
+
+
+

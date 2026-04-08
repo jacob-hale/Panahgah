@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 
@@ -304,7 +304,7 @@ export function ImpactDashboardPage() {
           </p>
         </div>
         <div className="d-flex gap-2">
-          <Link to="/" className="btn btn-success">
+          <Link to="/" className="btn btn-outline-secondary">
             Learn more
           </Link>
           <a href="#donor-impact" className="btn btn-primary">
@@ -380,7 +380,7 @@ export function ImpactDashboardPage() {
                 <span className="small text-body-secondary">Aggregate averages</span>
               </div>
               <p className="text-body-secondary mb-3" style={{ maxWidth: 820 }}>
-                Healing isn’t linear. We track indicators over time so we can improve support and keep residents safe.
+                Healing isnâ€™t linear. We track indicators over time so we can improve support and keep residents safe.
               </p>
             </div>
 
@@ -390,7 +390,7 @@ export function ImpactDashboardPage() {
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <div>
                       <div className="fw-semibold">Average health score</div>
-                      <div className="small text-body-secondary">Across wellbeing check-ins (0–5 scale)</div>
+                      <div className="small text-body-secondary">Across wellbeing check-ins (0â€“5 scale)</div>
                     </div>
                     <div className="fs-4 fw-semibold">{data.outcomes.avg_health_score.toFixed(2)}</div>
                   </div>
@@ -445,7 +445,7 @@ export function ImpactDashboardPage() {
               <StatCard
                 title="High-severity cases"
                 value={formatCompactNumber(safetyHighSeverity)}
-                subtext="Incidents labeled “High” severity"
+                subtext="Incidents labeled â€œHighâ€ severity"
                 icon={<IconShield />}
                 accentClassName="bg-warning-subtle"
               />
@@ -487,7 +487,7 @@ export function ImpactDashboardPage() {
                   <div className="alert alert-primary mt-3 mb-0">
                     <div className="fw-semibold">Giving guide</div>
                     <div className="small">
-                      <span className="fw-semibold">$50</span> supports one resident for one week. (Placeholder — we can calibrate with real program costs.)
+                      <span className="fw-semibold">$50</span> supports one resident for one week. (Placeholder â€” we can calibrate with real program costs.)
                     </div>
                   </div>
                 </div>
@@ -499,7 +499,7 @@ export function ImpactDashboardPage() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-baseline">
                     <div className="fw-semibold">Allocation by program area</div>
-                    <div className="small text-body-secondary">{allocationsTotal ? formatCurrencyPHP(allocationsTotal) : '—'}</div>
+                    <div className="small text-body-secondary">{allocationsTotal ? formatCurrencyPHP(allocationsTotal) : 'â€”'}</div>
                   </div>
                   <div className="mt-3">
                     <div className="progress" style={{ height: 14 }}>
@@ -545,7 +545,7 @@ export function ImpactDashboardPage() {
             <div className="col-12">
               <h2 className="h4 mb-1">Trends over time</h2>
               <p className="text-body-secondary mb-3" style={{ maxWidth: 820 }}>
-                Tracking trends helps us learn what’s working and where we need to invest more support.
+                Tracking trends helps us learn whatâ€™s working and where we need to invest more support.
               </p>
             </div>
 
@@ -579,3 +579,5 @@ export function ImpactDashboardPage() {
     </section>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 
@@ -232,15 +232,15 @@ export function AdminSupporterDetailPage() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       {supporter === null && !error ? (
-        <p className="text-body-secondary">Loading…</p>
+        <p className="text-body-secondary">Loadingâ€¦</p>
       ) : supporter ? (
         <>
           <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
             <div>
               <h1 className="h3 mb-1">{supporter.display_name}</h1>
               <p className="text-body-secondary small mb-0">
-                {supporter.email} · {supporter.supporter_type} · {supporter.status}
-                {supporter.phone ? ` · ${supporter.phone}` : ''}
+                {supporter.email} Â· {supporter.supporter_type} Â· {supporter.status}
+                {supporter.phone ? ` Â· ${supporter.phone}` : ''}
               </p>
             </div>
             <div className="text-end small">
@@ -320,7 +320,7 @@ export function AdminSupporterDetailPage() {
 
           <h2 className="h5 mb-3">Donations &amp; allocations</h2>
           {donations === null ? (
-            <p className="text-body-secondary">Loading…</p>
+            <p className="text-body-secondary">Loadingâ€¦</p>
           ) : donations.length === 0 ? (
             <p className="text-body-secondary">No donations recorded for this supporter yet.</p>
           ) : (
@@ -329,12 +329,12 @@ export function AdminSupporterDetailPage() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between flex-wrap gap-2">
                     <div>
-                      <strong>{d.donation_type}</strong> · {d.donation_date}
+                      <strong>{d.donation_type}</strong> Â· {d.donation_date}
                       <div className="small text-body-secondary">
                         {d.amount != null
                           ? `${d.currency_code ?? ''} ${Number(d.amount).toLocaleString()}`.trim()
                           : `Est. ${Number(d.estimated_value).toLocaleString()} (${d.impact_unit})`}
-                        {' · '}
+                        {' Â· '}
                         {d.channel_source}
                       </div>
                       {d.notes ? <div className="small mt-1">{d.notes}</div> : null}
@@ -350,7 +350,7 @@ export function AdminSupporterDetailPage() {
                   <div className="mt-3">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                       <span className="small fw-semibold">Allocations</span>
-                      <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => openAlloc(d.donation_id)}>
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => openAlloc(d.donation_id)}>
                         Add allocation
                       </button>
                     </div>
@@ -359,7 +359,7 @@ export function AdminSupporterDetailPage() {
                         {d.donation_allocations.map((a) => (
                           <li key={a.allocation_id} className="list-group-item d-flex justify-content-between align-items-start">
                             <div>
-                              <strong>{a.program_area}</strong> — safehouse #{a.safehouse_id} —{' '}
+                              <strong>{a.program_area}</strong> â€” safehouse #{a.safehouse_id} â€”{' '}
                               {Number(a.amount_allocated).toLocaleString()} on {a.allocation_date}
                               {a.allocation_notes ? <div className="small text-body-secondary">{a.allocation_notes}</div> : null}
                             </div>
@@ -402,7 +402,7 @@ export function AdminSupporterDetailPage() {
                   >
                     {safehouses.map((s) => (
                       <option key={s.safehouse_id} value={s.safehouse_id}>
-                        {s.safehouse_code} — {s.name}
+                        {s.safehouse_code} â€” {s.name}
                       </option>
                     ))}
                   </select>
@@ -445,7 +445,7 @@ export function AdminSupporterDetailPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setAllocModal(null)}>
+                <button type="button" className="btn btn-outline-secondary" onClick={() => setAllocModal(null)}>
                   Cancel
                 </button>
                 <button type="button" className="btn btn-primary" onClick={() => void saveAlloc()}>
@@ -459,3 +459,6 @@ export function AdminSupporterDetailPage() {
     </section>
   );
 }
+
+
+

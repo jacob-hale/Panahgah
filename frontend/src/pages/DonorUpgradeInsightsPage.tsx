@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 
@@ -88,7 +88,7 @@ export function DonorUpgradeInsightsPage() {
       <h1 className="h3 mb-2">Donor upgrade insights</h1>
       <p className="text-body-secondary">High-upgrade donor analytics with ask-ladder guidance and model quality metrics.</p>
       <div className="d-flex gap-2 align-items-center mb-3">
-        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={handleRetrain} disabled={training}>
+        <button type="button" className="btn btn-primary btn-sm" onClick={handleRetrain} disabled={training}>
           {training ? 'Retraining...' : 'Retrain donor models'}
         </button>
         {trainError ? <span className="small text-danger">{trainError}</span> : null}
@@ -162,3 +162,6 @@ export function DonorUpgradeInsightsPage() {
     </section>
   );
 }
+
+
+
