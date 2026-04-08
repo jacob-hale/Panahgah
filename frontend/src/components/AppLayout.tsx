@@ -6,6 +6,8 @@ export function AppLayout() {
   const { isAuthenticated, authSession, isLoading, logout } = useAuth();
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const profileName = authSession?.supporterProfile?.display_name?.trim();
+  const sessionIdentity = profileName || authSession?.email || 'Signed in';
 
   const handleLogout = async () => {
     await logout();
@@ -119,7 +121,7 @@ export function AppLayout() {
                     </Link>
                   )}
                   <span className="text-body-secondary small d-none d-md-inline">
-                    {authSession?.email} ({authSession?.roles.join(', ') || 'No roles'})
+                    {sessionIdentity} ({authSession?.roles.join(', ') || 'No roles'})
                   </span>
                   <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleLogout}>
                     Logout

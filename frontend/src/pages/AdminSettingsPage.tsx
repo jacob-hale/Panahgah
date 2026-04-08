@@ -110,6 +110,35 @@ export function AdminSettingsPage() {
       ) : (
         <div className="card shadow-sm">
           <div className="card-body">
+            <div className="mb-4 p-3 rounded border bg-light-subtle">
+              <h2 className="h6 mb-3">Profile identification</h2>
+              <div className="row g-2 small">
+                <div className="col-md-6">
+                  <span className="text-body-secondary">Name:</span>{' '}
+                  <span className="fw-medium">{profile.display_name || 'Not set'}</span>
+                </div>
+                <div className="col-md-6">
+                  <span className="text-body-secondary">Email:</span>{' '}
+                  <span className="fw-medium">{profile.email || 'Not set'}</span>
+                </div>
+                <div className="col-md-6">
+                  <span className="text-body-secondary">Role:</span>{' '}
+                  <span className="fw-medium">{authSession?.roles.join(', ') || 'Admin'}</span>
+                </div>
+                <div className="col-md-6">
+                  <span className="text-body-secondary">Phone:</span>{' '}
+                  <span className="fw-medium">{profile.phone || 'Not set'}</span>
+                </div>
+                <div className="col-md-6">
+                  <span className="text-body-secondary">Region:</span>{' '}
+                  <span className="fw-medium">{profile.region || 'Not set'}</span>
+                </div>
+                <div className="col-md-6">
+                  <span className="text-body-secondary">Country:</span>{' '}
+                  <span className="fw-medium">{profile.country || 'Not set'}</span>
+                </div>
+              </div>
+            </div>
             {error && <div className="alert alert-danger">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
             <form className="d-grid gap-3" onSubmit={handleSave}>

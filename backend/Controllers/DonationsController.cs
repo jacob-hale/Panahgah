@@ -110,7 +110,7 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
     }
 
     [HttpPost("mine")]
-    [Authorize(Policy = AuthPolicies.RequireDonor)]
+    [Authorize(Policy = AuthPolicies.RequireDonorOrAdmin)]
     public async Task<IActionResult> CreateMine([FromBody] DonorDonationCreateDto request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

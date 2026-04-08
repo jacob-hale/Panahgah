@@ -203,6 +203,8 @@ public class AuthController(
                     {
                         supporter.supporter_id,
                         supporter.display_name,
+                        supporter.first_name,
+                        supporter.last_name,
                         supporter.status,
                         supporter.supporter_type,
                         supporter.email,

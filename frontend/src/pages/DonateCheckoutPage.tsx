@@ -12,8 +12,14 @@ export function DonateCheckoutPage() {
 
   const amount = useMemo(() => Number(params.get('amount') ?? '0'), [params]);
   const monthly = useMemo(() => params.get('monthly') === '1', [params]);
+  const hasValidAmount = Number.isFinite(amount) && amount > 0;
 
   const handleSubmit = async () => {
+    if (!hasValidAmount) {
+      setError('Please choose a valid donation amount before checkout.');
+      return;
+    }
+
     if (!isAuthenticated) {
       navigate('/login');
       return;
@@ -49,14 +55,19 @@ export function DonateCheckoutPage() {
               this flow records your donation as a simulated successful submission.
             </p>
             <p className="mb-2">
-              <strong>Amount:</strong> ${amount.toFixed(2)}
+              <strong>Amount:</strong> ${hasValidAmount ? amount.toFixed(2) : '0.00'}
             </p>
             <p className="mb-4">
               <strong>Type:</strong> {monthly ? 'Monthly recurring donation' : 'One-time donation'}
             </p>
             {error && <div className="alert alert-danger">{error}</div>}
             <div className="d-flex gap-2 flex-wrap">
-              <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={submitting || amount <= 0}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSubmit}
+                disabled={submitting || !hasValidAmount}
+              >
                 {submitting ? 'Submitting…' : 'Submit payment (simulated)'}
               </button>
               <Link className="btn btn-outline-secondary" to="/donate">
