@@ -555,14 +555,17 @@ export function ProcessRecordingPage() {
                                 <label className="form-label" htmlFor="stype">
                                   Session type *
                                 </label>
-                                <input
+                                <select
                                   id="stype"
-                                  className="form-control"
+                                  className="form-select"
                                   required
-                                  maxLength={64}
                                   value={sessionForm.session_type}
                                   onChange={(e) => setSessionForm({ ...sessionForm, session_type: e.target.value })}
-                                />
+                                >
+                                  <option value="">Choose…</option>
+                                  <option value="Individual">Individual</option>
+                                  <option value="Group">Group</option>
+                                </select>
                               </div>
                               <div className="col-12">
                                 <label className="form-label" htmlFor="dur">

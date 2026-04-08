@@ -1,6 +1,24 @@
 function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
-  if (explicit) return explicit;
+  if (explicit) {
+    // Guardrail: in production we strongly prefer same-origin `/api` (reverse-proxied by Nginx).
+    // If someone accidentally bakes a cross-origin Railway backend URL into the frontend build,
+    // browsers will often block cookie-auth requests with CORS. Force same-origin in that case.
+    try {
+      if (typeof window !== 'undefined') {
+        const uiHost = window.location.host;
+        const uiIsRailway = uiHost.endsWith('.up.railway.app');
+        const apiHost = new URL(explicit).host;
+        const isCrossOriginRailwayToRailway = uiIsRailway && apiHost !== uiHost;
+        if (isCrossOriginRailwayToRailway) {
+          return '';
+        }
+      }
+    } catch {
+      // If URL parsing fails, fall back to explicit.
+    }
+    return explicit;
+  }
   // Default to same-origin `/api` in both dev and production.
   // - Dev: Vite proxy forwards `/api` to the backend target.
   // - Prod: keeps requests on the deployed origin unless an explicit API base is configured.
