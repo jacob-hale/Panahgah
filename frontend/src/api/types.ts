@@ -208,3 +208,18 @@ export type SocialPostGenerateResponse = {
   rationale: string;
   generated_posts: GeneratedSocialPost[];
 };
+
+export type HomeVisitationListItem = {
+  visitation_id: number;
+  resident_id: number;
+  resident_case_control_no: string;
+  resident_internal_code: string;
+  visit_date: string;
+  visit_type: string;
+  location_visited: string;
+  family_cooperation_level: string;
+  safety_concerns_noted: boolean;
+  follow_up_needed: boolean;
+  visit_outcome: string;
+  social_worker: string;
+};
