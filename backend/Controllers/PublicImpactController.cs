@@ -46,11 +46,14 @@ public sealed class PublicImpactController(ApplicationDbContext dbContext) : Con
         var successfulReintegrationCount = await dbContext.residents.AsNoTracking()
             .CountAsync(r => r.reintegration_status == "Completed");
 
-        var avgHealthScore = await dbContext.health_wellbeing_records.AsNoTracking()
-            .AverageAsync(r => (decimal?)r.general_health_score) ?? 0m;
+        // AverageAsync throws if the table has no rows (common on a fresh prod DB). Guard explicitly.
+        var avgHealthScore = await dbContext.health_wellbeing_records.AsNoTracking().AnyAsync()
+            ? await dbContext.health_wellbeing_records.AsNoTracking().AverageAsync(r => r.general_health_score)
+            : 0m;
 
-        var avgEducationProgress = await dbContext.education_records.AsNoTracking()
-            .AverageAsync(r => (decimal?)r.progress_percent) ?? 0m;
+        var avgEducationProgress = await dbContext.education_records.AsNoTracking().AnyAsync()
+            ? await dbContext.education_records.AsNoTracking().AverageAsync(r => r.progress_percent)
+            : 0m;
 
         var incidentTotal = await dbContext.incident_reports.AsNoTracking().CountAsync();
         var incidentResolved = incidentTotal == 0
@@ -75,20 +78,22 @@ public sealed class PublicImpactController(ApplicationDbContext dbContext) : Con
             .GroupBy(a => a.program_area)
             .Select(g => new PublicImpactProgramAllocationDto
             {
-                program_area = g.Key,
+                program_area = string.IsNullOrWhiteSpace(g.Key) ? "Unspecified" : g.Key,
                 amount_allocated = g.Sum(x => x.amount_allocated)
             })
             .OrderByDescending(x => x.amount_allocated)
             .ToListAsync();
 
         var trends = await dbContext.safehouse_monthly_metrics.AsNoTracking()
-            .GroupBy(m => m.month_start)
+            // Some prod data may contain NULLs despite non-nullable model properties.
+            // Use EF.Property with nullable types to avoid materialization exceptions.
+            .GroupBy(m => EF.Property<DateOnly?>(m, nameof(Models.SafehouseMonthlyMetric.month_start)))
             .Select(g => new PublicImpactTrendPointDto
             {
                 month_start = g.Key,
-                avg_health_score = g.Average(x => x.avg_health_score),
-                avg_education_progress = g.Average(x => x.avg_education_progress),
-                sessions_count = g.Sum(x => x.process_recording_count)
+                avg_health_score = g.Average(x => EF.Property<decimal?>(x, nameof(Models.SafehouseMonthlyMetric.avg_health_score))) ?? 0m,
+                avg_education_progress = g.Average(x => EF.Property<decimal?>(x, nameof(Models.SafehouseMonthlyMetric.avg_education_progress))) ?? 0m,
+                sessions_count = g.Sum(x => EF.Property<int?>(x, nameof(Models.SafehouseMonthlyMetric.process_recording_count))) ?? 0
             })
             .OrderBy(x => x.month_start)
             .ToListAsync();

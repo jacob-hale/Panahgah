@@ -25,7 +25,7 @@ type PublicImpactDashboard = {
     allocations_by_program_area: Array<{ program_area: string; amount_allocated: number }>;
   };
   trends: Array<{
-    month_start: string; // DateOnly -> ISO string
+    month_start: string | null; // DateOnly? -> ISO string
     avg_health_score: number;
     avg_education_progress: number;
     sessions_count: number;
@@ -106,74 +106,6 @@ function StatCard(props: {
           </div>
           {props.subtext ? <div className="small text-body-secondary mt-1">{props.subtext}</div> : null}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ProgressBar(props: { value01: number; label: string; rightLabel?: string }) {
-  const pct = clamp01(props.value01) * 100;
-  return (
-    <div>
-      <div className="d-flex justify-content-between align-items-baseline">
-        <div className="small text-body-secondary">{props.label}</div>
-        {props.rightLabel ? <div className="small text-body-secondary">{props.rightLabel}</div> : null}
-      </div>
-      <div className="progress mt-1" role="progressbar" aria-label={props.label} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-        <div className="progress-bar" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function SimpleLineChart(props: {
-  points: Array<{ xLabel: string; y: number }>;
-  height?: number;
-  strokeClassName?: string;
-  yMin?: number;
-  yMax?: number;
-}) {
-  const height = props.height ?? 96;
-  const width = 560;
-  const padX = 10;
-  const padY = 10;
-
-  const ys = props.points.map(p => p.y).filter(y => Number.isFinite(y));
-  const autoMin = ys.length ? Math.min(...ys) : 0;
-  const autoMax = ys.length ? Math.max(...ys) : 1;
-  const yMin = props.yMin ?? autoMin;
-  const yMax = props.yMax ?? autoMax;
-  const span = yMax - yMin || 1;
-
-  const path = props.points
-    .map((p, i) => {
-      const x = padX + (i * (width - padX * 2)) / Math.max(1, props.points.length - 1);
-      const yNorm = (p.y - yMin) / span;
-      const y = padY + (1 - clamp01(yNorm)) * (height - padY * 2);
-      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(' ');
-
-  const stroke = props.strokeClassName ?? 'text-primary';
-  const last = props.points[props.points.length - 1];
-
-  return (
-    <div>
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-label="Trend line chart">
-        <path d={path} fill="none" className={stroke} stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-        {last ? (
-          <circle
-            cx={padX + ((props.points.length - 1) * (width - padX * 2)) / Math.max(1, props.points.length - 1)}
-            cy={padY + (1 - clamp01((last.y - yMin) / span)) * (height - padY * 2)}
-            r="5"
-            className={stroke}
-            fill="currentColor"
-          />
-        ) : null}
-      </svg>
-      <div className="d-flex justify-content-between small text-body-secondary">
-        <span>{props.points[0]?.xLabel ?? ''}</span>
-        <span>{props.points[props.points.length - 1]?.xLabel ?? ''}</span>
       </div>
     </div>
   );
@@ -279,18 +211,6 @@ export function ImpactDashboardPage() {
     }));
   }, [data, allocationsTotal]);
 
-  const trends = data?.trends ?? [];
-  const last12 = trends.slice(Math.max(0, trends.length - 12));
-  const trendLabels = last12.map(t => {
-    // YYYY-MM-DD -> YYYY-MM
-    const month = t.month_start?.slice(0, 7) ?? '';
-    return month;
-  });
-
-  const healthTrendPoints = last12.map((t, i) => ({ xLabel: trendLabels[i] ?? '', y: t.avg_health_score }));
-  const eduTrendPoints = last12.map((t, i) => ({ xLabel: trendLabels[i] ?? '', y: t.avg_education_progress }));
-  const sessionsTrendPoints = last12.map((t, i) => ({ xLabel: trendLabels[i] ?? '', y: t.sessions_count }));
-
   return (
     <section className="pb-4">
       <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-end justify-content-between gap-3 mb-4">
@@ -372,95 +292,6 @@ export function ImpactDashboardPage() {
             </div>
           </div>
 
-          {/* SECTION 2: OUTCOMES */}
-          <div className="row g-3 mb-4">
-            <div className="col-12">
-              <div className="d-flex align-items-baseline justify-content-between">
-                <h2 className="h4 mb-1">Outcomes: lives changed</h2>
-                <span className="small text-body-secondary">Aggregate averages</span>
-              </div>
-              <p className="text-body-secondary mb-3" style={{ maxWidth: 820 }}>
-                Healing isnâ€™t linear. We track indicators over time so we can improve support and keep residents safe.
-              </p>
-            </div>
-
-            <div className="col-12 col-lg-6">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                      <div className="fw-semibold">Average health score</div>
-                      <div className="small text-body-secondary">Across wellbeing check-ins (0â€“5 scale)</div>
-                    </div>
-                    <div className="fs-4 fw-semibold">{data.outcomes.avg_health_score.toFixed(2)}</div>
-                  </div>
-                  <ProgressBar value01={clamp01(data.outcomes.avg_health_score / 5)} label="Health progress" rightLabel={`${Math.round((data.outcomes.avg_health_score / 5) * 100)}%`} />
-                </div>
-              </div>
-            </div>
-
-            <div className="col-12 col-lg-6">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                      <div className="fw-semibold">Education progress</div>
-                      <div className="small text-body-secondary">Average completion progress across education records</div>
-                    </div>
-                    <div className="fs-4 fw-semibold">{data.outcomes.avg_education_progress_percent.toFixed(1)}%</div>
-                  </div>
-                  <ProgressBar value01={clamp01(data.outcomes.avg_education_progress_percent / 100)} label="Learning milestones" rightLabel={`${Math.round(data.outcomes.avg_education_progress_percent)}%`} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 3: SAFETY & PROTECTION */}
-          <div className="row g-3 mb-4">
-            <div className="col-12">
-              <h2 className="h4 mb-1">Safety & protection</h2>
-              <p className="text-body-secondary mb-3" style={{ maxWidth: 820 }}>
-                Safety is non-negotiable. We document incidents, follow up quickly, and escalate risks to protect every resident.
-              </p>
-            </div>
-
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard
-                title="Incidents reported"
-                value={formatCompactNumber(safetyIncidents)}
-                subtext="All categories, anonymized"
-                icon={<IconShield />}
-              />
-            </div>
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard
-                title="Resolved"
-                value={`${safetyResolvedPct.toFixed(0)}%`}
-                subtext="Incidents marked resolved"
-                icon={<IconCheck />}
-                accentClassName="bg-success-subtle"
-              />
-            </div>
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard
-                title="High-severity cases"
-                value={formatCompactNumber(safetyHighSeverity)}
-                subtext="Incidents labeled â€œHighâ€ severity"
-                icon={<IconShield />}
-                accentClassName="bg-warning-subtle"
-              />
-            </div>
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard
-                title="Referrals made"
-                value={formatCompactNumber(safetyReferrals)}
-                subtext="Sessions resulting in referrals"
-                icon={<IconHeart />}
-                accentClassName="bg-info-subtle"
-              />
-            </div>
-          </div>
-
           {/* SECTION 4: DONOR IMPACT */}
           <div className="row g-3 mb-4" id="donor-impact">
             <div className="col-12">
@@ -487,7 +318,7 @@ export function ImpactDashboardPage() {
                   <div className="alert alert-primary mt-3 mb-0">
                     <div className="fw-semibold">Giving guide</div>
                     <div className="small">
-                      <span className="fw-semibold">$50</span> supports one resident for one week. (Placeholder â€” we can calibrate with real program costs.)
+                      <span className="fw-semibold">$50</span> supports one resident for one week. (Placeholder — we can calibrate with real program costs.)
                     </div>
                   </div>
                 </div>
@@ -499,7 +330,7 @@ export function ImpactDashboardPage() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-baseline">
                     <div className="fw-semibold">Allocation by program area</div>
-                    <div className="small text-body-secondary">{allocationsTotal ? formatCurrencyPHP(allocationsTotal) : 'â€”'}</div>
+                    <div className="small text-body-secondary">{allocationsTotal ? formatCurrencyPHP(allocationsTotal) : '—'}</div>
                   </div>
                   <div className="mt-3">
                     <div className="progress" style={{ height: 14 }}>
@@ -540,40 +371,52 @@ export function ImpactDashboardPage() {
             </div>
           </div>
 
-          {/* SECTION 5: TRENDS OVER TIME */}
-          <div className="row g-3">
+          {/* SECTION 3: SAFETY & PROTECTION */}
+          <div className="row g-3 mb-4">
             <div className="col-12">
-              <h2 className="h4 mb-1">Trends over time</h2>
+              <h2 className="h4 mb-1">Safety & protection</h2>
               <p className="text-body-secondary mb-3" style={{ maxWidth: 820 }}>
-                Tracking trends helps us learn whatâ€™s working and where we need to invest more support.
+                Safety is non-negotiable. We document incidents, follow up quickly, and escalate risks to protect every resident.
               </p>
             </div>
 
-            <div className="col-12 col-lg-4">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <div className="fw-semibold mb-2">Monthly average health</div>
-                  {healthTrendPoints.length ? <SimpleLineChart points={healthTrendPoints} yMin={0} yMax={5} /> : <div className="text-body-secondary small">Not enough data yet.</div>}
-                </div>
-              </div>
+            <div className="col-12 col-md-6 col-lg-3">
+              <StatCard
+                title="Incidents reported"
+                value={formatCompactNumber(safetyIncidents)}
+                subtext="All categories, anonymized"
+                icon={<IconShield />}
+              />
             </div>
-            <div className="col-12 col-lg-4">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <div className="fw-semibold mb-2">Monthly education progress</div>
-                  {eduTrendPoints.length ? <SimpleLineChart points={eduTrendPoints} yMin={0} yMax={100} strokeClassName="text-success" /> : <div className="text-body-secondary small">Not enough data yet.</div>}
-                </div>
-              </div>
+            <div className="col-12 col-md-6 col-lg-3">
+              <StatCard
+                title="Resolved"
+                value={`${safetyResolvedPct.toFixed(0)}%`}
+                subtext="Incidents marked resolved"
+                icon={<IconCheck />}
+                accentClassName="bg-success-subtle"
+              />
             </div>
-            <div className="col-12 col-lg-4">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <div className="fw-semibold mb-2">Sessions per month</div>
-                  {sessionsTrendPoints.length ? <SimpleLineChart points={sessionsTrendPoints} strokeClassName="text-warning" /> : <div className="text-body-secondary small">Not enough data yet.</div>}
-                </div>
-              </div>
+            <div className="col-12 col-md-6 col-lg-3">
+              <StatCard
+                title="High-severity cases"
+                value={formatCompactNumber(safetyHighSeverity)}
+                subtext='Incidents labeled "High" severity'
+                icon={<IconShield />}
+                accentClassName="bg-warning-subtle"
+              />
+            </div>
+            <div className="col-12 col-md-6 col-lg-3">
+              <StatCard
+                title="Referrals made"
+                value={formatCompactNumber(safetyReferrals)}
+                subtext="Sessions resulting in referrals"
+                icon={<IconHeart />}
+                accentClassName="bg-info-subtle"
+              />
             </div>
           </div>
+
         </>
       ) : null}
     </section>
