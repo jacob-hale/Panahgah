@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
@@ -11,6 +12,37 @@ using Panahgah.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 const string localFrontendCorsPolicy = "LocalFrontendCorsPolicy";
+var appConnection = builder.Configuration.GetConnectionString("PanahgahAppConnection");
+var identityConnection = builder.Configuration.GetConnectionString("PanahgahIdentityConnection");
+
+if (string.IsNullOrWhiteSpace(appConnection) || string.IsNullOrWhiteSpace(identityConnection))
+{
+    throw new InvalidOperationException(
+        "Missing DB connection strings. Set ConnectionStrings:PanahgahAppConnection and " +
+        "ConnectionStrings:PanahgahIdentityConnection in backend/appsettings.Development.json " +
+        "or environment variables.");
+}
+
+// Railway (and most PaaS) front apps reverse-proxy to the container.
+// Respect X-Forwarded-* so HTTPS redirection and scheme detection behave correctly.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    // In container/PaaS environments, proxy IPs are not known ahead of time.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// Railway expects the app to bind to the port it provides.
+// If PORT is present, bind to 0.0.0.0:$PORT (otherwise use framework defaults).
+var portEnv = Environment.GetEnvironmentVariable("PORT");
+if (int.TryParse(portEnv, out var port) && port is > 0 and < 65536)
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -18,11 +50,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahAppConnection")));
+    options.UseNpgsql(appConnection));
 builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahIdentityConnection")));
+    options.UseNpgsql(identityConnection));
 builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahIdentityConnection")));
+    options.UseNpgsql(identityConnection));
 builder.Services.AddSingleton<DonorMlPipelineService>();
 builder.Services.AddHostedService<DonorMlSchedulerService>();
 
@@ -126,6 +158,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -134,12 +168,25 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("{\"error\":\"An unexpected error occurred.\"}");
+        });
+    });
+
     app.UseHsts();
 }
 
+app.UseHttpsRedirection();
+
+app.UseRouting();
+
 // Run CORS early so error responses (e.g. 500) still get Access-Control-Allow-Origin when possible.
 app.UseCors(localFrontendCorsPolicy);
-app.UseHttpsRedirection();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
 app.UseAuthentication();
@@ -180,5 +227,3 @@ END $$;
 await AuthIdentityGenerator.SeedAsync(app.Services, app.Configuration);
 
 app.Run();
-
-// Round 2 attempt
