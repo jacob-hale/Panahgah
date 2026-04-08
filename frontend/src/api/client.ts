@@ -4,7 +4,7 @@ function resolveApiBaseUrl(): string {
   // Dev uses same-origin `/api` via Vite proxy.
   if (import.meta.env.DEV) return '';
   // Production fallback: call Railway backend directly.
-  // This avoids broken frontend `/api` reverse-proxy routing.
+  // This avoids relying on frontend `/api` reverse-proxy routing.
   return 'https://panahgah-backend-production.up.railway.app';
 }
 
@@ -41,7 +41,7 @@ export async function apiFetch<T>(
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'Failed to fetch' || err instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure VITE_API_BASE_URL points to the live backend URL with correct CORS/HTTPS.',
+        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure VITE_API_BASE_URL points to the live backend URL and that CORS/HTTPS are configured.',
       );
     }
     throw err;
