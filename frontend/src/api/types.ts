@@ -298,6 +298,8 @@ export type SocialPlatformConnectionUpsertPayload = {
   page_id: string;
   instagram_business_account_id: string | null;
   is_placeholder: boolean;
+};
+
 export type HomeVisitationListItem = {
   visitation_id: number;
   resident_id: number;
