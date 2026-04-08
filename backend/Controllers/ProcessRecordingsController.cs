@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Panahgah.Api.Auth;
 using Panahgah.Api.Contracts;
 using Panahgah.Api.Data;
@@ -129,6 +130,12 @@ public class ProcessRecordingsController(ApplicationDbContext dbContext) : Contr
     [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public async Task<IActionResult> Create([FromBody] ProcessRecordingUpsertDto request)
     {
+        var residentExists = await dbContext.residents.AsNoTracking().AnyAsync(r => r.resident_id == request.resident_id);
+        if (!residentExists)
+        {
+            return BadRequest("Resident not found.");
+        }
+
         var recording = new ProcessRecording
         {
             resident_id = request.resident_id,
@@ -148,7 +155,21 @@ public class ProcessRecordingsController(ApplicationDbContext dbContext) : Contr
         };
 
         dbContext.process_recordings.Add(recording);
-        await dbContext.SaveChangesAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+        {
+            // Map common constraint errors to a 400 so the UI can show a clear message.
+            return pg.SqlState switch
+            {
+                PostgresErrorCodes.ForeignKeyViolation => BadRequest("Invalid resident_id (foreign key)."),
+                PostgresErrorCodes.NotNullViolation => BadRequest("Invalid input (missing required value)."),
+                PostgresErrorCodes.StringDataRightTruncation => BadRequest("Invalid input (text too long)."),
+                _ => Problem("Failed to create process recording due to a database constraint.")
+            };
+        }
         return CreatedAtAction(nameof(GetById), new { id = recording.recording_id }, recording);
     }
 
