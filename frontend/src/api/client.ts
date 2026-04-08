@@ -9,12 +9,11 @@ function resolveApiBaseUrl(): string {
 }
 
 function getResolvedApiPath(path: string): string {
-  if (!API_BASE_URL) return path;
-  if (path.startsWith('/')) return `${API_BASE_URL}${path}`;
-  return `${API_BASE_URL}/${path}`;
+  const base = resolveApiBaseUrl();
+  if (!base) return path;
+  if (path.startsWith('/')) return `${base}${path}`;
+  return `${base}/${path}`;
 }
-
-const API_BASE_URL = resolveApiBaseUrl();
 
 type ApiFetchOptions = RequestInit & {
   jsonBody?: unknown;
