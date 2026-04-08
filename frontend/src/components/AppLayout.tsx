@@ -79,6 +79,11 @@ export function AppLayout() {
                       </NavLink>
                     </li>
                     <li>
+                      <NavLink className="dropdown-item" to="/admin/visits-and-conferences">
+                        Home visitations &amp; case conferences
+                      </NavLink>
+                    </li>
+                    <li>
                       <NavLink className="dropdown-item" to="/admin/social-insights">
                         Social media insights
                       </NavLink>
@@ -91,6 +96,11 @@ export function AppLayout() {
                     <li>
                       <NavLink className="dropdown-item" to="/admin/supporters">
                         Supporters &amp; donations
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink className="dropdown-item" to="/admin/settings">
+                        Admin settings
                       </NavLink>
                     </li>
                   </ul>
@@ -106,6 +116,11 @@ export function AppLayout() {
                   {authSession?.roles.includes('Donor') && (
                     <Link className="btn btn-outline-secondary btn-sm" to="/account">
                       My account
+                    </Link>
+                  )}
+                  {authSession?.roles.includes('Admin') && (
+                    <Link className="btn btn-outline-secondary btn-sm" to="/admin/settings">
+                      Admin settings
                     </Link>
                   )}
                   <span className="text-body-secondary small d-none d-md-inline">
