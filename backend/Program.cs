@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
@@ -20,8 +21,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahAppConnection")));
 builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahIdentityConnection")));
+builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("PanahgahIdentityConnection")));
 builder.Services.AddSingleton<DonorMlPipelineService>();
 builder.Services.AddHostedService<DonorMlSchedulerService>();
+
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToDbContext<DataProtectionKeyContext>()
+    .SetApplicationName("Panahgah.Api");
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
     {
@@ -164,6 +172,9 @@ END $$;
 
     var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
     await identityDb.Database.MigrateAsync();
+
+    var dataProtectionDb = scope.ServiceProvider.GetRequiredService<DataProtectionKeyContext>();
+    await dataProtectionDb.Database.MigrateAsync();
 }
 
 await AuthIdentityGenerator.SeedAsync(app.Services, app.Configuration);

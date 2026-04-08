@@ -17,7 +17,8 @@ public class AuthController(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     RoleManager<IdentityRole> roleManager,
-    ApplicationDbContext appDb) : ControllerBase
+    ApplicationDbContext appDb,
+    ILogger<AuthController> logger) : ControllerBase
 {
     [HttpPost("session/login")]
     [AllowAnonymous]
@@ -27,6 +28,7 @@ public class AuthController(
         var user = await userManager.FindByEmailAsync(normalizedEmail);
         if (user is null)
         {
+            logger.LogWarning("Session login failed: unknown email {Email}.", normalizedEmail);
             return Unauthorized("Invalid email or password.");
         }
 
@@ -38,6 +40,7 @@ public class AuthController(
 
         if (!passwordSignInResult.Succeeded)
         {
+            logger.LogWarning("Session login failed: bad credentials for {Email}.", normalizedEmail);
             return Unauthorized("Invalid email or password.");
         }
 
@@ -215,6 +218,10 @@ public class AuthController(
                     };
                 }
             }
+        }
+        else
+        {
+            logger.LogInformation("Auth me requested without authenticated session.");
         }
 
         return Ok(new
