@@ -18,6 +18,7 @@ import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { ProcessRecordingPage } from './pages/ProcessRecordingPage';
 import { SocialPostStudioPage } from './pages/SocialPostStudioPage';
 import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
+import { VisitsAndConferencesPage } from './pages/VisitsAndConferencesPage';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           <Route path="caseload/:residentId/edit" element={<CaseloadResidentFormPage />} />
           <Route path="caseload" element={<CaseloadInventoryPage />} />
           <Route path="process-recordings" element={<ProcessRecordingPage />} />
+          <Route path="visits-and-conferences" element={<VisitsAndConferencesPage />} />
           <Route path="social-insights" element={<SocialMediaInsightsPage />} />
           <Route path="donor-lapse-insights" element={<DonorLapseInsightsPage />} />
           <Route path="donor-upgrade-insights" element={<DonorUpgradeInsightsPage />} />
