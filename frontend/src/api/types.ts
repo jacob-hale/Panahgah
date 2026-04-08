@@ -224,20 +224,17 @@ export type HomeVisitationListItem = {
   social_worker: string;
 };
 
-export type HomeVisitationUpsertPayload = {
+/** POST /api/home-visitations — controlled vocabulary; server fills other DB columns. */
+export type HomeVisitationLogPayload = {
   resident_id: number;
-  visit_date: string;
-  social_worker: string;
   visit_type: string;
-  location_visited: string;
-  family_members_present: string;
-  purpose: string;
-  observations: string;
+  home_environment_observation: string;
+  home_environment_other?: string | null;
+  observations_additional?: string | null;
   family_cooperation_level: string;
   safety_concerns_noted: boolean;
-  follow_up_needed: boolean;
-  follow_up_notes: string;
-  visit_outcome: string;
+  follow_up_action: string;
+  follow_up_other_details?: string | null;
 };
 
 export type UpcomingCaseConferenceListItem = {
