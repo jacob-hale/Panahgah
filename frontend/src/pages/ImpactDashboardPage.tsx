@@ -25,7 +25,7 @@ type PublicImpactDashboard = {
     allocations_by_program_area: Array<{ program_area: string; amount_allocated: number }>;
   };
   trends: Array<{
-    month_start: string; // DateOnly -> ISO string
+    month_start: string | null; // DateOnly? -> ISO string
     avg_health_score: number;
     avg_education_progress: number;
     sessions_count: number;
@@ -283,7 +283,7 @@ export function ImpactDashboardPage() {
   const last12 = trends.slice(Math.max(0, trends.length - 12));
   const trendLabels = last12.map(t => {
     // YYYY-MM-DD -> YYYY-MM
-    const month = t.month_start?.slice(0, 7) ?? '';
+    const month = typeof t.month_start === 'string' ? t.month_start.slice(0, 7) : '';
     return month;
   });
 
