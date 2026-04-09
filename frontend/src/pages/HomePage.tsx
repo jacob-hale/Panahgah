@@ -5,41 +5,39 @@ export function HomePage() {
   return (
     <div className="pg-home">
       <header className="pg-home__hero pg-fullbleed">
-        <div className="container pg-home__hero-container">
-          <div className="row align-items-center align-items-lg-stretch g-4 g-lg-5">
-            <div className="col-12 col-lg-6 d-lg-flex flex-lg-column justify-content-lg-center">
-              <div className="pg-home__hero-text">
-                <h1 className="display-4 fw-semibold mb-3 pg-home__headline">
-                  Every girl deserves a place where she is safe, seen, and given a future.
-                </h1>
+        <div className="pg-home__hero-layout">
+          <div className="pg-home__hero-content">
+            <div className="pg-home__hero-text">
+              <h1 className="display-4 fw-semibold mb-3 pg-home__headline">
+                Every girl deserves a place where she is safe, seen, and given a future.
+              </h1>
 
-                <p className="lead mb-4 pg-home__hero-lead">
-                  Panahgah provides refuge, healing, and hope for girls who have experienced abuse—offering not just
-                  safety, but a path forward.
-                </p>
+              <p className="lead mb-4 pg-home__hero-lead">
+                Panahgah provides refuge, healing, and hope for girls who have experienced abuse—offering not just
+                safety, but a path forward.
+              </p>
 
-                <div className="d-flex flex-wrap gap-2 pg-hero-ctas">
-                  <Link className="btn btn-primary btn-lg" to="/donate">
-                    Support a Life
-                  </Link>
-                  <Link className="btn btn-outline-primary btn-lg" to="/impact-dashboard">
-                    See the Impact
-                  </Link>
-                </div>
+              <div className="d-flex flex-wrap gap-2 pg-hero-ctas">
+                <Link className="btn btn-primary btn-lg" to="/donate">
+                  Support a Life
+                </Link>
+                <Link className="btn btn-outline-primary btn-lg" to="/impact-dashboard">
+                  See the Impact
+                </Link>
               </div>
             </div>
-            <div className="col-12 col-lg-6 d-flex pg-home__hero-visual-col">
-              <figure className="pg-home__hero-figure w-100 mb-0">
-                <img
-                  className="pg-home__hero-img"
-                  src="/img/floating-diya-dusk-river.png"
-                  alt="A small oil lamp floats on still water at dusk; warm light reflects gently on the surface."
-                  width={1536}
-                  height={1024}
-                  loading="eager"
-                  decoding="async"
-                />
-              </figure>
+          </div>
+          <div className="pg-home__hero-media">
+            <div className="pg-home__hero-image-wrap">
+              <img
+                className="pg-home__hero-img"
+                src="/img/floating-diya-dusk-river.png"
+                alt="A small oil lamp floats on still water at dusk; warm light reflects gently on the surface."
+                width={1536}
+                height={1024}
+                loading="eager"
+                decoding="async"
+              />
             </div>
           </div>
         </div>
