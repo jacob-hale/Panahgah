@@ -1,11 +1,9 @@
 function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
   if (explicit) return explicit;
-  // Dev uses same-origin `/api` via Vite proxy.
-  if (import.meta.env.DEV) return '';
-  // Production fallback: call Railway backend directly.
-  // This avoids relying on frontend `/api` reverse-proxy routing.
-  return 'https://panahgah-backend-production.up.railway.app';
+  // Default to same-origin so deployments can proxy `/api` from the web server (e.g., Nginx).
+  // This keeps auth cookies first-party and works with a strict `connect-src 'self'` CSP.
+  return '';
 }
 
 function getResolvedApiPath(path: string): string {
