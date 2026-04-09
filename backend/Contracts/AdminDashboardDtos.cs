@@ -16,6 +16,10 @@ public sealed class AdminDashboardKpisDto
     public int safehouse_count { get; set; }
     public int recent_donations_count { get; set; }
     public decimal recent_donations_estimated_total { get; set; }
+    public decimal donations_lifetime_amount_total { get; set; }
+    public decimal donations_lifetime_estimated_total { get; set; }
+    public decimal donations_last_30_days_amount_total { get; set; }
+    public decimal donations_last_30_days_estimated_total { get; set; }
     public decimal progress_noted_rate_percent { get; set; }
 }
 

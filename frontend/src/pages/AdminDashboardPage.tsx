@@ -8,6 +8,10 @@ type AdminDashboardMetrics = {
     safehouse_count: number;
     recent_donations_count: number;
     recent_donations_estimated_total: number;
+    donations_lifetime_amount_total: number;
+    donations_lifetime_estimated_total: number;
+    donations_last_30_days_amount_total: number;
+    donations_last_30_days_estimated_total: number;
     progress_noted_rate_percent: number;
   };
   safehouse_resident_breakdown: {
@@ -135,6 +139,7 @@ export function AdminDashboardPage() {
   const topLapseSegment = metrics?.donor_ml?.donor_lapse?.top_segments?.[0];
   const topUpgradeSegment = metrics?.donor_ml?.donor_upgrade?.top_segments?.[0];
   const donorNotTrained = metrics?.donor_ml?.pipeline_health?.status !== 'ok';
+  const currencyFormatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
 
   return (
     <div>
@@ -194,6 +199,41 @@ export function AdminDashboardPage() {
                   <h2 className="h6 text-body-secondary">Upcoming case conferences</h2>
                   <p className="display-6 mb-2">{upcomingConferenceCount}</p>
                   <p className="small text-body-secondary mb-0">Scheduled in the next 7 days.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-xl-6">
+              <div className="card shadow-sm h-100 border-primary-subtle">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h5 mb-1">Total donations (OKR)</h2>
+                  <p className="small text-body-secondary mb-2">
+                    Primary success metric: funds raised to sustain resident care and operations.
+                  </p>
+                  <p className="display-6 mb-2">
+                    {currencyFormatter.format(metrics.kpis.donations_lifetime_amount_total)}
+                  </p>
+                  <p className="small text-body-secondary mb-0">
+                    Amount: {currencyFormatter.format(metrics.kpis.donations_lifetime_amount_total)} | Estimated:{' '}
+                    {currencyFormatter.format(metrics.kpis.donations_lifetime_estimated_total)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-xl-6">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="h5 mb-1">Donations (last 30 days)</h2>
+                  <p className="small text-body-secondary mb-2">Recent fundraising momentum over the rolling last 30 days.</p>
+                  <p className="display-6 mb-2">
+                    {currencyFormatter.format(metrics.kpis.donations_last_30_days_amount_total)}
+                  </p>
+                  <p className="small text-body-secondary mb-0">
+                    Amount: {currencyFormatter.format(metrics.kpis.donations_last_30_days_amount_total)} | Estimated:{' '}
+                    {currencyFormatter.format(metrics.kpis.donations_last_30_days_estimated_total)}
+                  </p>
                 </div>
               </div>
             </div>
