@@ -12,6 +12,7 @@ public sealed class HomeVisitationListItemDto
     public required string family_cooperation_level { get; init; }
     public bool safety_concerns_noted { get; init; }
     public bool follow_up_needed { get; init; }
+    public required string observations { get; init; }
     public required string visit_outcome { get; init; }
     public required string social_worker { get; init; }
 }

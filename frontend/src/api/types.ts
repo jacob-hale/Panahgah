@@ -311,6 +311,7 @@ export type HomeVisitationListItem = {
   family_cooperation_level: string;
   safety_concerns_noted: boolean;
   follow_up_needed: boolean;
+  observations: string;
   visit_outcome: string;
   social_worker: string;
 };

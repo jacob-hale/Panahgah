@@ -161,6 +161,7 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
             family_cooperation_level = v.family_cooperation_level,
             safety_concerns_noted = v.safety_concerns_noted,
             follow_up_needed = v.follow_up_needed,
+            observations = v.observations,
             visit_outcome = v.visit_outcome,
             social_worker = v.social_worker
         });
