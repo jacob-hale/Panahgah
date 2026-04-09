@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminRoute } from './components/admin/AdminRoute';
+import { DonorRoute } from './components/donor/DonorRoute';
 import { AppLayout } from './components/AppLayout';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CaseloadInventoryPage } from './pages/CaseloadInventoryPage';
@@ -22,6 +23,7 @@ import { SocialPostStudioPage } from './pages/SocialPostStudioPage';
 import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
 import { VisitsAndConferencesPage } from './pages/VisitsAndConferencesPage';
 import { GirlsReintegrationInsightsPage } from './pages/GirlsReintegrationInsightsPage';
+import { ReportsAnalyticsPage } from './pages/ReportsAnalyticsPage';
 
 function App() {
   return (
@@ -30,7 +32,9 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
-        <Route path="account" element={<AccountPage />} />
+        <Route path="account" element={<DonorRoute />}>
+          <Route index element={<AccountPage />} />
+        </Route>
         <Route path="admin/settings" element={<AdminRoute />}>
           <Route index element={<AdminSettingsPage />} />
         </Route>
@@ -49,6 +53,7 @@ function App() {
           <Route path="donor-lapse-insights" element={<DonorLapseInsightsPage />} />
           <Route path="donor-upgrade-insights" element={<DonorUpgradeInsightsPage />} />
           <Route path="girls-reintegration-insights" element={<GirlsReintegrationInsightsPage />} />
+          <Route path="reports-analytics" element={<ReportsAnalyticsPage />} />
           <Route path="social-post-studio" element={<SocialPostStudioPage />} />
           <Route path="supporters" element={<AdminSupportersPage />} />
           <Route path="supporters/:supporterId" element={<AdminSupporterDetailPage />} />

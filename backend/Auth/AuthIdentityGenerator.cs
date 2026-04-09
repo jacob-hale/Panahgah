@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Panahgah.Api.Data;
 using Panahgah.Api.Models;
 
@@ -11,6 +12,7 @@ public static class AuthIdentityGenerator
     {
         using var scope = serviceProvider.CreateScope();
 
+        var environment = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var appDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -33,8 +35,27 @@ public static class AuthIdentityGenerator
             }
         }
 
-        var adminEmail = configuration["AuthSeed:AdminEmail"] ?? "admin@panahgah.local";
-        var adminPassword = configuration["AuthSeed:AdminPassword"] ?? "change-this-admin-password";
+        const string defaultAdminEmail = "admin@panahgah.local";
+        const string defaultAdminPassword = "change-this-admin-password";
+
+        var adminEmail = configuration["AuthSeed:AdminEmail"];
+        var adminPassword = configuration["AuthSeed:AdminPassword"];
+
+        // Avoid creating or resetting privileged credentials in non-development environments unless
+        // they are explicitly provided via env/secrets configuration.
+        if (!environment.IsDevelopment())
+        {
+            if (string.IsNullOrWhiteSpace(adminEmail)
+                || string.IsNullOrWhiteSpace(adminPassword)
+                || string.Equals(adminEmail, defaultAdminEmail, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(adminPassword, defaultAdminPassword, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        adminEmail ??= defaultAdminEmail;
+        adminPassword ??= defaultAdminPassword;
 
         var adminUser = await userManager.FindByEmailAsync(adminEmail);
         if (adminUser is null)

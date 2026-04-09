@@ -83,7 +83,7 @@ export function AppLayout() {
                       </li>
                       <li>
                         <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/visits-and-conferences">
-                          Home visitations &amp; case conferences
+                          Visitations and Conferences
                         </NavLink>
                       </li>
                     </ul>
@@ -117,6 +117,11 @@ export function AppLayout() {
                       <li>
                         <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/girls-reintegration-insights">
                           Girls reintegration insights
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/reports-analytics">
+                          Reports &amp; Analytics
                         </NavLink>
                       </li>
                     </ul>

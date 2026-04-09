@@ -311,24 +311,21 @@ export type HomeVisitationListItem = {
   family_cooperation_level: string;
   safety_concerns_noted: boolean;
   follow_up_needed: boolean;
+  observations: string;
   visit_outcome: string;
   social_worker: string;
 };
 
-export type HomeVisitationUpsertPayload = {
+/** POST /api/home-visitations — controlled vocabulary; server fills other DB columns. */
+export type HomeVisitationLogPayload = {
   resident_id: number;
-  visit_date: string;
-  social_worker: string;
   visit_type: string;
-  location_visited: string;
-  family_members_present: string;
-  purpose: string;
-  observations: string;
+  home_environment_observation: string;
+  home_environment_other?: string | null;
+  observations_additional?: string | null;
   family_cooperation_level: string;
   safety_concerns_noted: boolean;
   follow_up_needed: boolean;
-  follow_up_notes: string;
-  visit_outcome: string;
 };
 
 export type UpcomingCaseConferenceListItem = {
@@ -337,4 +334,42 @@ export type UpcomingCaseConferenceListItem = {
   resident_id: number;
   resident_case_code: string;
   plan_status: string | null;
+};
+
+/** GET /api/admin/reports/analytics */
+export type AdminReportsAnalytics = {
+  beneficiaries: {
+    residents_total: number;
+    residents_active: number;
+  };
+  outcomes: {
+    avg_health_score: number;
+    avg_education_progress_percent: number;
+  };
+  reintegration: {
+    completed_count: number;
+    with_status_count: number;
+    completion_rate: number;
+  };
+  donation_trend_monthly: Array<{
+    month_start: string;
+    amount_sum: number;
+    estimated_value_sum: number;
+  }>;
+  network_monthly_trends: Array<{
+    month_start: string | null;
+    avg_health_score: number;
+    avg_education_progress: number;
+    sessions_count: number;
+  }>;
+  safehouse_performance: Array<{
+    safehouse_id: number;
+    safehouse_name: string;
+    metric_month: string;
+    active_residents: number;
+    avg_health_score: number;
+    avg_education_progress: number;
+    process_recording_count: number;
+  }>;
+  total_process_recordings: number;
 };

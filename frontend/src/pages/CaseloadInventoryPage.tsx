@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 import type { PagedResponse, Resident, Safehouse } from '../api/types';
@@ -153,6 +153,13 @@ export function CaseloadInventoryPage() {
     };
   }, [canPaginate, page, totalPages]);
 
+  const handleResidentRowKeyDown = (e: KeyboardEvent<HTMLTableRowElement>, r: Resident) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setSelectedResidentForDetails(r);
+    }
+  };
+
   return (
     <div>
       <nav aria-label="breadcrumb" className="mb-3">
@@ -166,7 +173,25 @@ export function CaseloadInventoryPage() {
         </ol>
       </nav>
 
-      <h1 className="h3 mb-4">Caseload inventory</h1>
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h1 className="h3 mb-0">Caseload inventory</h1>
+        {!listLoading && !listError && (
+          <div className="d-flex align-items-center gap-2 ms-auto">
+            <Link to="/admin/caseload/new" className="btn btn-primary">
+              Add resident
+            </Link>
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              aria-expanded={isFiltersOpen}
+              aria-controls="caseload-filters-collapse"
+              onClick={() => setIsFiltersOpen((v) => !v)}
+            >
+              Filters
+            </button>
+          </div>
+        )}
+      </div>
 
       {listLoading ? (
         <div className="d-flex justify-content-center py-4">
@@ -178,40 +203,14 @@ export function CaseloadInventoryPage() {
         <div className="alert alert-danger">{listError}</div>
       ) : (
         <>
-          <div className="row g-4">
-            {/* Left column: add shortcut + filters */}
-            <div className="col-12 col-lg-3 order-1 order-lg-1">
-              <div className="card shadow-sm mb-4">
-                <div className="card-body d-grid gap-2">
-                  <h2 className="h6 card-title panahgah-heading mb-0">Residents</h2>
-                  <Link to="/admin/caseload/new" className="btn btn-primary">
-                    Add resident
-                  </Link>
-                  <p className="small text-body-secondary mb-0">
-                    Create or edit a resident on a full page with all case fields.
-                  </p>
-                </div>
-              </div>
-              <div className="accordion" id="caseloadAccordion">
-                <div className="accordion-item">
-                  <h2 className="accordion-header" id="filtersHeading">
-                    <button
-                      className={`accordion-button panahgah-heading ${isFiltersOpen ? '' : 'collapsed'}`}
-                      type="button"
-                      aria-expanded={isFiltersOpen}
-                      aria-controls="filtersCollapse"
-                      onClick={() => setIsFiltersOpen((v) => !v)}
-                    >
-                      Filters
-                    </button>
-                  </h2>
-                  <div
-                    id="filtersCollapse"
-                    className={`accordion-collapse collapse ${isFiltersOpen ? 'show' : ''}`}
-                    aria-labelledby="filtersHeading"
-                  >
-                    <div className="accordion-body">
-                      <div className="d-grid gap-3">
+          <div
+            id="caseload-filters-collapse"
+            className={`collapse ${isFiltersOpen ? 'show' : ''}`}
+          >
+            <div className="card border shadow-sm mb-3">
+              <div className="card-body">
+                <h2 className="h6 panahgah-heading mb-3">Filter residents</h2>
+                <div className="d-grid gap-3">
                         <div>
                           <label className="form-label" htmlFor="search">
                             Search
@@ -392,17 +391,14 @@ export function CaseloadInventoryPage() {
                         >
                           Clear filters
                         </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Center column: residents table */}
-            <div className="col-12 col-lg-9 order-3 order-lg-2">
-              <div className="card shadow-sm">
-                <div className="card-body">
+          <div className="col-12">
+            <div className="card shadow-sm">
+              <div className="card-body">
                   <div className="d-flex align-items-baseline justify-content-between gap-3 mb-2">
                     <h2 className="h5 card-title mb-0 panahgah-heading">Residents</h2>
                     <div className="d-flex align-items-center gap-2">
@@ -428,8 +424,8 @@ export function CaseloadInventoryPage() {
                     </div>
                   </div>
 
-                  <div className="table-responsive">
-                    <table className="table table-sm table-striped align-middle mb-0">
+                  <div className="table-responsive" style={{ minHeight: '55vh' }}>
+                    <table className="table table-sm table-striped table-hover align-middle mb-0">
                       <thead>
                         <tr>
                           <th scope="col">Case control</th>
@@ -456,16 +452,16 @@ export function CaseloadInventoryPage() {
                         ) : (
                           residents.map((r) => {
                             return (
-                              <tr key={r.resident_id}>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="btn btn-link p-0 text-decoration-none"
-                                    onClick={() => setSelectedResidentForDetails(r)}
-                                  >
-                                    {r.case_control_no}
-                                  </button>
-                                </td>
+                              <tr
+                                key={r.resident_id}
+                                role="button"
+                                tabIndex={0}
+                                className="cursor-pointer"
+                                onClick={() => setSelectedResidentForDetails(r)}
+                                onKeyDown={(e) => handleResidentRowKeyDown(e, r)}
+                                aria-label={`View details for ${r.case_control_no}`}
+                              >
+                                <td>{r.case_control_no}</td>
                                 <td>{r.internal_code}</td>
                                 <td>{r.case_status}</td>
                                 <td>{r.case_category}</td>
@@ -473,7 +469,7 @@ export function CaseloadInventoryPage() {
                                 <td>{r.assigned_social_worker}</td>
                                 <td>{r.date_of_admission}</td>
                                 <td>{r.reintegration_status ?? ''}</td>
-                                <td className="text-end">
+                                <td className="text-end" onClick={(e) => e.stopPropagation()}>
                                   <div className="dropdown">
                                     <button
                                       type="button"
@@ -578,7 +574,6 @@ export function CaseloadInventoryPage() {
                 </div>
               </div>
             </div>
-          </div>
         </>
       )}
 

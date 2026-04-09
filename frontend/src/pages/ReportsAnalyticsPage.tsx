@@ -1,0 +1,269 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { apiFetch } from '../api/client';
+import type { AdminReportsAnalytics } from '../api/types';
+
+function formatMonthLabel(isoDate: string): string {
+  const parts = isoDate.split('-');
+  if (parts.length < 2) return isoDate;
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return isoDate;
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+}
+
+function formatPct(rate: number) {
+  return `${(rate * 100).toFixed(1)}%`;
+}
+
+function DonationBars(props: { points: AdminReportsAnalytics['donation_trend_monthly'] }) {
+  const { points } = props;
+  const maxVal = useMemo(() => {
+    let m = 0;
+    for (const p of points) {
+      m = Math.max(m, p.estimated_value_sum, p.amount_sum ?? 0);
+    }
+    return m > 0 ? m : 1;
+  }, [points]);
+
+  const w = 640;
+  const h = 200;
+  const pad = 24;
+  const barW = (w - pad * 2) / Math.max(points.length, 1);
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} className="d-block" role="img" aria-label="Donation trend by month">
+      <title>Donation trend (estimated value per month)</title>
+      {points.map((p, i) => {
+        const v = p.estimated_value_sum;
+        const bh = ((h - pad * 2) * v) / maxVal;
+        const x = pad + i * barW + barW * 0.15;
+        const bw = barW * 0.7;
+        const y = h - pad - bh;
+        return <rect key={p.month_start} x={x} y={y} width={bw} height={Math.max(bh, 0)} fill="var(--bs-primary)" opacity={0.85} />;
+      })}
+      <text x={pad} y={h - 4} className="small" fill="currentColor">
+        Last 12 months (UTC), estimated value
+      </text>
+    </svg>
+  );
+}
+
+export function ReportsAnalyticsPage() {
+  const [data, setData] = useState<AdminReportsAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await apiFetch<AdminReportsAnalytics>('/api/admin/reports/analytics');
+        if (!cancelled) setData(res);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load reports.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div>
+      <nav aria-label="breadcrumb" className="mb-3">
+        <ol className="breadcrumb mb-0">
+          <li className="breadcrumb-item">
+            <Link to="/admin">Admin</Link>
+          </li>
+          <li className="breadcrumb-item active" aria-current="page">
+            Reports &amp; Analytics
+          </li>
+        </ol>
+      </nav>
+
+      <h1 className="h3 mb-2">Reports &amp; Analytics</h1>
+      <p className="text-body-secondary mb-4">
+        Aggregated trends for planning and reporting. Sections below align with common annual accomplishment themes—
+        <strong> caring</strong> (services and reach), <strong> healing</strong> (wellbeing), and <strong> teaching</strong>{' '}
+        (education)—using data already captured in Panahgah.
+      </p>
+
+      {loading ? (
+        <div className="d-flex justify-content-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading…</span>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="alert alert-danger">{error}</div>
+      ) : data ? (
+        <>
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-md-4">
+              <div className="card h-100 shadow-sm border-primary-subtle">
+                <div className="card-body">
+                  <h2 className="h6 text-primary">Caring (reach &amp; services)</h2>
+                  <p className="small text-body-secondary mb-2">Residents served and supportive sessions recorded.</p>
+                  <ul className="list-unstyled small mb-0">
+                    <li>
+                      <strong>{data.beneficiaries.residents_total}</strong> residents (all)
+                    </li>
+                    <li>
+                      <strong>{data.beneficiaries.residents_active}</strong> active cases (by status)
+                    </li>
+                    <li>
+                      <strong>{data.total_process_recordings}</strong> process recordings (sessions)
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-md-4">
+              <div className="card h-100 shadow-sm border-success-subtle">
+                <div className="card-body">
+                  <h2 className="h6 text-success">Healing (wellbeing)</h2>
+                  <p className="small text-body-secondary mb-2">Average general health score from health records.</p>
+                  <p className="display-6 mb-0">{data.outcomes.avg_health_score.toFixed(2)}</p>
+                  <p className="small text-body-secondary mb-0">scale from recorded health assessments</p>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-md-4">
+              <div className="card h-100 shadow-sm border-info-subtle">
+                <div className="card-body">
+                  <h2 className="h6 text-info-emphasis">Teaching (education)</h2>
+                  <p className="small text-body-secondary mb-2">Average education progress percent.</p>
+                  <p className="display-6 mb-0">{data.outcomes.avg_education_progress_percent.toFixed(1)}%</p>
+                  <p className="small text-body-secondary mb-0">from education records</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card shadow-sm mb-4">
+            <div className="card-body">
+              <h2 className="h5 mb-3">Donation trends</h2>
+              <p className="small text-body-secondary mb-3">Last 12 months (monthly estimated value and monetary amount sums).</p>
+              <DonationBars points={data.donation_trend_monthly} />
+              <div className="table-responsive mt-3">
+                <table className="table table-sm table-striped mb-0">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th className="text-end">Amount sum</th>
+                      <th className="text-end">Estimated value sum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.donation_trend_monthly.map((p) => (
+                      <tr key={p.month_start}>
+                        <td>{formatMonthLabel(p.month_start)}</td>
+                        <td className="text-end">{p.amount_sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                        <td className="text-end">{p.estimated_value_sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="card shadow-sm mb-4">
+            <div className="card-body">
+              <h2 className="h5 mb-3">Reintegration</h2>
+              <p className="small text-body-secondary mb-2">
+                Completion rate among residents with a recorded reintegration status.
+              </p>
+              <p className="mb-1">
+                <strong>{data.reintegration.completed_count}</strong> completed /{' '}
+                <strong>{data.reintegration.with_status_count}</strong> with status recorded
+              </p>
+              <p className="mb-0">
+                Rate: <strong>{formatPct(data.reintegration.completion_rate)}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="card shadow-sm mb-4">
+            <div className="card-body">
+              <h2 className="h5 mb-3">Safehouse performance (latest month on file)</h2>
+              <p className="small text-body-secondary mb-3">
+                One row per safehouse: most recent monthly metrics snapshot.
+              </p>
+              {data.safehouse_performance.length === 0 ? (
+                <p className="text-body-secondary small mb-0">No safehouse monthly metrics yet.</p>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-sm table-striped align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Safehouse</th>
+                        <th>Month</th>
+                        <th className="text-end">Active residents</th>
+                        <th className="text-end">Avg health</th>
+                        <th className="text-end">Avg education %</th>
+                        <th className="text-end">Sessions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.safehouse_performance.map((s) => (
+                        <tr key={s.safehouse_id}>
+                          <td>{s.safehouse_name}</td>
+                          <td>{formatMonthLabel(s.metric_month)}</td>
+                          <td className="text-end">{s.active_residents}</td>
+                          <td className="text-end">{s.avg_health_score.toFixed(2)}</td>
+                          <td className="text-end">{s.avg_education_progress.toFixed(1)}</td>
+                          <td className="text-end">{s.process_recording_count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card shadow-sm mb-4">
+            <div className="card-body">
+              <h2 className="h5 mb-3">Network trends (monthly metrics)</h2>
+              <p className="small text-body-secondary mb-3">
+                Aggregated across safehouses by month (health, education, session counts).
+              </p>
+              {data.network_monthly_trends.length === 0 ? (
+                <p className="text-body-secondary small mb-0">No monthly metric rows in range.</p>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-sm table-striped mb-0">
+                    <thead>
+                      <tr>
+                        <th>Month</th>
+                        <th className="text-end">Avg health</th>
+                        <th className="text-end">Avg education %</th>
+                        <th className="text-end">Sessions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.network_monthly_trends.map((row, idx) => (
+                        <tr key={row.month_start ?? `m-${idx}`}>
+                          <td>{row.month_start ? formatMonthLabel(row.month_start) : '—'}</td>
+                          <td className="text-end">{row.avg_health_score.toFixed(2)}</td>
+                          <td className="text-end">{row.avg_education_progress.toFixed(1)}</td>
+                          <td className="text-end">{row.sessions_count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
