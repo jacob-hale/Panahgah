@@ -40,3 +40,33 @@ public sealed class DonorDonationCreateDto
     [MaxLength(256)]
     public string? campaign_name { get; set; }
 }
+
+public sealed class DonationAllocationReadDto
+{
+    public int allocation_id { get; set; }
+    public int donation_id { get; set; }
+    public int safehouse_id { get; set; }
+    public string program_area { get; set; } = string.Empty;
+    public decimal amount_allocated { get; set; }
+    public DateOnly allocation_date { get; set; }
+    public string allocation_notes { get; set; } = string.Empty;
+}
+
+public sealed class DonationReadDto
+{
+    public int donation_id { get; set; }
+    public int supporter_id { get; set; }
+    public string donation_type { get; set; } = string.Empty;
+    public DateOnly donation_date { get; set; }
+    public string channel_source { get; set; } = string.Empty;
+    public string? currency_code { get; set; }
+    public decimal? amount { get; set; }
+    public decimal estimated_value { get; set; }
+    public string impact_unit { get; set; } = string.Empty;
+    public bool is_recurring { get; set; }
+    public string? campaign_name { get; set; }
+    public string notes { get; set; } = string.Empty;
+    public int? created_by_partner_id { get; set; }
+    public int? referral_post_id { get; set; }
+    public List<DonationAllocationReadDto> donation_allocations { get; set; } = [];
+}

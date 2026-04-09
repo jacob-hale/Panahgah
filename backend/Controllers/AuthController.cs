@@ -158,6 +158,7 @@ public class AuthController(
     }
 
     [HttpPost("session/logout")]
+    [Authorize]
     public async Task<IActionResult> SessionLogout()
     {
         await signInManager.SignOutAsync();
