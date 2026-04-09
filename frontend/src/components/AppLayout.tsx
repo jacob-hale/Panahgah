@@ -83,7 +83,7 @@ export function AppLayout() {
                       </li>
                       <li>
                         <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/visits-and-conferences">
-                          Home visitations &amp; case conferences
+                          Visitations and Conferences
                         </NavLink>
                       </li>
                     </ul>
