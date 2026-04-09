@@ -250,10 +250,10 @@ public class EducationRecord
     public string course_name { get; set; } = string.Empty;
     public string education_level { get; set; } = string.Empty;
     public string attendance_status { get; set; } = string.Empty;
-    public decimal attendance_rate { get; set; }
-    public decimal progress_percent { get; set; }
+    public decimal? attendance_rate { get; set; }
+    public decimal? progress_percent { get; set; }
     public string completion_status { get; set; } = string.Empty;
-    public decimal gpa_like_score { get; set; }
+    public decimal? gpa_like_score { get; set; }
     public string notes { get; set; } = string.Empty;
 
     public Resident resident { get; set; } = null!;
@@ -267,10 +267,10 @@ public class HealthWellbeingRecord
     public decimal weight_kg { get; set; }
     public decimal height_cm { get; set; }
     public decimal bmi { get; set; }
-    public decimal nutrition_score { get; set; }
-    public decimal sleep_score { get; set; }
-    public decimal energy_score { get; set; }
-    public decimal general_health_score { get; set; }
+    public decimal? nutrition_score { get; set; }
+    public decimal? sleep_score { get; set; }
+    public decimal? energy_score { get; set; }
+    public decimal? general_health_score { get; set; }
     public bool medical_checkup_done { get; set; }
     public bool dental_checkup_done { get; set; }
     public bool psychological_checkup_done { get; set; }

@@ -47,12 +47,16 @@ public sealed class PublicImpactController(ApplicationDbContext dbContext) : Con
             .CountAsync(r => r.reintegration_status == "Completed");
 
         // AverageAsync throws if the table has no rows (common on a fresh prod DB). Guard explicitly.
-        var avgHealthScore = await dbContext.health_wellbeing_records.AsNoTracking().AnyAsync()
-            ? await dbContext.health_wellbeing_records.AsNoTracking().AverageAsync(r => r.general_health_score)
+        var healthWithScore = dbContext.health_wellbeing_records.AsNoTracking()
+            .Where(r => r.general_health_score != null);
+        var avgHealthScore = await healthWithScore.AnyAsync()
+            ? await healthWithScore.AverageAsync(r => r.general_health_score!.Value)
             : 0m;
 
-        var avgEducationProgress = await dbContext.education_records.AsNoTracking().AnyAsync()
-            ? await dbContext.education_records.AsNoTracking().AverageAsync(r => r.progress_percent)
+        var educationWithProgress = dbContext.education_records.AsNoTracking()
+            .Where(r => r.progress_percent != null);
+        var avgEducationProgress = await educationWithProgress.AnyAsync()
+            ? await educationWithProgress.AverageAsync(r => r.progress_percent!.Value)
             : 0m;
 
         var incidentTotal = await dbContext.incident_reports.AsNoTracking().CountAsync();
