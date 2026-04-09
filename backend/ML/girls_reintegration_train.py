@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 import time
 from pathlib import Path
 
@@ -45,14 +46,57 @@ def normalize_status(v: str) -> str:
 
 
 def readiness_label(status: str):
+    """Map free-text reintegration_status to 0/1. Unmapped values are excluded from supervised training."""
     s = normalize_status(status)
     if not s:
         return None
-    positive_tokens = ("ready", "reintegrated", "successful", "completed", "stable")
-    negative_tokens = ("high risk", "not ready", "pending", "reopened", "unsafe")
-    if any(token in s for token in positive_tokens):
+    # Multi-word phrases first (substring checks).
+    negative_phrases = (
+        "high risk",
+        "not ready",
+        "in progress",
+        "pending review",
+    )
+    for phrase in negative_phrases:
+        if phrase in s:
+            return 0
+
+    # Single-word tokens: use word tokens so "inactive" does not match "active".
+    words = set(re.findall(r"[a-z0-9]+", s))
+
+    positive_words = frozenset(
+        {
+            "ready",
+            "reintegrated",
+            "successful",
+            "completed",
+            "complete",
+            "stable",
+            "discharged",
+            "graduated",
+            "reunified",
+            "restored",
+        }
+    )
+    negative_words = frozenset(
+        {
+            "pending",
+            "reopened",
+            "unsafe",
+            "active",
+            "ongoing",
+            "enrolled",
+            "current",
+            "admitted",
+            "withdrawn",
+            "cancelled",
+            "suspended",
+            "deferred",
+        }
+    )
+    if words & positive_words:
         return 1
-    if any(token in s for token in negative_tokens):
+    if words & negative_words:
         return 0
     return None
 
@@ -112,6 +156,12 @@ def top_features_block(model, x_test, y_test):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifacts-dir", required=True)
+    parser.add_argument(
+        "--min-labeled-rows",
+        type=int,
+        default=12,
+        help="Minimum residents with mappable reintegration_status labels (both classes required).",
+    )
     args = parser.parse_args()
     started = time.time()
 
@@ -219,10 +269,17 @@ def main():
         base[col] = base[col].fillna(0)
 
     train_df = base.dropna(subset=["label"]).copy()
-    if len(train_df) < 30:
-        raise ValueError("Need at least 30 labeled resident rows (reintegration_status) to train.")
+    min_labeled = max(8, int(args.min_labeled_rows))
+    if len(train_df) < min_labeled:
+        raise ValueError(
+            f"Need at least {min_labeled} labeled resident rows (reintegration_status) to train. "
+            f"Currently {len(train_df)} labeled after mapping statuses."
+        )
     if train_df["label"].nunique() < 2:
-        raise ValueError("Reintegration labels need both positive and negative classes.")
+        raise ValueError(
+            "Reintegration labels need both positive and negative classes. "
+            f"Labeled rows: {len(train_df)}."
+        )
 
     features = [
         "safehouse_code",
@@ -261,9 +318,13 @@ def main():
     x = train_df[features]
     y = train_df["label"].astype(int)
     stratify_y = y if y.nunique() > 1 else None
-    x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.25, random_state=42, stratify=stratify_y
-    )
+    try:
+        x_train, x_test, y_train, y_test = train_test_split(
+            x, y, test_size=0.25, random_state=42, stratify=stratify_y
+        )
+    except ValueError:
+        # Small / imbalanced classes: split without stratification.
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=42)
 
     pre = build_preprocessor(x_train)
     predictive = Pipeline(
@@ -307,6 +368,17 @@ def main():
         )
 
     duration_ms = int((time.time() - started) * 1000)
+    warnings_out = []
+    if len(train_df) < 30:
+        warnings_out.append(
+            f"Only {len(train_df)} labeled residents: metrics may be unstable; aim for 30+ for production confidence."
+        )
+    unlabeled_n = int(base["label"].isna().sum())
+    if unlabeled_n > 0:
+        warnings_out.append(
+            f"{unlabeled_n} residents had reintegration_status values that did not map to a label and were scored but not used for training."
+        )
+
     output = {
         "readiness_distribution": {
             "high_count": int(counts.get("High", 0)),
@@ -322,7 +394,7 @@ def main():
             "last_run_duration_ms": duration_ms,
             "rows_used": int(len(train_df)),
             "initiated_by": str(payload.get("initiated_by", "manual")),
-            "warnings": [],
+            "warnings": warnings_out,
         },
     }
 

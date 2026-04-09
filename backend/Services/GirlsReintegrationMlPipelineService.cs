@@ -133,13 +133,16 @@ public sealed class GirlsReintegrationMlPipelineService(
 
             if (process.ExitCode != 0)
             {
-                throw new InvalidOperationException($"Girls reintegration MLR training failed: {stderr}");
+                throw MapPythonFailure(stderr, stdout);
             }
 
             var result = JsonSerializer.Deserialize<GirlsReintegrationInsightsResponseDto>(stdout, JsonOptions);
             if (result is null)
             {
-                throw new InvalidOperationException("Girls reintegration MLR trainer returned empty payload.");
+                throw new GirlsReintegrationTrainingException(
+                    "invalid_trainer_output",
+                    "Girls reintegration trainer returned empty or invalid JSON.",
+                    "Check Railway logs for Python stdout/stderr. The training script must print a single JSON object on stdout.");
             }
 
             return result;
@@ -182,5 +185,43 @@ public sealed class GirlsReintegrationMlPipelineService(
     private string GetLatestInsightsPath()
     {
         return Path.Combine(GetArtifactsDir(), "girls_reintegration_mlr_latest.json");
+    }
+
+    private static Exception MapPythonFailure(string stderr, string stdout)
+    {
+        var err = (stderr ?? string.Empty).Trim();
+        var combined = err + "\n" + (stdout ?? string.Empty);
+
+        if (combined.Contains("Need at least", StringComparison.OrdinalIgnoreCase) &&
+            combined.Contains("labeled", StringComparison.OrdinalIgnoreCase))
+        {
+            return new GirlsReintegrationTrainingException(
+                "insufficient_labeled_rows",
+                err.Contains('\n') ? err.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault() ?? err : err,
+                "Too few residents have a mappable reintegration_status (positive/negative). Standardize status text in the database or lower MIN_LABELED_ROWS in the training script for demos.");
+        }
+
+        if (combined.Contains("both positive and negative", StringComparison.OrdinalIgnoreCase) ||
+            combined.Contains("both classes", StringComparison.OrdinalIgnoreCase))
+        {
+            return new GirlsReintegrationTrainingException(
+                "single_class_labels",
+                err.Contains('\n') ? err.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault() ?? err : err,
+                "The labeled subset only has one class. Add residents with distinct readiness outcomes (e.g. completed vs active) so the model can learn.");
+        }
+
+        if (combined.Contains("Need resident rows", StringComparison.OrdinalIgnoreCase))
+        {
+            return new GirlsReintegrationTrainingException(
+                "no_residents",
+                "No resident rows were sent to the trainer.",
+                "Verify the application database has residents and the API can read them.");
+        }
+
+        var preview = err.Length > 800 ? err[..800] + "…" : err;
+        return new GirlsReintegrationTrainingException(
+            "python_training_failed",
+            string.IsNullOrWhiteSpace(preview) ? "Python training process exited with an error." : preview,
+            "See Railway logs for full stderr. Ensure pandas/scikit-learn are installed in the container (backend/requirements.txt + Dockerfile).");
     }
 }

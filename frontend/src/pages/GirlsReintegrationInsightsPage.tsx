@@ -96,7 +96,11 @@ export function GirlsReintegrationInsightsPage() {
         <button type="button" className="btn btn-primary btn-sm" onClick={handleRetrain} disabled={training}>
           {training ? 'Retraining...' : 'Retrain reintegration model'}
         </button>
-        {trainError ? <span className="small text-danger">{trainError}</span> : null}
+        {trainError ? (
+          <span className="small text-danger" style={{ whiteSpace: 'pre-wrap' }}>
+            {trainError}
+          </span>
+        ) : null}
       </div>
 
       {loading ? <p>Loading girls reintegration insights...</p> : null}
@@ -184,6 +188,13 @@ export function GirlsReintegrationInsightsPage() {
                     Last trained: {data.pipeline_health.last_trained_at_utc || 'N/A'} | Rows used:{' '}
                     {data.pipeline_health.rows_used ?? 'N/A'}
                   </div>
+                  {data.pipeline_health.warnings && data.pipeline_health.warnings.length > 0 ? (
+                    <ul className="small text-warning-emphasis mt-2 mb-0">
+                      {data.pipeline_health.warnings.map((w) => (
+                        <li key={w}>{w}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               </div>
             </div>
