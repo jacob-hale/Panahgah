@@ -1,8 +1,15 @@
 function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
   if (explicit) return explicit;
-  // Default to same-origin so deployments can proxy `/api` from the web server (e.g., Nginx).
-  // This keeps auth cookies first-party and works with a strict `connect-src 'self'` CSP.
+
+  // Railway fallback: if frontend and backend are split services and no env var is available,
+  // route API calls directly to the known backend host.
+  const host = window.location.hostname.toLowerCase();
+  if (host === 'panahgah.up.railway.app' || host.endsWith('.up.railway.app')) {
+    return 'https://panahgah-backend-production.up.railway.app';
+  }
+
+  // Default to same-origin so deployments can proxy `/api` from the web server.
   return '';
 }
 
@@ -66,7 +73,7 @@ export async function apiFetch<T>(
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'Failed to fetch' || err instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. In dev: start backend (e.g. `dotnet run` in /backend), keep `npm run dev` for frontend, and use the Vite proxy (leave VITE_API_BASE_URL unset, or set VITE_DEV_API_PROXY_TARGET). In production: ensure VITE_API_BASE_URL points to the live backend URL and that CORS/HTTPS are configured.',
+        'Could not reach the API. In dev: start backend (`dotnet run` in /backend) and keep `npm run dev` in /frontend so the Vite proxy can forward `/api`. In production: ensure backend is reachable and CORS/HTTPS are configured.',
       );
     }
     throw err;
