@@ -128,6 +128,18 @@ def main():
     if residents.empty:
         raise ValueError("Need resident rows to train reintegration model.")
 
+    if not education_records.empty:
+        for col in ["attendance_rate", "progress_percent", "gpa_like_score"]:
+            if col not in education_records.columns:
+                education_records[col] = np.nan
+            education_records[col] = pd.to_numeric(education_records[col], errors="coerce")
+
+    if not health_records.empty:
+        for col in ["nutrition_score", "sleep_score", "energy_score", "general_health_score"]:
+            if col not in health_records.columns:
+                health_records[col] = np.nan
+            health_records[col] = pd.to_numeric(health_records[col], errors="coerce")
+
     # Build feature table.
     base = residents.copy()
     base["resident_code"] = base["internal_code"].fillna("")
@@ -167,6 +179,7 @@ def main():
 
     if not process_recordings.empty:
         p = process_recordings.copy()
+        p["session_duration_minutes"] = pd.to_numeric(p["session_duration_minutes"], errors="coerce")
         p["progress_noted"] = p["progress_noted"].fillna(False).astype(int)
         p["concerns_flagged"] = p["concerns_flagged"].fillna(False).astype(int)
         p["referral_made"] = p["referral_made"].fillna(False).astype(int)

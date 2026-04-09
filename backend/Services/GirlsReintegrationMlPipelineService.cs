@@ -66,11 +66,24 @@ public sealed class GirlsReintegrationMlPipelineService(
                 .ToListAsync(cancellationToken);
 
             var educationRecords = await dbContext.education_records.AsNoTracking()
-                .Select(e => new { e.resident_id, e.attendance_rate, e.progress_percent, e.gpa_like_score })
+                .Select(e => new
+                {
+                    e.resident_id,
+                    attendance_rate = EF.Property<decimal?>(e, nameof(e.attendance_rate)),
+                    progress_percent = EF.Property<decimal?>(e, nameof(e.progress_percent)),
+                    gpa_like_score = EF.Property<decimal?>(e, nameof(e.gpa_like_score))
+                })
                 .ToListAsync(cancellationToken);
 
             var healthRecords = await dbContext.health_wellbeing_records.AsNoTracking()
-                .Select(h => new { h.resident_id, h.nutrition_score, h.sleep_score, h.energy_score, h.general_health_score })
+                .Select(h => new
+                {
+                    h.resident_id,
+                    nutrition_score = EF.Property<decimal?>(h, nameof(h.nutrition_score)),
+                    sleep_score = EF.Property<decimal?>(h, nameof(h.sleep_score)),
+                    energy_score = EF.Property<decimal?>(h, nameof(h.energy_score)),
+                    general_health_score = EF.Property<decimal?>(h, nameof(h.general_health_score))
+                })
                 .ToListAsync(cancellationToken);
 
             var interventionPlans = await dbContext.intervention_plans.AsNoTracking()
