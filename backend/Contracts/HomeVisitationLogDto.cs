@@ -28,10 +28,6 @@ public sealed class HomeVisitationLogDto
     [Required]
     public bool safety_concerns_noted { get; set; }
 
-    [Required, MaxLength(128)]
-    public string follow_up_action { get; set; } = string.Empty;
-
-    /// <summary>Required when <see cref="follow_up_action"/> is "Other (describe below)".</summary>
-    [MaxLength(2000)]
-    public string? follow_up_other_details { get; set; }
+    [Required]
+    public bool follow_up_needed { get; set; }
 }
