@@ -89,15 +89,13 @@ public sealed class PublicImpactController(ApplicationDbContext dbContext) : Con
             .ToListAsync();
 
         var trends = await dbContext.safehouse_monthly_metrics.AsNoTracking()
-            // Some prod data may contain NULLs despite non-nullable model properties.
-            // Use EF.Property with nullable types to avoid materialization exceptions.
-            .GroupBy(m => EF.Property<DateOnly?>(m, nameof(Models.SafehouseMonthlyMetric.month_start)))
+            .GroupBy(m => m.month_start)
             .Select(g => new PublicImpactTrendPointDto
             {
                 month_start = g.Key,
-                avg_health_score = g.Average(x => EF.Property<decimal?>(x, nameof(Models.SafehouseMonthlyMetric.avg_health_score))) ?? 0m,
-                avg_education_progress = g.Average(x => EF.Property<decimal?>(x, nameof(Models.SafehouseMonthlyMetric.avg_education_progress))) ?? 0m,
-                sessions_count = g.Sum(x => EF.Property<int?>(x, nameof(Models.SafehouseMonthlyMetric.process_recording_count))) ?? 0
+                avg_health_score = g.Average(x => x.avg_health_score) ?? 0m,
+                avg_education_progress = g.Average(x => x.avg_education_progress) ?? 0m,
+                sessions_count = g.Sum(x => x.process_recording_count) ?? 0
             })
             .OrderBy(x => x.month_start)
             .ToListAsync();
