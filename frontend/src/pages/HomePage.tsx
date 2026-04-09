@@ -5,61 +5,90 @@ export function HomePage() {
   return (
     <div className="pg-home">
       <header className="pg-home__hero pg-fullbleed">
-        <div className="container py-5">
-          <div className="row justify-content-center">
-            <div className="col-lg-10 col-xl-8">
-              <div className="d-inline-flex align-items-center gap-2 pg-pill mb-3">
-                <span className="pg-pill__dot" aria-hidden="true" />
-                <span className="small fw-semibold">Panahgah nonprofit</span>
-              </div>
+        <div className="container pg-home__hero-container">
+          <div className="row align-items-center g-4 g-lg-5">
+            <div className="col-12 col-lg-6">
+              <div className="pg-home__hero-text">
+                <div className="d-inline-flex align-items-center gap-2 pg-pill mb-3">
+                  <span className="pg-pill__dot" aria-hidden="true" />
+                  <span className="small fw-semibold">Panahgah nonprofit</span>
+                </div>
 
-              <h1 className="display-4 fw-semibold mb-3 pg-home__headline">
-                A safe place to heal, rebuild, and move forward.
-              </h1>
+                <h1 className="display-4 fw-semibold mb-3 pg-home__headline">
+                  Every girl deserves a place where she is safe, seen, and given a future.
+                </h1>
 
-              <p className="lead text-body-secondary mb-3">
-                Panahgah is a nonprofit helping sexually abused girls in India find safety, dignity, and steady support
-                through trusted safehouses.
-              </p>
+                <p className="lead mb-4 pg-home__hero-lead">
+                  Panahgah provides refuge, healing, and hope for girls who have experienced abuse—offering not just
+                  safety, but a path forward.
+                </p>
 
-              <div className="pg-definition mb-4">
-                <div className="pg-definition__term">Panahgah</div>
-                <div className="pg-definition__text">
-                  Hindi noun: a place of refuge, sanctuary, or shelter.
+                <div className="d-flex flex-wrap gap-2 pg-hero-ctas">
+                  <Link className="btn btn-primary btn-lg" to="/donate">
+                    Support a Life
+                  </Link>
+                  <Link className="btn btn-outline-primary btn-lg" to="/impact-dashboard">
+                    See the Impact
+                  </Link>
                 </div>
               </div>
-
-              <div className="d-flex flex-wrap gap-2 pg-hero-ctas">
-                <Link className="btn btn-primary btn-lg" to="/donate">
-                  Donate now
-                </Link>
-                <a className="btn btn-primary btn-lg" href="#impact">
-                  See what your gift does
-                </a>
-                <Link className="btn btn-primary btn-lg" to="/impact-dashboard">
-                  View impact dashboard
-                </Link>
-              </div>
+            </div>
+            <div className="col-12 col-lg-6">
+              <figure className="pg-home__hero-figure">
+                <img
+                  className="pg-home__hero-img"
+                  src="/img/floating-diya-dusk-river.png"
+                  alt="A small oil lamp floats on still water at dusk; warm light reflects gently on the surface."
+                  width={1536}
+                  height={1024}
+                  loading="eager"
+                  decoding="async"
+                />
+              </figure>
             </div>
           </div>
         </div>
       </header>
 
+      <section className="py-5">
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-lg-10 col-xl-8">
+              <h2 className="h2 fw-semibold mb-3">What we do</h2>
+              <p className="text-body-secondary mb-3">
+                Panahgah exists to protect and restore the lives of girls who have experienced abuse, exploitation, and
+                trafficking.
+              </p>
+              <p className="text-body-secondary mb-3">We partner with local communities to provide:</p>
+              <ul className="text-body-secondary mb-3 ps-3">
+                <li className="mb-2">Safe housing and protection</li>
+                <li className="mb-2">Trauma-informed counseling and care</li>
+                <li className="mb-2">Education and life skills development</li>
+                <li className="mb-2">Reintegration support for a stable future</li>
+              </ul>
+              <p className="text-body-secondary mb-0">
+                Every step is carefully tracked and supported—so no girl falls through the cracks.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="pg-fullbleed pg-donate-band py-5">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-8">
-              <h2 className="h2 fw-semibold mb-2">Help fund safe, steady care.</h2>
+              <p className="text-body-secondary mb-3 fw-semibold">Your support is not just a donation.</p>
+              <p className="text-body-secondary mb-3">
+                It is a safe place to sleep. A counseling session. A meal. A moment of hope.
+              </p>
+              <p className="text-body-secondary mb-3">Behind every number is a life being rebuilt.</p>
               <p className="text-body-secondary mb-4">
-                Your donation helps support safehousing, essentials, counseling, and recovery services for girls who are
-                rebuilding their lives.
+                You can trust your contribution becomes connected to a real life.
               </p>
               <Link className="btn btn-primary btn-lg" to="/donate">
                 Donate now
               </Link>
-              <p className="small text-body-secondary mt-3 mb-0">
-                Every contribution helps keep safe places open and staffed.
-              </p>
             </div>
           </div>
         </div>
@@ -69,10 +98,10 @@ export function HomePage() {
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-8">
-              <h2 className="h2 fw-semibold mb-2">What your gift helps provide.</h2>
+              <h2 className="h2 fw-semibold mb-2">How your gift shows up in real life</h2>
               <p className="text-body-secondary mb-4">
-                Donations directly support the daily needs and long-term recovery of girls living in Panahgah
-                safehouses.
+                These are the kinds of care your generosity helps make possible—transparently tracked so you can trust
+                the difference you make.
               </p>
               <div className="row g-3 mb-4">
                 <div className="col-md-6">
@@ -99,6 +128,27 @@ export function HomePage() {
               <Link className="btn btn-outline-secondary btn-lg" to="/impact-dashboard">
                 Open impact dashboard
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-5">
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-lg-10 col-xl-8 text-center">
+              <p className="text-body-secondary mb-2">Healing is possible.</p>
+              <p className="text-body-secondary mb-2">Safety is possible.</p>
+              <p className="text-body-secondary mb-4">A future is possible.</p>
+              <p className="text-body-secondary mb-4">And it starts with people who choose to care.</p>
+              <div className="d-flex flex-wrap gap-2 justify-content-center pg-hero-ctas">
+                <Link className="btn btn-primary btn-lg" to="/donate">
+                  Help Protect a Life
+                </Link>
+                <Link className="btn btn-outline-primary btn-lg" to="/impact-dashboard">
+                  Become Part of the Story
+                </Link>
+              </div>
             </div>
           </div>
         </div>
