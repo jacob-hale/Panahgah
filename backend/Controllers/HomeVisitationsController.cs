@@ -92,14 +92,7 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
             return BadRequest("Invalid family_cooperation_level.");
         }
 
-        var followUp = request.follow_up_action.Trim();
-        if (!HomeVisitationCatalog.IsAllowedFollowUpAction(followUp))
-        {
-            return BadRequest("Invalid follow_up_action.");
-        }
-
         const string homeOther = "Other (describe below)";
-        const string followOther = "Other (describe below)";
 
         var homeOtherText = request.home_environment_other?.Trim() ?? string.Empty;
         if (homeEnv.Equals(homeOther, StringComparison.Ordinal))
@@ -107,15 +100,6 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
             if (homeOtherText.Length < 3)
             {
                 return BadRequest("home_environment_other is required when home_environment_observation is Other.");
-            }
-        }
-
-        var followOtherText = request.follow_up_other_details?.Trim() ?? string.Empty;
-        if (followUp.Equals(followOther, StringComparison.Ordinal))
-        {
-            if (followOtherText.Length < 3)
-            {
-                return BadRequest("follow_up_other_details is required when follow_up_action is Other.");
             }
         }
 
@@ -140,20 +124,6 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
 
         var observations = string.Join("\n\n", observationsParts);
 
-        var followUpNeeded = !followUp.Equals("None", StringComparison.Ordinal);
-        string? followUpNotes = null;
-        if (followUpNeeded)
-        {
-            if (followUp.Equals(followOther, StringComparison.Ordinal))
-            {
-                followUpNotes = followOtherText;
-            }
-            else
-            {
-                followUpNotes = followUp;
-            }
-        }
-
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var visitation = new HomeVisitation
@@ -168,14 +138,14 @@ public sealed class HomeVisitationsController(ApplicationDbContext dbContext) : 
             observations = observations,
             family_cooperation_level = coop,
             safety_concerns_noted = request.safety_concerns_noted,
-            follow_up_needed = followUpNeeded,
-            follow_up_notes = string.IsNullOrWhiteSpace(followUpNotes) ? null : followUpNotes,
+            follow_up_needed = request.follow_up_needed,
+            follow_up_notes = null,
             visit_outcome = HomeVisitationCatalog.DefaultVisitOutcome
         };
 
         dbContext.home_visitations.Add(visitation);
         await dbContext.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetAll), new { resident_id = visitation.resident_id }, null);
+        return NoContent();
     }
 
     private static IQueryable<HomeVisitationListItemDto> ProjectToListItemDtos(IQueryable<HomeVisitation> q) =>

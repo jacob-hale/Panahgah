@@ -324,8 +324,7 @@ export type HomeVisitationLogPayload = {
   observations_additional?: string | null;
   family_cooperation_level: string;
   safety_concerns_noted: boolean;
-  follow_up_action: string;
-  follow_up_other_details?: string | null;
+  follow_up_needed: boolean;
 };
 
 export type UpcomingCaseConferenceListItem = {

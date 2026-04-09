@@ -40,23 +40,9 @@ public static class HomeVisitationCatalog
     public static readonly string[] AllowedFamilyCooperationLevels =
     [
         "Cooperative",
-        "Generally cooperative",
+        "Highly Cooperative",
         "Neutral",
-        "Uncooperative",
-        "Hostile or refused engagement",
-        "Not observed"
-    ];
-
-    /// <summary>Follow-up action presets; "None" maps to follow_up_needed = false.</summary>
-    public static readonly string[] AllowedFollowUpActions =
-    [
-        "None",
-        "Schedule follow-up visit",
-        "Refer to supervisor",
-        "Coordinate with safehouse staff",
-        "External referral",
-        "Emergency escalation",
-        "Other (describe below)"
+        "Uncooperative"
     ];
 
     /// <summary>DB requires non-null strings for fields not collected on the streamlined form.</summary>
@@ -74,9 +60,6 @@ public static class HomeVisitationCatalog
 
     public static bool IsAllowedFamilyCooperationLevel(string value) =>
         AllowedFamilyCooperationLevels.Contains(value, StringComparer.Ordinal);
-
-    public static bool IsAllowedFollowUpAction(string value) =>
-        AllowedFollowUpActions.Contains(value, StringComparer.Ordinal);
 }
 
 

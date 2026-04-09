@@ -35,25 +35,12 @@ const homeEnvironmentObservations = [
 
 const familyCooperationLevels = [
   'Cooperative',
-  'Generally cooperative',
+  'Highly Cooperative',
   'Neutral',
   'Uncooperative',
-  'Hostile or refused engagement',
-  'Not observed',
-] as const;
-
-const followUpActions = [
-  'None',
-  'Schedule follow-up visit',
-  'Refer to supervisor',
-  'Coordinate with safehouse staff',
-  'External referral',
-  'Emergency escalation',
-  'Other (describe below)',
 ] as const;
 
 const homeOtherLabel = 'Other (describe below)';
-const followOtherLabel = 'Other (describe below)';
 
 export function VisitsAndConferencesPage() {
   const [residentOptions, setResidentOptions] = useState<Resident[]>([]);
@@ -70,8 +57,8 @@ export function VisitsAndConferencesPage() {
   const [familyCoop, setFamilyCoop] = useState('');
   /** Empty until the user chooses; maps to safety_concerns_noted on submit. */
   const [safetySelection, setSafetySelection] = useState<'yes' | 'no' | ''>('');
-  const [followUp, setFollowUp] = useState('');
-  const [followUpOther, setFollowUpOther] = useState('');
+  /** Empty until the user chooses; maps to follow_up_needed on submit. */
+  const [followUpNeededSelection, setFollowUpNeededSelection] = useState<'yes' | 'no' | ''>('');
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -91,8 +78,7 @@ export function VisitsAndConferencesPage() {
     setObservationsAdditional('');
     setFamilyCoop('');
     setSafetySelection('');
-    setFollowUp('');
-    setFollowUpOther('');
+    setFollowUpNeededSelection('');
   }, []);
 
   const closeLogForm = useCallback(() => {
@@ -203,18 +189,13 @@ export function VisitsAndConferencesPage() {
       return;
     }
 
-    if (!followUp) {
-      setSubmitError('Select a follow-up action.');
+    if (!followUpNeededSelection) {
+      setSubmitError('Select whether follow-up is needed.');
       return;
     }
 
     if (homeEnv === homeOtherLabel && homeEnvOther.trim().length < 3) {
       setSubmitError('Describe the home environment when you select “Other”.');
-      return;
-    }
-
-    if (followUp === followOtherLabel && followUpOther.trim().length < 3) {
-      setSubmitError('Describe follow-up actions when you select “Other”.');
       return;
     }
 
@@ -224,7 +205,7 @@ export function VisitsAndConferencesPage() {
       home_environment_observation: homeEnv,
       family_cooperation_level: familyCoop,
       safety_concerns_noted: safetySelection === 'yes',
-      follow_up_action: followUp,
+      follow_up_needed: followUpNeededSelection === 'yes',
     };
 
     if (homeEnv === homeOtherLabel) {
@@ -233,9 +214,6 @@ export function VisitsAndConferencesPage() {
     const addl = observationsAdditional.trim();
     if (addl.length > 0) {
       payload.observations_additional = addl;
-    }
-    if (followUp === followOtherLabel) {
-      payload.follow_up_other_details = followUpOther.trim();
     }
 
     setSubmitting(true);
@@ -499,36 +477,19 @@ export function VisitsAndConferencesPage() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label" htmlFor="hv_follow_up">
-                      Follow-up actions
+                    <label className="form-label" htmlFor="hv_follow_up_needed">
+                      Follow-up needed
                     </label>
                     <select
-                      id="hv_follow_up"
+                      id="hv_follow_up_needed"
                       className="form-select"
-                      value={followUp}
-                      onChange={(e) => setFollowUp(e.target.value)}
+                      value={followUpNeededSelection}
+                      onChange={(e) => setFollowUpNeededSelection(e.target.value as '' | 'yes' | 'no')}
                     >
-                      <option value="">Select follow-up action</option>
-                      {followUpActions.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
+                      <option value="">Select follow-up status</option>
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
                     </select>
-                    {followUp === followOtherLabel ? (
-                      <div className="mt-2">
-                        <label className="form-label small" htmlFor="follow_up_other">
-                          Describe (required for “Other”)
-                        </label>
-                        <textarea
-                          id="follow_up_other"
-                          className="form-control"
-                          rows={3}
-                          value={followUpOther}
-                          onChange={(e) => setFollowUpOther(e.target.value)}
-                        />
-                      </div>
-                    ) : null}
                   </div>
 
                   <div className="mb-3">
