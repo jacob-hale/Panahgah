@@ -119,6 +119,11 @@ export function AppLayout() {
                           Girls reintegration insights
                         </NavLink>
                       </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/reports-analytics">
+                          Reports &amp; Analytics
+                        </NavLink>
+                      </li>
                     </ul>
                   </li>
                 </>
