@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
-import type { HomeVisitationLogPayload, PagedResponse, Resident, UpcomingCaseConferenceListItem } from '../api/types';
+import type { HomeVisitationListItem, HomeVisitationLogPayload, PagedResponse, Resident, UpcomingCaseConferenceListItem } from '../api/types';
 
 function formatDateOnly(value: string): string {
   const parts = value.split('-');
@@ -69,6 +69,11 @@ export function VisitsAndConferencesPage() {
   const [conferenceError, setConferenceError] = useState<string | null>(null);
   const [upcoming, setUpcoming] = useState<UpcomingCaseConferenceListItem[]>([]);
   const [history, setHistory] = useState<UpcomingCaseConferenceListItem[]>([]);
+
+  const [visitsResidentId, setVisitsResidentId] = useState<number | ''>('');
+  const [visitsLoading, setVisitsLoading] = useState(false);
+  const [visitsError, setVisitsError] = useState<string | null>(null);
+  const [visits, setVisits] = useState<HomeVisitationListItem[]>([]);
 
   const resetForm = useCallback(() => {
     setResidentId('');
@@ -151,6 +156,25 @@ export function VisitsAndConferencesPage() {
     }
   }, []);
 
+  const loadVisitationsForResident = useCallback(async (rid: number) => {
+    setVisitsLoading(true);
+    setVisitsError(null);
+    try {
+      const params = new URLSearchParams();
+      params.set('resident_id', String(rid));
+      params.set('page', '1');
+      params.set('page_size', '50');
+      params.set('sort_order', 'desc');
+      const res = await apiFetch<PagedResponse<HomeVisitationListItem>>(`/api/home-visitations?${params.toString()}`);
+      setVisits(res.items);
+    } catch (e) {
+      setVisitsError(e instanceof Error ? e.message : 'Could not load visitations.');
+      setVisits([]);
+    } finally {
+      setVisitsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (conferenceResidentId === '') {
       setUpcoming([]);
@@ -160,6 +184,15 @@ export function VisitsAndConferencesPage() {
     }
     void loadConferences(conferenceResidentId);
   }, [conferenceResidentId, loadConferences]);
+
+  useEffect(() => {
+    if (visitsResidentId === '') {
+      setVisits([]);
+      setVisitsError(null);
+      return;
+    }
+    void loadVisitationsForResident(visitsResidentId);
+  }, [visitsResidentId, loadVisitationsForResident]);
 
   const submitVisitation = async () => {
     setSubmitError(null);
@@ -262,6 +295,73 @@ export function VisitsAndConferencesPage() {
           <button type="button" className="btn btn-primary btn-lg" onClick={openLogForm}>
             Log new visitation
           </button>
+        </div>
+      </div>
+
+      <div className="card shadow-sm mb-4">
+        <div className="card-body">
+          <h2 className="h5 mb-3">Existing visitations</h2>
+
+          <div className="mb-3">
+            <label className="form-label" htmlFor="hv_existing_resident">
+              Resident
+            </label>
+            <select
+              id="hv_existing_resident"
+              className="form-select"
+              value={visitsResidentId}
+              onChange={(e) => setVisitsResidentId(e.target.value ? Number(e.target.value) : '')}
+              disabled={residentLookupLoading}
+            >
+              <option value="">Select a resident</option>
+              {residentOptions.map((r) => (
+                <option key={r.resident_id} value={r.resident_id}>
+                  {r.case_control_no} · {r.internal_code}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {visitsResidentId === '' ? (
+            <div className="text-body-secondary small">Choose a resident to view their visitations.</div>
+          ) : visitsLoading ? (
+            <div className="d-flex justify-content-center py-4">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading…</span>
+              </div>
+            </div>
+          ) : visitsError ? (
+            <div className="alert alert-danger py-2">{visitsError}</div>
+          ) : visits.length === 0 ? (
+            <div className="text-body-secondary small">No visitations found for this resident.</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-sm table-striped align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Visit type</th>
+                    <th scope="col">Home environment / notes</th>
+                    <th scope="col">Family cooperation</th>
+                    <th scope="col">Safety concerns</th>
+                    <th scope="col">Follow-up needed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visits.map((v) => (
+                    <tr key={v.visitation_id}>
+                      <td className="text-nowrap">{formatDateOnly(v.visit_date)}</td>
+                      <td>{v.visit_type}</td>
+                      <td style={{ minWidth: 260, whiteSpace: 'pre-wrap' }}>{v.observations}</td>
+                      <td>{v.family_cooperation_level}</td>
+                      <td>{v.safety_concerns_noted ? 'Yes' : 'No'}</td>
+                      <td>{v.follow_up_needed ? 'Yes' : 'No'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
