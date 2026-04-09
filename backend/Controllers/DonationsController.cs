@@ -19,8 +19,39 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
     {
         var donations = await dbContext.donations
             .AsNoTracking()
-            .Include(d => d.donation_allocations)
             .OrderByDescending(d => d.donation_date)
+            .ThenByDescending(d => d.donation_id)
+            .Select(d => new DonationReadDto
+            {
+                donation_id = d.donation_id,
+                supporter_id = d.supporter_id,
+                donation_type = d.donation_type,
+                donation_date = d.donation_date,
+                channel_source = d.channel_source,
+                currency_code = d.currency_code,
+                amount = d.amount,
+                estimated_value = d.estimated_value,
+                impact_unit = d.impact_unit,
+                is_recurring = d.is_recurring,
+                campaign_name = d.campaign_name,
+                notes = d.notes,
+                created_by_partner_id = d.created_by_partner_id,
+                referral_post_id = d.referral_post_id,
+                donation_allocations = d.donation_allocations
+                    .OrderBy(a => a.allocation_date)
+                    .ThenBy(a => a.allocation_id)
+                    .Select(a => new DonationAllocationReadDto
+                    {
+                        allocation_id = a.allocation_id,
+                        donation_id = a.donation_id,
+                        safehouse_id = a.safehouse_id,
+                        program_area = a.program_area,
+                        amount_allocated = a.amount_allocated,
+                        allocation_date = a.allocation_date,
+                        allocation_notes = a.allocation_notes
+                    })
+                    .ToList()
+            })
             .ToListAsync();
         return Ok(donations);
     }
@@ -44,9 +75,40 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
 
         var donations = await dbContext.donations
             .AsNoTracking()
-            .Include(d => d.donation_allocations)
             .Where(d => d.supporter_id == supporter.supporter_id)
             .OrderByDescending(d => d.donation_date)
+            .ThenByDescending(d => d.donation_id)
+            .Select(d => new DonationReadDto
+            {
+                donation_id = d.donation_id,
+                supporter_id = d.supporter_id,
+                donation_type = d.donation_type,
+                donation_date = d.donation_date,
+                channel_source = d.channel_source,
+                currency_code = d.currency_code,
+                amount = d.amount,
+                estimated_value = d.estimated_value,
+                impact_unit = d.impact_unit,
+                is_recurring = d.is_recurring,
+                campaign_name = d.campaign_name,
+                notes = d.notes,
+                created_by_partner_id = d.created_by_partner_id,
+                referral_post_id = d.referral_post_id,
+                donation_allocations = d.donation_allocations
+                    .OrderBy(a => a.allocation_date)
+                    .ThenBy(a => a.allocation_id)
+                    .Select(a => new DonationAllocationReadDto
+                    {
+                        allocation_id = a.allocation_id,
+                        donation_id = a.donation_id,
+                        safehouse_id = a.safehouse_id,
+                        program_area = a.program_area,
+                        amount_allocated = a.amount_allocated,
+                        allocation_date = a.allocation_date,
+                        allocation_notes = a.allocation_notes
+                    })
+                    .ToList()
+            })
             .ToListAsync();
         return Ok(donations);
     }
@@ -57,7 +119,37 @@ public class DonationsController(ApplicationDbContext dbContext) : ControllerBas
     {
         var donation = await dbContext.donations
             .AsNoTracking()
-            .Include(d => d.donation_allocations)
+            .Select(d => new DonationReadDto
+            {
+                donation_id = d.donation_id,
+                supporter_id = d.supporter_id,
+                donation_type = d.donation_type,
+                donation_date = d.donation_date,
+                channel_source = d.channel_source,
+                currency_code = d.currency_code,
+                amount = d.amount,
+                estimated_value = d.estimated_value,
+                impact_unit = d.impact_unit,
+                is_recurring = d.is_recurring,
+                campaign_name = d.campaign_name,
+                notes = d.notes,
+                created_by_partner_id = d.created_by_partner_id,
+                referral_post_id = d.referral_post_id,
+                donation_allocations = d.donation_allocations
+                    .OrderBy(a => a.allocation_date)
+                    .ThenBy(a => a.allocation_id)
+                    .Select(a => new DonationAllocationReadDto
+                    {
+                        allocation_id = a.allocation_id,
+                        donation_id = a.donation_id,
+                        safehouse_id = a.safehouse_id,
+                        program_area = a.program_area,
+                        amount_allocated = a.amount_allocated,
+                        allocation_date = a.allocation_date,
+                        allocation_notes = a.allocation_notes
+                    })
+                    .ToList()
+            })
             .FirstOrDefaultAsync(d => d.donation_id == id);
         if (donation is null)
         {
