@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminRoute } from './components/admin/AdminRoute';
+import { DonorRoute } from './components/donor/DonorRoute';
 import { AppLayout } from './components/AppLayout';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CaseloadInventoryPage } from './pages/CaseloadInventoryPage';
@@ -29,7 +30,9 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
-        <Route path="account" element={<AccountPage />} />
+        <Route path="account" element={<DonorRoute />}>
+          <Route index element={<AccountPage />} />
+        </Route>
         <Route path="admin/settings" element={<AdminRoute />}>
           <Route index element={<AdminSettingsPage />} />
         </Route>
