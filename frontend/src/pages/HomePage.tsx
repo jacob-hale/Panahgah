@@ -39,32 +39,6 @@ export function HomePage() {
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-8">
-              <p className="text-body-secondary mb-3">
-                Somewhere tonight, a young girl is lying awake in fear. Not because of strangers—but because of the
-                place that was supposed to be her home.
-              </p>
-              <p className="text-body-secondary mb-3">
-                She has learned to be silent. To shrink. To survive.
-              </p>
-              <p className="text-body-secondary mb-3">But her story does not end there.</p>
-              <p className="text-body-secondary mb-3">At Panahgah, it begins again.</p>
-              <p className="text-body-secondary mb-3">
-                Here, she enters a safe house where she is protected, cared for, and slowly reminded of something she
-                may have forgotten—that she has worth.
-              </p>
-              <p className="text-body-secondary mb-0">
-                Through counseling, education, and daily support, she begins to rebuild what was taken from her: trust,
-                confidence, and hope.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-5">
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-10 col-xl-8">
               <h2 className="h2 fw-semibold mb-3">What we do</h2>
               <p className="text-body-secondary mb-3">
                 Panahgah exists to protect and restore the lives of girls who have experienced abuse, exploitation, and
@@ -95,8 +69,7 @@ export function HomePage() {
               </p>
               <p className="text-body-secondary mb-3">Behind every number is a life being rebuilt.</p>
               <p className="text-body-secondary mb-4">
-                Through this platform, we connect every contribution to real outcomes—so you can see exactly how your
-                generosity is changing lives.
+                You can trust your contribution becomes connected to a real life.
               </p>
               <Link className="btn btn-primary btn-lg" to="/donate">
                 Support a Life
