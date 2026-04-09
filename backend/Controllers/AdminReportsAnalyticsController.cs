@@ -120,27 +120,32 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
                 var houseIds = maxWithMonth.Select(x => x.safehouse_id).Distinct().ToList();
                 var maxDict = maxWithMonth.ToDictionary(x => x.safehouse_id, x => x.maxMonth!.Value);
 
-                var projectedRows = await (
-                    from m in dbContext.safehouse_monthly_metrics.AsNoTracking()
-                    join s in dbContext.safehouses.AsNoTracking() on m.safehouse_id equals s.safehouse_id
-                    where houseIds.Contains(m.safehouse_id)
-                    select new
+                // Single-table projection only: in a join, EF can still emit bare columns and Npgsql
+                // throws InvalidCastException when DB has NULL in avg_* despite non-nullable CLR props.
+                var metricRows = await dbContext.safehouse_monthly_metrics.AsNoTracking()
+                    .Where(m => houseIds.Contains(m.safehouse_id))
+                    .Select(m => new
                     {
-                        safehouse_id = s.safehouse_id,
-                        safehouse_name = s.name,
+                        m.safehouse_id,
                         month_start = EF.Property<DateOnly?>(m, nameof(SafehouseMonthlyMetric.month_start)),
                         active_residents = EF.Property<int?>(m, nameof(SafehouseMonthlyMetric.active_residents)) ?? 0,
                         avg_health_score = EF.Property<decimal?>(m, nameof(SafehouseMonthlyMetric.avg_health_score)) ?? 0m,
                         avg_education_progress = EF.Property<decimal?>(m, nameof(SafehouseMonthlyMetric.avg_education_progress)) ?? 0m,
                         process_recording_count = EF.Property<int?>(m, nameof(SafehouseMonthlyMetric.process_recording_count)) ?? 0
-                    }).ToListAsync();
+                    })
+                    .ToListAsync();
 
-                safehousePerformance = projectedRows
+                var houseNames = await dbContext.safehouses.AsNoTracking()
+                    .Where(s => houseIds.Contains(s.safehouse_id))
+                    .ToDictionaryAsync(s => s.safehouse_id, s => s.name);
+
+                safehousePerformance = metricRows
                     .Where(x => maxDict.TryGetValue(x.safehouse_id, out var mm) && x.month_start == mm)
+                    .Where(x => houseNames.ContainsKey(x.safehouse_id))
                     .Select(x => new AdminReportsSafehousePerformanceDto
                     {
                         safehouse_id = x.safehouse_id,
-                        safehouse_name = x.safehouse_name,
+                        safehouse_name = houseNames[x.safehouse_id],
                         metric_month = x.month_start!.Value,
                         active_residents = x.active_residents,
                         avg_health_score = x.avg_health_score,
