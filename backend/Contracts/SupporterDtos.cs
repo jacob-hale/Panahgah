@@ -2,6 +2,17 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Panahgah.Api.Contracts;
 
+/// <summary>
+/// Query for listing supporters. Default <c>page_size = 0</c> returns all rows (backward compatible with unpaged GET).
+/// </summary>
+public sealed class SupportersQueryDto
+{
+    public int page { get; set; } = 1;
+
+    /// <summary>0 = return all rows in one response; negative treated like residents list (10).</summary>
+    public int page_size { get; set; } = 0;
+}
+
 public sealed class SupporterUpsertDto
 {
     [Required, MaxLength(64)]
