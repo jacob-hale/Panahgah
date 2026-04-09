@@ -269,12 +269,12 @@ export function VisitsAndConferencesPage() {
             <Link to="/admin">Admin</Link>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
-            Home visitations &amp; case conferences
+            Visitations and Conferences
           </li>
         </ol>
       </nav>
 
-      <h1 className="h3 mb-4">Home visitations &amp; case conferences</h1>
+      <h1 className="h3 mb-4">Visitations and Conferences</h1>
 
       <div className="card shadow-sm mb-4">
         <div className="card-body">
