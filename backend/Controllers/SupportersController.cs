@@ -63,10 +63,61 @@ public class SupportersController(ApplicationDbContext dbContext) : ControllerBa
 
     [HttpGet]
     [Authorize(Policy = AuthPolicies.RequireAdmin)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] SupportersQueryDto query)
     {
-        var list = await dbContext.supporters.AsNoTracking().OrderByDescending(s => s.created_at).ToListAsync();
-        return Ok(list);
+        var q = dbContext.supporters.AsNoTracking().OrderByDescending(s => s.created_at);
+
+        var totalRecords = await q.CountAsync();
+
+        var pageSize = query.page_size < 0 ? 10 : query.page_size;
+        if (pageSize == 0)
+        {
+            var all = await q.ToListAsync();
+            return Ok(new PagedResponseDto<Supporter>
+            {
+                items = all,
+                total_records = totalRecords,
+                total_pages = 1,
+                current_page = 1,
+                page_size = 0
+            });
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 10;
+        }
+
+        if (pageSize > 500)
+        {
+            pageSize = 500;
+        }
+
+        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+        if (totalPages <= 0)
+        {
+            totalPages = 1;
+        }
+
+        var currentPage = query.page < 1 ? 1 : query.page;
+        if (currentPage > totalPages)
+        {
+            currentPage = totalPages;
+        }
+
+        var items = await q
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new PagedResponseDto<Supporter>
+        {
+            items = items,
+            total_records = totalRecords,
+            total_pages = totalPages,
+            current_page = currentPage,
+            page_size = pageSize
+        });
     }
 
     [HttpGet("{id:int}")]

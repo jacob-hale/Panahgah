@@ -1,6 +1,7 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
+import type { PagedResponse } from '../api/types';
 
 type SupporterRow = {
   supporter_id: number;
@@ -38,27 +39,65 @@ const emptyForm = {
 };
 
 export function AdminSupportersPage() {
-  const [rows, setRows] = useState<SupporterRow[] | null>(null);
+  const [rows, setRows] = useState<SupporterRow[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<'5' | '10' | '20' | '50' | 'Max'>('10');
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (pageOverride?: number) => {
+    setListLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<SupporterRow[]>('/api/supporters');
-      setRows(data);
+      const params = new URLSearchParams();
+      const effectivePage = pageOverride ?? page;
+      params.set('page', String(effectivePage));
+      params.set('page_size', String(pageSize === 'Max' ? 0 : Number.parseInt(pageSize, 10)));
+      const res = await apiFetch<PagedResponse<SupporterRow>>(`/api/supporters?${params.toString()}`);
+      setRows(res.items);
+      setTotalRecords(res.total_records);
+      setTotalPages(res.total_pages);
+      setPage(res.current_page);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load supporters.');
       setRows([]);
+    } finally {
+      setListLoading(false);
     }
-  }, []);
+  }, [page, pageSize]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const canPaginate = useMemo(() => pageSize !== 'Max' && totalPages > 1, [pageSize, totalPages]);
+
+  const paginationModel = useMemo(() => {
+    if (!canPaginate) {
+      return { pages: [] as number[], showLeftEllipsis: false, showRightEllipsis: false };
+    }
+
+    const neighbors = 3;
+    const start = Math.max(1, page - neighbors);
+    const end = Math.min(totalPages, page + neighbors);
+
+    const pages: number[] = [];
+    for (let p = start; p <= end; p += 1) {
+      pages.push(p);
+    }
+
+    return {
+      pages,
+      showLeftEllipsis: start > 1,
+      showRightEllipsis: end < totalPages,
+    };
+  }, [canPaginate, page, totalPages]);
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -107,7 +146,11 @@ export function AdminSupportersPage() {
       };
       if (modal === 'create') {
         await apiFetch('/api/supporters', { method: 'POST', jsonBody: payload });
-      } else if (modal === 'edit' && editingId != null) {
+        setModal(null);
+        await load(1);
+        return;
+      }
+      if (modal === 'edit' && editingId != null) {
         await apiFetch(`/api/supporters/${editingId}`, { method: 'PUT', jsonBody: payload });
       }
       setModal(null);
@@ -127,6 +170,10 @@ export function AdminSupportersPage() {
         method: 'DELETE',
         jsonBody: { confirmDelete: true },
       });
+      if (pageSize !== 'Max' && page > 1 && rows.length <= 1) {
+        setPage((p) => Math.max(1, p - 1));
+        return;
+      }
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Delete failed.');
@@ -159,45 +206,138 @@ export function AdminSupportersPage() {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {rows === null ? (
-        <p className="text-body-secondary">Loadingâ€¦</p>
+      {listLoading && rows.length === 0 ? (
+        <p className="text-body-secondary">Loading…</p>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-sm table-striped align-middle">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Email</th>
-                <th>Channel</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.supporter_id}>
-                  <td>{r.display_name}</td>
-                  <td>{r.supporter_type}</td>
-                  <td>{r.status}</td>
-                  <td>{r.email}</td>
-                  <td>{r.acquisition_channel}</td>
-                  <td className="text-end text-nowrap">
-                    <Link className="btn btn-outline-secondary btn-sm me-1" to={`/admin/supporters/${r.supporter_id}`}>
-                      Donations
-                    </Link>
-                    <button type="button" className="btn btn-outline-secondary btn-sm me-1" onClick={() => openEdit(r)}>
-                      Edit
-                    </button>
-                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => remove(r.supporter_id)}>
-                      Delete
-                    </button>
-                  </td>
+        <>
+          <div className="d-flex align-items-baseline justify-content-end gap-3 mb-2">
+            <div className="d-flex align-items-center gap-2">
+              <label className="small text-body-secondary" htmlFor="supporters-rpp">
+                Records
+              </label>
+              <select
+                id="supporters-rpp"
+                className="form-select form-select-sm"
+                style={{ width: 110 }}
+                value={pageSize}
+                onChange={(e) => {
+                  setPage(1);
+                  setPageSize(e.target.value as typeof pageSize);
+                }}
+              >
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="Max">Max</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table table-sm table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Email</th>
+                  <th>Channel</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-body-secondary small">
+                      No supporters yet. Use &quot;Add supporter&quot; to create one.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r) => (
+                    <tr key={r.supporter_id}>
+                      <td>{r.display_name}</td>
+                      <td>{r.supporter_type}</td>
+                      <td>{r.status}</td>
+                      <td>{r.email}</td>
+                      <td>{r.acquisition_channel}</td>
+                      <td className="text-end text-nowrap">
+                        <Link className="btn btn-outline-secondary btn-sm me-1" to={`/admin/supporters/${r.supporter_id}`}>
+                          Donations
+                        </Link>
+                        <button type="button" className="btn btn-outline-secondary btn-sm me-1" onClick={() => openEdit(r)}>
+                          Edit
+                        </button>
+                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => remove(r.supporter_id)}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3">
+            <nav aria-label="Supporters pagination">
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${!canPaginate || page <= 1 ? 'disabled' : ''}`}>
+                  <button
+                    type="button"
+                    className="page-link"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={!canPaginate || page <= 1}
+                  >
+                    Prev
+                  </button>
+                </li>
+
+                {paginationModel.showLeftEllipsis && (
+                  <li className="page-item disabled" aria-hidden="true">
+                    <span className="page-link">…</span>
+                  </li>
+                )}
+
+                {paginationModel.pages.map((p) => (
+                  <li
+                    key={p}
+                    className={`page-item ${p === page ? 'active' : ''}`}
+                    aria-current={p === page ? 'page' : undefined}
+                  >
+                    {p === page ? (
+                      <span className="page-link">{p}</span>
+                    ) : (
+                      <button type="button" className="page-link" onClick={() => setPage(p)} disabled={!canPaginate}>
+                        {p}
+                      </button>
+                    )}
+                  </li>
+                ))}
+
+                {paginationModel.showRightEllipsis && (
+                  <li className="page-item disabled" aria-hidden="true">
+                    <span className="page-link">…</span>
+                  </li>
+                )}
+
+                <li className={`page-item ${!canPaginate || page >= totalPages ? 'disabled' : ''}`}>
+                  <button
+                    type="button"
+                    className="page-link"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={!canPaginate || page >= totalPages}
+                  >
+                    Next
+                  </button>
+                </li>
+              </ul>
+            </nav>
+            <span className="small text-body-secondary">
+              Page {page} of {totalPages} ({totalRecords} total)
+            </span>
+          </div>
+        </>
       )}
 
       {modal && (
@@ -333,7 +473,7 @@ export function AdminSupportersPage() {
                   Cancel
                 </button>
                 <button type="button" className="btn btn-primary" disabled={saving} onClick={() => void save()}>
-                  {saving ? 'Savingâ€¦' : 'Save'}
+                  {saving ? 'Saving…' : 'Save'}
                 </button>
               </div>
             </div>
