@@ -22,6 +22,7 @@ import { ProcessRecordingPage } from './pages/ProcessRecordingPage';
 import { SocialPostStudioPage } from './pages/SocialPostStudioPage';
 import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
 import { VisitsAndConferencesPage } from './pages/VisitsAndConferencesPage';
+import { GirlsReintegrationInsightsPage } from './pages/GirlsReintegrationInsightsPage';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
           <Route path="social-insights" element={<SocialMediaInsightsPage />} />
           <Route path="donor-lapse-insights" element={<DonorLapseInsightsPage />} />
           <Route path="donor-upgrade-insights" element={<DonorUpgradeInsightsPage />} />
+          <Route path="girls-reintegration-insights" element={<GirlsReintegrationInsightsPage />} />
           <Route path="social-post-studio" element={<SocialPostStudioPage />} />
           <Route path="supporters" element={<AdminSupportersPage />} />
           <Route path="supporters/:supporterId" element={<AdminSupporterDetailPage />} />

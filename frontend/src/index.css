@@ -48,3 +48,9 @@
   background-color: rgba(74, 104, 172, 0.28);
 }
 
+/* Keep MLR contact cells compact so rows stay uniform height. */
+.mlr-contact-phone {
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+

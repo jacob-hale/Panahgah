@@ -11,6 +11,9 @@ type DonorMlInsights = {
     top_segments: { supporter_type: string; acquisition_channel: string; avg_score: number }[];
     top_donors: {
       supporter_id: number;
+      supporter_name?: string | null;
+      supporter_email?: string | null;
+      supporter_phone?: string | null;
       score: number;
       supporter_type: string;
       acquisition_channel: string;
@@ -113,11 +116,14 @@ export function DonorUpgradeInsightsPage() {
             <h2 className="h5 mb-2">Top upgrade candidates</h2>
             <div className="table-responsive">
               <table className="table table-sm mb-0">
-                <thead><tr><th>Supporter ID</th><th>Score</th><th>Type</th><th>Channel</th><th>Gift count</th><th>Median amount</th><th>Ask floor</th><th>Ask ceiling</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Score</th><th>Type</th><th>Channel</th><th>Gift count</th><th>Median amount</th><th>Ask floor</th><th>Ask ceiling</th></tr></thead>
                 <tbody>
                   {up.top_donors.map((r) => (
                     <tr key={r.supporter_id}>
-                      <td>{r.supporter_id}</td><td>{r.score.toFixed(3)}</td><td>{r.supporter_type}</td><td>{r.acquisition_channel}</td>
+                      <td>{r.supporter_name || `Supporter #${r.supporter_id}`}</td>
+                      <td>{r.supporter_email || 'N/A'}</td>
+                      <td className="mlr-contact-phone">{r.supporter_phone || 'N/A'}</td>
+                      <td>{r.score.toFixed(3)}</td><td>{r.supporter_type}</td><td>{r.acquisition_channel}</td>
                       <td>{r.donation_count_hist ?? 'N/A'}</td><td>{r.hist_median_amount?.toFixed(2) ?? 'N/A'}</td><td>{r.suggested_ask_floor?.toFixed(2) ?? 'N/A'}</td><td>{r.suggested_ask_ceiling?.toFixed(2) ?? 'N/A'}</td>
                     </tr>
                   ))}

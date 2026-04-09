@@ -56,6 +56,7 @@ builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
 builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
     options.UseNpgsql(identityConnection));
 builder.Services.AddSingleton<DonorMlPipelineService>();
+builder.Services.AddSingleton<GirlsReintegrationMlPipelineService>();
 builder.Services.AddHostedService<DonorMlSchedulerService>();
 
 builder.Services

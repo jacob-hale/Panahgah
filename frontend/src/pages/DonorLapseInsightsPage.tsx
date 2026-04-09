@@ -11,6 +11,9 @@ type DonorMlInsights = {
     top_segments: { supporter_type: string; acquisition_channel: string; avg_score: number }[];
     top_donors: {
       supporter_id: number;
+      supporter_name?: string | null;
+      supporter_email?: string | null;
+      supporter_phone?: string | null;
       score: number;
       supporter_type: string;
       acquisition_channel: string;
@@ -111,11 +114,14 @@ export function DonorLapseInsightsPage() {
             <h2 className="h5 mb-2">Top high-risk donors</h2>
             <div className="table-responsive">
               <table className="table table-sm mb-0">
-                <thead><tr><th>Supporter ID</th><th>Score</th><th>Type</th><th>Channel</th><th>Days since last gift</th><th>Donation count</th><th>Avg value</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Score</th><th>Type</th><th>Channel</th><th>Days since last gift</th><th>Donation count</th><th>Avg value</th></tr></thead>
                 <tbody>
                   {lapse.top_donors.map((r) => (
                     <tr key={r.supporter_id}>
-                      <td>{r.supporter_id}</td><td>{r.score.toFixed(3)}</td><td>{r.supporter_type}</td><td>{r.acquisition_channel}</td>
+                      <td>{r.supporter_name || `Supporter #${r.supporter_id}`}</td>
+                      <td>{r.supporter_email || 'N/A'}</td>
+                      <td className="mlr-contact-phone">{r.supporter_phone || 'N/A'}</td>
+                      <td>{r.score.toFixed(3)}</td><td>{r.supporter_type}</td><td>{r.acquisition_channel}</td>
                       <td>{r.days_since_last_donation ?? 'N/A'}</td><td>{r.donation_count_hist ?? 'N/A'}</td><td>{r.avg_estimated_value_hist?.toFixed(2) ?? 'N/A'}</td>
                     </tr>
                   ))}
