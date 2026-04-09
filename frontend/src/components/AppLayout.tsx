@@ -167,7 +167,11 @@ export function AppLayout() {
         </div>
       </nav>
 
-      <main className={isHomePage ? 'flex-grow-1' : 'container py-4 flex-grow-1'}>
+      <main
+        className={
+          isHomePage ? 'flex-grow-1 min-w-0' : 'container py-4 flex-grow-1 min-w-0'
+        }
+      >
         <Outlet />
       </main>
 
