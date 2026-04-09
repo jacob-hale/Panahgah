@@ -72,7 +72,7 @@ export function HomePage() {
                 You can trust your contribution becomes connected to a real life.
               </p>
               <Link className="btn btn-primary btn-lg" to="/donate">
-                Support a Life
+                Donate now
               </Link>
             </div>
           </div>
