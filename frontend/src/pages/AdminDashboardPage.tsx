@@ -188,7 +188,7 @@ export function AdminDashboardPage() {
                   <h2 className="h6 text-body-secondary">Donations pipeline</h2>
                   <p className="display-6 mb-2">{metrics.kpis.recent_donations_count}</p>
                   <p className="small text-body-secondary mb-0">
-                    Recent donations total PHP {metrics.kpis.recent_donations_estimated_total.toLocaleString()}.
+                    Recent donations total USD {metrics.kpis.recent_donations_estimated_total.toLocaleString()}.
                   </p>
                 </div>
               </div>

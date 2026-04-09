@@ -40,10 +40,10 @@ function formatCompactNumber(value: number) {
   return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 }
 
-function formatCurrencyPHP(value: number) {
+function formatCurrencyUSD(value: number) {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
-    currency: 'PHP',
+    currency: 'USD',
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -307,12 +307,12 @@ export function ImpactDashboardPage() {
                   <div className="fw-semibold mb-2">Total support received</div>
                   <div className="d-flex flex-column gap-2">
                     <div className="d-flex justify-content-between">
-                      <span className="text-body-secondary">Monetary (PHP)</span>
-                      <span className="fw-semibold">{formatCurrencyPHP(data.donor_impact.donations_total_amount_php)}</span>
+                      <span className="text-body-secondary">Monetary (USD)</span>
+                      <span className="fw-semibold">{formatCurrencyUSD(data.donor_impact.donations_total_amount_php)}</span>
                     </div>
                     <div className="d-flex justify-content-between">
-                      <span className="text-body-secondary">Estimated total value (PHP)</span>
-                      <span className="fw-semibold">{formatCurrencyPHP(data.donor_impact.donations_total_estimated_php)}</span>
+                      <span className="text-body-secondary">Estimated total value (USD)</span>
+                      <span className="fw-semibold">{formatCurrencyUSD(data.donor_impact.donations_total_estimated_php)}</span>
                     </div>
                   </div>
                   <div className="alert alert-primary mt-3 mb-0">
@@ -320,6 +320,9 @@ export function ImpactDashboardPage() {
                     <div className="small">
                       <span className="fw-semibold">$50</span> supports one resident for one week. (Placeholder — we can calibrate with real program costs.)
                     </div>
+                    <Link to="/donate" className="btn btn-primary btn-sm mt-3">
+                      Donate now
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -330,7 +333,7 @@ export function ImpactDashboardPage() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-baseline">
                     <div className="fw-semibold">Allocation by program area</div>
-                    <div className="small text-body-secondary">{allocationsTotal ? formatCurrencyPHP(allocationsTotal) : '—'}</div>
+                    <div className="small text-body-secondary">{allocationsTotal ? formatCurrencyUSD(allocationsTotal) : '—'}</div>
                   </div>
                   <div className="mt-3">
                     <div className="progress" style={{ height: 14 }}>
@@ -355,7 +358,7 @@ export function ImpactDashboardPage() {
                               <span className={`rounded-2 ${seg.className}`} style={{ width: 12, height: 12, display: 'inline-block' }} />
                               <span className="small">{seg.program_area}</span>
                             </div>
-                            <span className="small text-body-secondary">{formatCurrencyPHP(seg.amount)}</span>
+                            <span className="small text-body-secondary">{formatCurrencyUSD(seg.amount)}</span>
                           </div>
                         </div>
                       ))}
