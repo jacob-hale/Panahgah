@@ -8,12 +8,15 @@ using Panahgah.Api.Data;
 using Panahgah.Api.Middleware;
 using Panahgah.Api.Models;
 using Panahgah.Api.Services;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 const string localFrontendCorsPolicy = "LocalFrontendCorsPolicy";
-var appConnection = builder.Configuration.GetConnectionString("PanahgahAppConnection");
-var identityConnection = builder.Configuration.GetConnectionString("PanahgahIdentityConnection");
+// Local CLI runs may not set ASPNETCORE_ENVIRONMENT=Development, so load this file as an optional fallback.
+builder.Configuration.AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
+var appConnection = ResolveConnectionString("PanahgahAppConnection", builder.Configuration);
+var identityConnection = ResolveConnectionString("PanahgahIdentityConnection", builder.Configuration);
 
 if (string.IsNullOrWhiteSpace(appConnection) || string.IsNullOrWhiteSpace(identityConnection))
 {
@@ -21,6 +24,44 @@ if (string.IsNullOrWhiteSpace(appConnection) || string.IsNullOrWhiteSpace(identi
         "Missing DB connection strings. Set ConnectionStrings:PanahgahAppConnection and " +
         "ConnectionStrings:PanahgahIdentityConnection in backend/appsettings.Development.json " +
         "or environment variables.");
+}
+
+static string? ResolveConnectionString(string name, IConfiguration configuration)
+{
+    var fromConfig = configuration.GetConnectionString(name);
+    if (!string.IsNullOrWhiteSpace(fromConfig))
+    {
+        return fromConfig.Trim();
+    }
+
+    var fromEnv = Environment.GetEnvironmentVariable($"ConnectionStrings__{name}");
+    if (!string.IsNullOrWhiteSpace(fromEnv))
+    {
+        return fromEnv.Trim();
+    }
+
+    var candidate = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.Development.json");
+    if (!File.Exists(candidate))
+    {
+        return null;
+    }
+
+    try
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(candidate));
+        if (document.RootElement.TryGetProperty("ConnectionStrings", out var cs) &&
+            cs.TryGetProperty(name, out var value) &&
+            value.ValueKind == JsonValueKind.String)
+        {
+            return value.GetString()?.Trim();
+        }
+    }
+    catch
+    {
+        // If this fallback parse fails, caller throws the existing startup message.
+    }
+
+    return null;
 }
 
 // Railway (and most PaaS) front apps reverse-proxy to the container.
@@ -103,6 +144,8 @@ builder.Services.AddHttpClient<GeminiSocialPostGenerator>();
 builder.Services.AddHttpClient<ISocialPublishingService, SocialPublishingService>();
 builder.Services.AddScoped<ISocialPostGenerator, ConfigurableSocialPostGenerator>();
 builder.Services.AddScoped<ISocialConnectionSecretResolver, SocialConnectionSecretResolver>();
+builder.Services.AddScoped<IMediaAssetSelector, MediaAssetSelector>();
+builder.Services.AddScoped<ICampaignSchedulerService, CampaignSchedulerService>();
 builder.Services.AddHttpClient<MetaGraphSocialPublisher>();
 builder.Services.AddScoped<ISocialPublisher, MetaGraphSocialPublisher>();
 builder.Services.AddHostedService<SocialPublishWorker>();
@@ -208,17 +251,24 @@ using (var scope = app.Services.CreateScope())
     await appDb.Database.MigrateAsync();
 
     // Guardrail: fix Postgres identity/sequence drift that can cause
-    // "23505 duplicate key value violates unique constraint PK_process_recordings"
-    // on inserts (when the sequence lags behind existing rows).
+    // duplicate key violations when a sequence lags behind existing rows.
     await appDb.Database.ExecuteSqlRawAsync(@"
 DO $$
-DECLARE seq text;
-DECLARE max_id bigint;
+DECLARE seq_process text;
+DECLARE max_process_id bigint;
+DECLARE seq_supporters text;
+DECLARE max_supporter_id bigint;
 BEGIN
-  SELECT pg_get_serial_sequence('process_recordings', 'recording_id') INTO seq;
-  IF seq IS NOT NULL THEN
-    SELECT COALESCE(MAX(recording_id), 0) INTO max_id FROM process_recordings;
-    PERFORM setval(seq, GREATEST(max_id, 1), max_id > 0);
+  SELECT pg_get_serial_sequence('process_recordings', 'recording_id') INTO seq_process;
+  IF seq_process IS NOT NULL THEN
+    SELECT COALESCE(MAX(recording_id), 0) INTO max_process_id FROM process_recordings;
+    PERFORM setval(seq_process, GREATEST(max_process_id, 1), max_process_id > 0);
+  END IF;
+
+  SELECT pg_get_serial_sequence('supporters', 'supporter_id') INTO seq_supporters;
+  IF seq_supporters IS NOT NULL THEN
+    SELECT COALESCE(MAX(supporter_id), 0) INTO max_supporter_id FROM supporters;
+    PERFORM setval(seq_supporters, GREATEST(max_supporter_id, 1), max_supporter_id > 0);
   END IF;
 END $$;
 ");

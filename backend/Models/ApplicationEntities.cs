@@ -406,6 +406,7 @@ public class ScheduledSocialPost
 {
     public int scheduled_post_id { get; set; }
     public int? campaign_id { get; set; }
+    public int? media_asset_id { get; set; }
     public string platform { get; set; } = string.Empty;
     public DateTime scheduled_for_utc { get; set; }
     public string caption { get; set; } = string.Empty;
@@ -418,6 +419,7 @@ public class ScheduledSocialPost
     public DateTime? published_at_utc { get; set; }
 
     public SocialCampaign? campaign { get; set; }
+    public MediaAsset? media_asset { get; set; }
 }
 
 public class SocialPlatformConnection
@@ -433,4 +435,20 @@ public class SocialPlatformConnection
     public bool is_placeholder { get; set; } = true;
     public DateTime created_at_utc { get; set; }
     public DateTime updated_at_utc { get; set; }
+}
+
+public class MediaAsset
+{
+    public int media_asset_id { get; set; }
+    public string category { get; set; } = string.Empty;
+    public string url { get; set; } = string.Empty;
+    public string? alt_text { get; set; }
+    public string? tags { get; set; }
+    public string platform_suitability { get; set; } = "both";
+    public string status { get; set; } = "active";
+    public DateTime created_at_utc { get; set; }
+    public DateTime updated_at_utc { get; set; }
+    public bool is_active { get; set; } = true;
+
+    public ICollection<ScheduledSocialPost> scheduled_posts { get; set; } = new List<ScheduledSocialPost>();
 }

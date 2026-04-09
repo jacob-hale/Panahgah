@@ -33,23 +33,28 @@ public sealed class AnthropicSocialPostGenerator(HttpClient httpClient, IConfigu
         var model = configuration["Llms:AnthropicModel"] ?? "claude-3-5-haiku-latest";
 
         var systemPrompt =
-            """
-            You are a social media copywriter for a nonprofit. Generate high-performing draft posts using provided model insights.
-            Return ONLY valid JSON with this schema:
+            SocialPostCopyGuidance.OrganizationSystemBlock
+            + """
+            
+            You are a social media copywriter. Generate high-performing draft posts using the brief and model insights.
+            Return ONLY valid JSON. Use real sentences for every string field—never output the literal word "string" as a value.
+
+            Shape (example structure only—replace values with real content):
             {
-              "recommended_day_of_week": "string",
-              "recommended_post_hour": 0,
-              "recommended_post_type": "string",
-              "rationale": "string",
+              "recommended_day_of_week": "Wednesday",
+              "recommended_post_hour": 16,
+              "recommended_post_type": "Impact story",
+              "rationale": "One sentence explaining why these choices fit the brief.",
               "generated_posts": [
-                { "variant_name": "Primary", "caption": "string", "hashtags": ["#tag1", "#tag2"] },
-                { "variant_name": "Alternative", "caption": "string", "hashtags": ["#tag1", "#tag2"] }
+                { "variant_name": "Primary", "caption": "Body copy only—no #Panahgah here; optional other hashtags at the end of the caption if useful.", "hashtags": ["#Community"] },
+                { "variant_name": "Alternative", "caption": "A second distinct caption option.", "hashtags": [] }
               ]
             }
-            Keep captions platform-appropriate and under 220 words. Avoid unsupported claims.
+
+            Do not put #Panahgah inside the caption string (it is appended automatically at the very end). Other hashtags may appear at the end of the caption before that step. Keep captions platform-appropriate and under 220 words.
             """;
 
-        var userPrompt = BuildUserPrompt(request, insights);
+        var userPrompt = SocialPostCopyGuidance.BuildUserPrompt(request, insights);
         var payload = new
         {
             model,
@@ -90,36 +95,8 @@ public sealed class AnthropicSocialPostGenerator(HttpClient httpClient, IConfigu
             throw new InvalidOperationException("LLM response did not include generated posts.");
         }
 
+        SocialCaptionFormatting.FinalizeGeneratorResponse(generated);
         return generated;
-    }
-
-    private static string BuildUserPrompt(SocialPostGenerateRequestDto request, Model5InsightsResponseDto insights)
-    {
-        var bestWindow = insights.best_windows.FirstOrDefault();
-        var bestPostType = insights.best_post_type_by_platform
-            .FirstOrDefault(x => string.Equals(x.platform, request.platform, StringComparison.OrdinalIgnoreCase));
-
-        var sb = new StringBuilder();
-        sb.AppendLine("Create two social post drafts from this brief:");
-        sb.AppendLine($"Platform: {request.platform}");
-        sb.AppendLine($"Goal: {request.goal}");
-        sb.AppendLine($"Preferred post type: {request.post_type}");
-        sb.AppendLine($"Topic: {request.post_topic}");
-        sb.AppendLine($"Tone: {request.tone}");
-        sb.AppendLine($"Include resident story: {request.include_resident_story}");
-        sb.AppendLine($"Key details: {request.key_details ?? "None"}");
-        sb.AppendLine();
-        sb.AppendLine("Model insights to incorporate:");
-        sb.AppendLine($"Baseline expected referrals/post: {insights.baseline_expected_referrals:F2}");
-        sb.AppendLine(
-            $"Resident story effect avg referrals: with story {insights.story_effect.with_story_avg:F2}, without story {insights.story_effect.without_story_avg:F2}.");
-        sb.AppendLine(
-            $"Recommended platform post type: {(bestPostType is null ? "N/A" : $"{bestPostType.post_type} ({bestPostType.uplift_pct:F1}% uplift)")}");
-        sb.AppendLine(
-            $"Recommended posting window: {(bestWindow is null ? "N/A" : $"{bestWindow.day_of_week} @ {bestWindow.post_hour}:00 ({bestWindow.uplift_pct:F1}% uplift)")}");
-        sb.AppendLine();
-        sb.AppendLine("Output exactly the required JSON object.");
-        return sb.ToString();
     }
 
     private static string ExtractTextFromAnthropicResponse(string responseBody)

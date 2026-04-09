@@ -63,3 +63,10 @@ Desktop.ini
 # --- Misc ---
 coverage/
 *.cache
+
+# Local dotnet build output folders (not source)
+backend/bin_compile_check/
+backend/bin_verify/
+backend/bin_verify_slot/
+backend/bin_verify_slot2/
+backend/bin_verify_agent/

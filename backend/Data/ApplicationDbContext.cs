@@ -26,6 +26,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SocialCampaign> social_campaigns => Set<SocialCampaign>();
     public DbSet<ScheduledSocialPost> scheduled_social_posts => Set<ScheduledSocialPost>();
     public DbSet<SocialPlatformConnection> social_platform_connections => Set<SocialPlatformConnection>();
+    public DbSet<MediaAsset> media_assets => Set<MediaAsset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -167,11 +168,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(e => e.campaign)
             .WithMany(e => e.scheduled_posts)
             .HasForeignKey(e => e.campaign_id);
+        modelBuilder.Entity<ScheduledSocialPost>()
+            .HasOne(e => e.media_asset)
+            .WithMany(e => e.scheduled_posts)
+            .HasForeignKey(e => e.media_asset_id);
 
         modelBuilder.Entity<SocialPlatformConnection>().HasKey(e => e.connection_id);
         modelBuilder.Entity<SocialPlatformConnection>().ToTable("social_platform_connections");
         modelBuilder.Entity<SocialPlatformConnection>()
             .Property(e => e.token_source)
             .HasDefaultValue(string.Empty);
+
+        modelBuilder.Entity<MediaAsset>().HasKey(e => e.media_asset_id);
+        modelBuilder.Entity<MediaAsset>().ToTable("media_assets");
     }
 }

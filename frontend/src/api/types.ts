@@ -259,6 +259,7 @@ export type SocialCampaignCreatePayload = {
 export type ScheduledSocialPost = {
   scheduled_post_id: number;
   campaign_id: number | null;
+  media_asset_id?: number | null;
   platform: string;
   scheduled_for_utc: string;
   caption: string;
@@ -277,6 +278,53 @@ export type ScheduledSocialPostCreatePayload = {
   scheduled_for_utc: string;
   caption: string;
   media_url: string | null;
+};
+
+export type CampaignGeneratePayload = {
+  campaign_name: string;
+  campaign_goal: string;
+  post_topic: string;
+  media_category: string;
+  tone: string;
+  post_type: string;
+  start_utc: string;
+  end_utc: string;
+  posts_per_week: number;
+  include_resident_story: boolean;
+  post_to_facebook: boolean;
+  post_to_instagram: boolean;
+};
+
+export type SinglePostGeneratePayload = {
+  post_topic: string;
+  goal: string;
+  tone: string;
+  post_type: string;
+  media_category: string;
+  include_resident_story: boolean;
+  scheduled_for_utc: string;
+  post_to_facebook: boolean;
+  post_to_instagram: boolean;
+};
+
+export type ScheduledSocialPostUpdatePayload = {
+  caption?: string;
+  media_url?: string | null;
+  scheduled_for_utc?: string;
+};
+
+export type ScheduledSocialPostBulkActionPayload = {
+  scheduled_post_ids: number[];
+};
+
+export type DraftRegeneratePayload = {
+  scheduled_post_ids: number[];
+  post_topic: string;
+  goal: string;
+  tone: string;
+  post_type: string;
+  media_category: string;
+  include_resident_story: boolean;
 };
 
 export type SocialPlatformConnection = {
