@@ -64,8 +64,29 @@ public class AdminDashboardController(ApplicationDbContext dbContext, DonorMlPip
                 })
             .ToListAsync();
 
+        var donationTotals = await dbContext.donations
+            .AsNoTracking()
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                lifetime_amount = g.Sum(x => (decimal?)x.amount) ?? 0m,
+                lifetime_estimated = g.Sum(x => (decimal?)x.estimated_value) ?? 0m
+            })
+            .FirstOrDefaultAsync();
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var last30DaysStart = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(-30));
         var conferenceWindowEnd = today.AddDays(UpcomingConferenceWindowDays);
+        var donationLast30DaysTotals = await dbContext.donations
+            .AsNoTracking()
+            .Where(d => d.donation_date >= last30DaysStart)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                amount = g.Sum(x => (decimal?)x.amount) ?? 0m,
+                estimated = g.Sum(x => (decimal?)x.estimated_value) ?? 0m
+            })
+            .FirstOrDefaultAsync();
         var upcomingCaseConferences = await dbContext.intervention_plans
             .AsNoTracking()
             .Where(p => p.case_conference_date.HasValue
@@ -124,6 +145,10 @@ public class AdminDashboardController(ApplicationDbContext dbContext, DonorMlPip
                 safehouse_count = safehouses.Count,
                 recent_donations_count = recentDonations.Count,
                 recent_donations_estimated_total = recentDonations.Sum(d => d.estimated_value),
+                donations_lifetime_amount_total = donationTotals?.lifetime_amount ?? 0m,
+                donations_lifetime_estimated_total = donationTotals?.lifetime_estimated ?? 0m,
+                donations_last_30_days_amount_total = donationLast30DaysTotals?.amount ?? 0m,
+                donations_last_30_days_estimated_total = donationLast30DaysTotals?.estimated ?? 0m,
                 progress_noted_rate_percent = progressRate
             },
             safehouse_resident_breakdown = safehouseResidentBreakdown,
