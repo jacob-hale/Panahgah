@@ -122,7 +122,7 @@ export function DonorUpgradeInsightsPage() {
                     <tr key={r.supporter_id}>
                       <td>{r.supporter_name || `Supporter #${r.supporter_id}`}</td>
                       <td>{r.supporter_email || 'N/A'}</td>
-                      <td>{r.supporter_phone || 'N/A'}</td>
+                      <td className="mlr-contact-phone">{r.supporter_phone || 'N/A'}</td>
                       <td>{r.score.toFixed(3)}</td><td>{r.supporter_type}</td><td>{r.acquisition_channel}</td>
                       <td>{r.donation_count_hist ?? 'N/A'}</td><td>{r.hist_median_amount?.toFixed(2) ?? 'N/A'}</td><td>{r.suggested_ask_floor?.toFixed(2) ?? 'N/A'}</td><td>{r.suggested_ask_ceiling?.toFixed(2) ?? 'N/A'}</td>
                     </tr>

@@ -120,7 +120,7 @@ export function DonorLapseInsightsPage() {
                     <tr key={r.supporter_id}>
                       <td>{r.supporter_name || `Supporter #${r.supporter_id}`}</td>
                       <td>{r.supporter_email || 'N/A'}</td>
-                      <td>{r.supporter_phone || 'N/A'}</td>
+                      <td className="mlr-contact-phone">{r.supporter_phone || 'N/A'}</td>
                       <td>{r.score.toFixed(3)}</td><td>{r.supporter_type}</td><td>{r.acquisition_channel}</td>
                       <td>{r.days_since_last_donation ?? 'N/A'}</td><td>{r.donation_count_hist ?? 'N/A'}</td><td>{r.avg_estimated_value_hist?.toFixed(2) ?? 'N/A'}</td>
                     </tr>
