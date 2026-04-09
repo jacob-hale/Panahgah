@@ -22,10 +22,22 @@ function parseApiErrorMessage(text: string, status: number): string {
   if (!text) return fallback;
 
   try {
-    const parsed = JSON.parse(text) as { error?: unknown; message?: unknown; title?: unknown };
-    if (typeof parsed.error === 'string' && parsed.error.trim()) return parsed.error;
-    if (typeof parsed.message === 'string' && parsed.message.trim()) return parsed.message;
-    if (typeof parsed.title === 'string' && parsed.title.trim()) return parsed.title;
+    const parsed = JSON.parse(text) as {
+      error?: unknown;
+      message?: unknown;
+      title?: unknown;
+      detail?: unknown;
+      hint?: unknown;
+    };
+    const primary =
+      (typeof parsed.error === 'string' && parsed.error.trim() ? parsed.error : null) ??
+      (typeof parsed.detail === 'string' && parsed.detail.trim() ? parsed.detail : null) ??
+      (typeof parsed.message === 'string' && parsed.message.trim() ? parsed.message : null) ??
+      (typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title : null);
+    if (primary) {
+      const hint = typeof parsed.hint === 'string' && parsed.hint.trim() ? parsed.hint.trim() : '';
+      return hint ? `${primary}\n${hint}` : primary;
+    }
   } catch {
     // Not JSON, return text as-is.
   }

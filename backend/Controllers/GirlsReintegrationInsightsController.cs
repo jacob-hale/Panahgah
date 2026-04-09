@@ -20,9 +20,39 @@ public sealed class GirlsReintegrationInsightsController(
             var result = await pipelineService.TrainAsync("manual", cancellationToken);
             return Ok(result);
         }
+        catch (GirlsReintegrationTrainingException ex)
+        {
+            var body = new GirlsReintegrationTrainErrorDto
+            {
+                error = ex.Message,
+                code = ex.Code,
+                hint = ex.Hint
+            };
+
+            if (ex.Code == "python_training_failed")
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, body);
+            }
+
+            return BadRequest(body);
+        }
+        catch (FileNotFoundException ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new GirlsReintegrationTrainErrorDto
+            {
+                error = ex.Message,
+                code = "trainer_script_missing",
+                hint = "Confirm backend/ML/girls_reintegration_train.py is published with the API (see Dockerfile / csproj Content)."
+            });
+        }
         catch (Exception ex)
         {
-            return Problem($"Girls reintegration model training failed: {ex.Message}", statusCode: 500);
+            return StatusCode(StatusCodes.Status500InternalServerError, new GirlsReintegrationTrainErrorDto
+            {
+                error = ex.Message,
+                code = "unexpected",
+                hint = "Check Railway logs for the full stack trace (database access, serialization, or process spawn)."
+            });
         }
     }
 

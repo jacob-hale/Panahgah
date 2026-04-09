@@ -1,5 +1,13 @@
 namespace Panahgah.Api.Contracts;
 
+/// <summary>Returned on failed POST /api/ml/girls-reintegration/train (400/500 JSON body).</summary>
+public sealed class GirlsReintegrationTrainErrorDto
+{
+    public string error { get; set; } = string.Empty;
+    public string code { get; set; } = string.Empty;
+    public string? hint { get; set; }
+}
+
 public sealed class GirlsReintegrationInsightsResponseDto
 {
     public GirlsReadinessDistributionDto readiness_distribution { get; set; } = new();
