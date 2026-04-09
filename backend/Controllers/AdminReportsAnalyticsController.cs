@@ -23,12 +23,17 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
             .ToListAsync();
         var residentsActive = residentRows.Count(IsActiveCaseStatus);
 
-        var avgHealth = await dbContext.health_wellbeing_records.AsNoTracking().AnyAsync()
-            ? await dbContext.health_wellbeing_records.AsNoTracking().AverageAsync(r => r.general_health_score)
+        // education_records / health_wellbeing_records may contain NULLs in score columns (imports).
+        var healthWithScore = dbContext.health_wellbeing_records.AsNoTracking()
+            .Where(r => r.general_health_score != null);
+        var avgHealth = await healthWithScore.AnyAsync()
+            ? await healthWithScore.AverageAsync(r => r.general_health_score!.Value)
             : 0m;
 
-        var avgEdu = await dbContext.education_records.AsNoTracking().AnyAsync()
-            ? await dbContext.education_records.AsNoTracking().AverageAsync(r => r.progress_percent)
+        var educationWithProgress = dbContext.education_records.AsNoTracking()
+            .Where(r => r.progress_percent != null);
+        var avgEdu = await educationWithProgress.AnyAsync()
+            ? await educationWithProgress.AverageAsync(r => r.progress_percent!.Value)
             : 0m;
 
         var completedReint = await dbContext.residents.AsNoTracking()

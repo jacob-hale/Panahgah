@@ -69,9 +69,9 @@ public sealed class GirlsReintegrationMlPipelineService(
                 .Select(e => new
                 {
                     e.resident_id,
-                    attendance_rate = EF.Property<decimal?>(e, nameof(e.attendance_rate)),
-                    progress_percent = EF.Property<decimal?>(e, nameof(e.progress_percent)),
-                    gpa_like_score = EF.Property<decimal?>(e, nameof(e.gpa_like_score))
+                    e.attendance_rate,
+                    e.progress_percent,
+                    e.gpa_like_score
                 })
                 .ToListAsync(cancellationToken);
 
@@ -79,10 +79,10 @@ public sealed class GirlsReintegrationMlPipelineService(
                 .Select(h => new
                 {
                     h.resident_id,
-                    nutrition_score = EF.Property<decimal?>(h, nameof(h.nutrition_score)),
-                    sleep_score = EF.Property<decimal?>(h, nameof(h.sleep_score)),
-                    energy_score = EF.Property<decimal?>(h, nameof(h.energy_score)),
-                    general_health_score = EF.Property<decimal?>(h, nameof(h.general_health_score))
+                    h.nutrition_score,
+                    h.sleep_score,
+                    h.energy_score,
+                    h.general_health_score
                 })
                 .ToListAsync(cancellationToken);
 
