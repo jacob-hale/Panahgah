@@ -34,8 +34,9 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
         var completedReint = await dbContext.residents.AsNoTracking()
             .CountAsync(r => r.reintegration_status == "Completed");
 
+        // Avoid .Trim() in LINQ — PostgreSQL translation can fail; empty string still excluded.
         var withStatus = await dbContext.residents.AsNoTracking()
-            .CountAsync(r => r.reintegration_status != null && r.reintegration_status.Trim().Length > 0);
+            .CountAsync(r => r.reintegration_status != null && r.reintegration_status != "");
 
         var reintRate = withStatus == 0 ? 0m : Math.Round((decimal)completedReint / withStatus, 4);
 
@@ -70,13 +71,13 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
         }
 
         var networkMonthly = await dbContext.safehouse_monthly_metrics.AsNoTracking()
-            .GroupBy(m => EF.Property<DateOnly?>(m, nameof(SafehouseMonthlyMetric.month_start)))
+            .GroupBy(m => m.month_start)
             .Select(g => new AdminReportsNetworkMonthTrendDto
             {
                 month_start = g.Key,
-                avg_health_score = g.Average(x => EF.Property<decimal?>(x, nameof(SafehouseMonthlyMetric.avg_health_score))) ?? 0m,
-                avg_education_progress = g.Average(x => EF.Property<decimal?>(x, nameof(SafehouseMonthlyMetric.avg_education_progress))) ?? 0m,
-                sessions_count = g.Sum(x => EF.Property<int?>(x, nameof(SafehouseMonthlyMetric.process_recording_count))) ?? 0
+                avg_health_score = g.Average(x => x.avg_health_score),
+                avg_education_progress = g.Average(x => x.avg_education_progress),
+                sessions_count = g.Sum(x => x.process_recording_count)
             })
             .OrderBy(x => x.month_start)
             .ToListAsync();
@@ -90,26 +91,41 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
             networkLast12 = networkLast12.TakeLast(12).ToList();
         }
 
-        var inner = dbContext.safehouse_monthly_metrics.AsNoTracking()
+        // Avoid composite anonymous join — EF/PostgreSQL often fails to translate; filter in memory.
+        var maxPerHouse = await dbContext.safehouse_monthly_metrics.AsNoTracking()
             .GroupBy(m => m.safehouse_id)
-            .Select(g => new { safehouse_id = g.Key, maxMonth = g.Max(x => x.month_start) });
-
-        var safehousePerformance = await (
-            from m in dbContext.safehouse_monthly_metrics.AsNoTracking()
-            join s in dbContext.safehouses.AsNoTracking() on m.safehouse_id equals s.safehouse_id
-            join mp in inner on new { m.safehouse_id, Month = m.month_start } equals new { mp.safehouse_id, Month = mp.maxMonth }
-            select new AdminReportsSafehousePerformanceDto
-            {
-                safehouse_id = s.safehouse_id,
-                safehouse_name = s.name,
-                metric_month = m.month_start,
-                active_residents = m.active_residents,
-                avg_health_score = m.avg_health_score,
-                avg_education_progress = m.avg_education_progress,
-                process_recording_count = m.process_recording_count
-            })
-            .OrderBy(x => x.safehouse_name)
+            .Select(g => new { safehouse_id = g.Key, maxMonth = g.Max(x => x.month_start) })
             .ToListAsync();
+
+        List<AdminReportsSafehousePerformanceDto> safehousePerformance;
+        if (maxPerHouse.Count == 0)
+        {
+            safehousePerformance = [];
+        }
+        else
+        {
+            var houseIds = maxPerHouse.Select(x => x.safehouse_id).Distinct().ToList();
+            var maxDict = maxPerHouse.ToDictionary(x => x.safehouse_id, x => x.maxMonth);
+            var metricRows = await dbContext.safehouse_monthly_metrics.AsNoTracking()
+                .Include(m => m.safehouse)
+                .Where(m => houseIds.Contains(m.safehouse_id))
+                .ToListAsync();
+
+            safehousePerformance = metricRows
+                .Where(m => maxDict.TryGetValue(m.safehouse_id, out var mm) && m.month_start == mm)
+                .Select(m => new AdminReportsSafehousePerformanceDto
+                {
+                    safehouse_id = m.safehouse.safehouse_id,
+                    safehouse_name = m.safehouse.name,
+                    metric_month = m.month_start,
+                    active_residents = m.active_residents,
+                    avg_health_score = m.avg_health_score,
+                    avg_education_progress = m.avg_education_progress,
+                    process_recording_count = m.process_recording_count
+                })
+                .OrderBy(x => x.safehouse_name)
+                .ToList();
+        }
 
         var totalSessions = await dbContext.process_recordings.AsNoTracking().CountAsync();
 
