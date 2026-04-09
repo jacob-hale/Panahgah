@@ -23,6 +23,9 @@ public sealed class DonorMlModelSummaryDto
 public sealed class DonorMlDonorRowDto
 {
     public int supporter_id { get; set; }
+    public string? supporter_name { get; set; }
+    public string? supporter_email { get; set; }
+    public string? supporter_phone { get; set; }
     public double score { get; set; }
     public string supporter_type { get; set; } = string.Empty;
     public string acquisition_channel { get; set; } = string.Empty;
