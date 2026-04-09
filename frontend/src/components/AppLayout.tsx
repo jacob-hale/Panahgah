@@ -54,59 +54,74 @@ export function AppLayout() {
                 </NavLink>
               </li>
               {!isLoading && authSession?.roles.includes('Admin') && (
-                <li className="nav-item dropdown">
-                  <button
-                    type="button"
-                    className="nav-link dropdown-toggle"
-                    id="adminNavDropdown"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Staff portal
-                  </button>
-                  <ul className="dropdown-menu" aria-labelledby="adminNavDropdown">
-                    <li>
-                      <NavLink end className="dropdown-item staff-portal-dropdown-item" to="/admin">
-                        Admin dashboard
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/caseload">
-                        Caseload inventory
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/process-recordings">
-                        Process recordings
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/visits-and-conferences">
-                        Home visitations &amp; case conferences
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-insights">
-                        Social media insights
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-post-studio">
-                        Social post studio
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/supporters">
-                        Supporters &amp; donations
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/settings">
-                        Admin settings
-                      </NavLink>
-                    </li>
-                  </ul>
-                </li>
+                <>
+                  <li className="nav-item dropdown">
+                    <button
+                      type="button"
+                      className="nav-link dropdown-toggle"
+                      id="adminOpsDropdown"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                    >
+                      Operations
+                    </button>
+                    <ul className="dropdown-menu" aria-labelledby="adminOpsDropdown">
+                      <li>
+                        <NavLink end className="dropdown-item staff-portal-dropdown-item" to="/admin">
+                          Admin dashboard
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/caseload">
+                          Caseload inventory
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/process-recordings">
+                          Process recordings
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/visits-and-conferences">
+                          Home visitations &amp; case conferences
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </li>
+                  <li className="nav-item dropdown">
+                    <button
+                      type="button"
+                      className="nav-link dropdown-toggle"
+                      id="adminInsightsDropdown"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                    >
+                      Insights &amp; outreach
+                    </button>
+                    <ul className="dropdown-menu" aria-labelledby="adminInsightsDropdown">
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-insights">
+                          Social media insights
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-post-studio">
+                          Social post studio
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/supporters">
+                          Supporters &amp; donations
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/girls-reintegration-insights">
+                          Girls reintegration insights
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </li>
+                </>
               )}
             </ul>
 
