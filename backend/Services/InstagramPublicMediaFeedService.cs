@@ -15,6 +15,7 @@ public sealed class InstagramPublicMediaFeedService(
     IConfiguration configuration,
     IMemoryCache memoryCache,
     IOptions<SocialPublicFeedOptions> feedOptions,
+    InstagramTimelineCacheVersion timelineCacheVersion,
     ILogger<InstagramPublicMediaFeedService> logger)
 {
     private const string GraphVersion = "v25.0";
@@ -38,7 +39,7 @@ public sealed class InstagramPublicMediaFeedService(
             return [];
         }
 
-        var cacheKey = $"ig_public_timeline_{igId}_{maxItems}";
+        var cacheKey = $"ig_public_timeline_{igId}_{maxItems}_v{timelineCacheVersion.Current}";
         if (memoryCache.TryGetValue(cacheKey, out IReadOnlyList<PublicSocialFeedItemDto>? cached) && cached is not null)
         {
             return cached;
