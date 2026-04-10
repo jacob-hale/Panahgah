@@ -28,7 +28,9 @@ export function SocialMediaInsightsPage() {
       const data = await apiFetch<Model5InsightsResponse>('/api/ml/model5/insights');
       setInsights(data);
     } catch {
-      setError('Unable to run Model 5 scoring. Ensure Python, model artifact, and admin access are configured.');
+      setError(
+        'Unable to load social media insights. Ensure Python, the trained insights model, and admin access are configured.',
+      );
     } finally {
       setLoading(false);
     }
@@ -78,14 +80,14 @@ export function SocialMediaInsightsPage() {
         </ol>
       </nav>
 
-      <h1 className="h3 mb-2">Social media insights (Model 5 dashboard)</h1>
+      <h1 className="h3 mb-2">Social media insights</h1>
       <p className="text-body-secondary">
-        Mirrors the Model 5 final output blocks: baseline referrals, best posting windows, best post type per
-        platform, and resident-story effect.
+        Baseline referrals per post, best posting windows, best post type by platform, and resident-story effect—derived
+        from your historical social posts.
       </p>
       <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
         <button type="button" className="btn btn-primary" onClick={handleTrainModel} disabled={training}>
-          {training ? 'Training model…' : 'Retrain Model 5 from DB'}
+          {training ? 'Retraining insights…' : 'Retrain insights from database'}
         </button>
         <button type="button" className="btn btn-outline-secondary" onClick={() => void loadInsights()} disabled={loading}>
           Refresh insights

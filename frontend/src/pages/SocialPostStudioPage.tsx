@@ -737,7 +737,7 @@ export function SocialPostStudioPage() {
                     }
                   />
                   <label htmlFor="studio-campaign-resident-story" className="form-check-label">
-                    Prefer resident-story framing when the model supports it
+                    Prefer resident-story framing when insights favor stories
                   </label>
                 </div>
                 <div className="form-check">
@@ -906,7 +906,7 @@ export function SocialPostStudioPage() {
                     }
                   />
                   <label htmlFor="studio-single-resident-story" className="form-check-label">
-                    Prefer resident-story framing when the model supports it
+                    Prefer resident-story framing when insights favor stories
                   </label>
                 </div>
                 <div className="form-check">
@@ -1049,7 +1049,7 @@ export function SocialPostStudioPage() {
               </div>
               {topWindows.length > 0 ? (
                 <div className="alert alert-info small py-2">
-                  <div><strong>Model 5 posting insights</strong></div>
+                  <div><strong>Suggested posting times &amp; formats</strong></div>
                   <div className="mt-1">
                     {topWindows.map((w, idx) => (
                       <div key={`${w.day_of_week}-${w.post_hour}-${idx}`}>
@@ -1067,8 +1067,8 @@ export function SocialPostStudioPage() {
                   </div>
                   <div className="mt-1 text-body-secondary">
                     Drafts are created in this order: post 1 = #1, post 2 = #2, post 3 = #3 (not re-sorted by
-                    calendar). Day/hour for each row use <strong>India Standard Time (IST)</strong> for the model hour,
-                    then store as UTC—your browser shows local time.
+                    calendar). Day/hour for each row use <strong>India Standard Time (IST)</strong> for the suggested
+                    slot from insights, then store as UTC—your browser shows local time.
                   </div>
                 </div>
               ) : null}
