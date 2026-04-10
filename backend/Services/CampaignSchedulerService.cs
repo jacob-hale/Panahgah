@@ -28,21 +28,37 @@ public sealed class MediaAssetSelector(IWebHostEnvironment environment, IConfigu
     // Keep campaign assets to formats Meta reliably accepts for both Facebook photos and Instagram images.
     private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg"];
 
+    /// <summary>
+    /// When the API runs in Docker / cloud, there is often no checkout of <c>frontend/public</c>.
+    /// Public URLs still point at the deployed static host; this table must stay aligned with that tree.
+    /// </summary>
+    private static readonly Dictionary<string, string[]> FallbackCampaignFilesByCategory = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["donation_impact"] = ["donations_reliefItems.png", "donations_schoolSupplies.png"],
+        ["events"] = ["events_commuityOutreach.png", "event_awarenessWorkshop.png"],
+        ["girls"] = ["girls_withSocialWorker.png", "girl_studyAtDesk.png"],
+        ["motivational_quotes"] = ["motivational_quote_plantGrowing.png", "motivational_quote_sunrise.png"],
+        ["safehouses"] = ["safehouse_cleanBedroom.png", "safehouse_cleanSanctuary.png"],
+    };
+
     public Task<IReadOnlyList<string>> ListCategoriesAsync(CancellationToken cancellationToken = default)
     {
         var root = ResolveMediaRootPath();
-        if (!Directory.Exists(root))
+        if (Directory.Exists(root))
         {
-            return Task.FromResult<IReadOnlyList<string>>([]);
+            var categories = Directory.GetDirectories(root)
+                .Select(Path.GetFileName)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
+                .OrderBy(x => x)
+                .ToList();
+            if (categories.Count > 0)
+            {
+                return Task.FromResult<IReadOnlyList<string>>(categories);
+            }
         }
 
-        var categories = Directory.GetDirectories(root)
-            .Select(Path.GetFileName)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x!)
-            .OrderBy(x => x)
-            .ToList();
-        return Task.FromResult<IReadOnlyList<string>>(categories);
+        return Task.FromResult<IReadOnlyList<string>>(FallbackCampaignFilesByCategory.Keys.OrderBy(k => k).ToList());
     }
 
     public async Task<string?> PickRandomCategoryAsync(CancellationToken cancellationToken = default)
@@ -65,40 +81,60 @@ public sealed class MediaAssetSelector(IWebHostEnvironment environment, IConfigu
         }
 
         var root = ResolveMediaRootPath();
-        if (!Directory.Exists(root))
+        if (Directory.Exists(root))
         {
-            return Task.FromResult<SelectedMediaAsset?>(null);
+            var categoryFolder = Directory.GetDirectories(root)
+                .FirstOrDefault(d =>
+                    string.Equals(Path.GetFileName(d), normalizedCategory, StringComparison.OrdinalIgnoreCase))
+                ?? Path.Combine(root, normalizedCategory);
+            if (Directory.Exists(categoryFolder))
+            {
+                var files = Directory.GetFiles(categoryFolder)
+                    .Where(path => ImageExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()))
+                    .ToList();
+                if (files.Count > 0)
+                {
+                    var selectedFile = files[Random.Next(files.Count)];
+                    var fileName = Path.GetFileName(selectedFile);
+                    var realCategory = Path.GetFileName(categoryFolder) ?? normalizedCategory;
+                    return Task.FromResult<SelectedMediaAsset?>(BuildSelectedAsset(realCategory, fileName));
+                }
+            }
         }
 
-        var categoryFolder = Directory.GetDirectories(root)
-            .FirstOrDefault(d =>
-                string.Equals(Path.GetFileName(d), normalizedCategory, StringComparison.OrdinalIgnoreCase))
-            ?? Path.Combine(root, normalizedCategory);
-        if (!Directory.Exists(categoryFolder))
+        if (TrySelectFallback(normalizedCategory, out var fallback))
         {
-            return Task.FromResult<SelectedMediaAsset?>(null);
+            return Task.FromResult<SelectedMediaAsset?>(fallback);
         }
 
-        var files = Directory.GetFiles(categoryFolder)
-            .Where(path => ImageExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()))
-            .ToList();
-        if (files.Count == 0)
-        {
-            return Task.FromResult<SelectedMediaAsset?>(null);
-        }
+        return Task.FromResult<SelectedMediaAsset?>(null);
+    }
 
-        var selectedFile = files[Random.Next(files.Count)];
-        var fileName = Path.GetFileName(selectedFile);
-        var realCategory = Path.GetFileName(categoryFolder) ?? normalizedCategory;
-        var publicUrl = $"{ResolveMediaPublicBaseUrl().TrimEnd('/')}/{realCategory}/{Uri.EscapeDataString(fileName)}";
+    private SelectedMediaAsset BuildSelectedAsset(string realCategoryFolderName, string fileName)
+    {
+        var publicUrl =
+            $"{ResolveMediaPublicBaseUrl().TrimEnd('/')}/{realCategoryFolderName}/{Uri.EscapeDataString(fileName)}";
         var guessedAlt = Path.GetFileNameWithoutExtension(fileName).Replace('-', ' ').Replace('_', ' ');
-        return Task.FromResult<SelectedMediaAsset?>(new SelectedMediaAsset
+        return new SelectedMediaAsset
         {
-            category = realCategory,
+            category = realCategoryFolderName,
             url = publicUrl,
             alt_text = guessedAlt,
-            tags = realCategory
-        });
+            tags = realCategoryFolderName,
+        };
+    }
+
+    private bool TrySelectFallback(string normalizedCategory, out SelectedMediaAsset? asset)
+    {
+        asset = null;
+        if (!FallbackCampaignFilesByCategory.TryGetValue(normalizedCategory, out var names) || names.Length == 0)
+        {
+            return false;
+        }
+
+        var fileName = names[Random.Next(names.Length)];
+        asset = BuildSelectedAsset(normalizedCategory, fileName);
+        return true;
     }
 
     private string ResolveMediaRootPath()
@@ -109,7 +145,22 @@ public sealed class MediaAssetSelector(IWebHostEnvironment environment, IConfigu
             return Path.GetFullPath(configured);
         }
 
-        return Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "frontend", "public", "campaign-media"));
+        var alongsideApp = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "campaign-media"));
+        var monorepoDev = Path.GetFullPath(
+            Path.Combine(environment.ContentRootPath, "..", "frontend", "public", "campaign-media"));
+
+        if (Directory.Exists(alongsideApp))
+        {
+            return alongsideApp;
+        }
+
+        if (Directory.Exists(monorepoDev))
+        {
+            return monorepoDev;
+        }
+
+        // Prefer /app/campaign-media in Docker once populated; else dev path for new clones.
+        return alongsideApp;
     }
 
     private string ResolveMediaPublicBaseUrl()
@@ -380,7 +431,8 @@ public sealed class CampaignSchedulerService(
                                         requestedCategory.Equals("random", StringComparison.OrdinalIgnoreCase);
         if (useRandomCategoryEachSlot && allCategories.Count == 0)
         {
-            throw new InvalidOperationException("No campaign-media folders found. Add images under frontend/public/campaign-media/<category>/.");
+            throw new InvalidOperationException(
+                "No campaign media categories available. Add images under frontend/public/campaign-media/<category>/ or configure Social:MediaRootPath / fallback list in MediaAssetSelector.");
         }
 
         var usedMediaUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
