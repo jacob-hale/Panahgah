@@ -6,8 +6,7 @@ public sealed class AdminReportsAnalyticsDto
     public required AdminReportsOutcomeSummaryDto outcomes { get; init; }
     public required AdminReportsReintegrationDto reintegration { get; init; }
     public required IReadOnlyList<AdminReportsDonationMonthPointDto> donation_trend_monthly { get; init; }
-    public required IReadOnlyList<AdminReportsNetworkMonthTrendDto> network_monthly_trends { get; init; }
-    public required IReadOnlyList<AdminReportsSafehousePerformanceDto> safehouse_performance { get; init; }
+    public required IReadOnlyList<AdminReportsSafehouseOccupancyDto> safehouse_occupancy { get; init; }
     public int total_process_recordings { get; init; }
 }
 
@@ -40,21 +39,10 @@ public sealed class AdminReportsDonationMonthPointDto
     public decimal estimated_value_sum { get; init; }
 }
 
-public sealed class AdminReportsNetworkMonthTrendDto
-{
-    public DateOnly? month_start { get; init; }
-    public decimal avg_health_score { get; init; }
-    public decimal avg_education_progress { get; init; }
-    public int sessions_count { get; init; }
-}
-
-public sealed class AdminReportsSafehousePerformanceDto
+public sealed class AdminReportsSafehouseOccupancyDto
 {
     public int safehouse_id { get; init; }
     public required string safehouse_name { get; init; }
     public DateOnly metric_month { get; init; }
     public int active_residents { get; init; }
-    public decimal avg_health_score { get; init; }
-    public decimal avg_education_progress { get; init; }
-    public int process_recording_count { get; init; }
 }
