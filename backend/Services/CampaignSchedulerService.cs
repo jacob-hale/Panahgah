@@ -431,7 +431,6 @@ public sealed class CampaignSchedulerService(
                 var scheduledPost = new ScheduledSocialPost
                 {
                     campaign_id = campaignId,
-                    media_asset_id = null,
                     platform = platform,
                     scheduled_for_utc = slot,
                     caption = caption,
