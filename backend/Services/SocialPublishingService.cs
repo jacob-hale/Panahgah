@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Data;
 using Panahgah.Api.Models;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace Panahgah.Api.Services;
@@ -226,8 +228,105 @@ public sealed class MetaGraphSocialPublisher(
     ILogger<MetaGraphSocialPublisher> logger) : ISocialPublisher
 {
     private const string GraphVersion = "v25.0";
-    private static readonly TimeSpan InstagramPublishRetryDelay = TimeSpan.FromSeconds(3);
-    private const int InstagramPublishMaxAttempts = 4;
+    private static readonly TimeSpan InstagramPublishRetryDelay = TimeSpan.FromSeconds(4);
+    private const int InstagramPublishMaxAttempts = 8;
+    private const int InstagramMediaCreateMaxAttempts = 8;
+
+    /// <summary>
+    /// Facebook sometimes benefits from a cache-busting query param; Instagram's crawler is stricter—use clean URLs for IG.
+    /// </summary>
+    private static string WithFacebookPhotoCacheBuster(string rawUrl, int postId)
+    {
+        var u = rawUrl.Trim();
+        if (string.IsNullOrEmpty(u))
+        {
+            return u;
+        }
+
+        var sep = u.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+        return $"{u}{sep}fb_cb={postId}";
+    }
+
+    private static Dictionary<string, string> BuildInstagramCreatePayload(
+        string imageUrl,
+        string? caption,
+        string accessToken,
+        int createAttempt)
+    {
+        var captionText = SocialCaptionFormatting.EnsurePanahgahHashtag(caption);
+        var payload = new Dictionary<string, string>
+        {
+            ["image_url"] = imageUrl,
+            ["caption"] = captionText,
+            ["access_token"] = accessToken,
+        };
+
+        // First half: explicit IMAGE. Later attempts omit media_type (Graph accepts image_url-only for photos).
+        if (createAttempt <= InstagramMediaCreateMaxAttempts / 2)
+        {
+            payload["media_type"] = "IMAGE";
+        }
+
+        return payload;
+    }
+
+    private async Task<HttpResponseMessage> SendInstagramPreflightRequestAsync(
+        string imageUrl,
+        CancellationToken cancellationToken)
+    {
+        using var headReq = new HttpRequestMessage(HttpMethod.Head, imageUrl);
+        headReq.Headers.TryAddWithoutValidation("User-Agent", "facebookexternalhit/1.1");
+        var headResp = await httpClient.SendAsync(headReq, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (headResp.StatusCode != HttpStatusCode.MethodNotAllowed && headResp.StatusCode != HttpStatusCode.NotImplemented)
+        {
+            return headResp;
+        }
+
+        headResp.Dispose();
+        using var getReq = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+        getReq.Headers.TryAddWithoutValidation("User-Agent", "facebookexternalhit/1.1");
+        getReq.Headers.Range = new RangeHeaderValue(0, 0);
+        return await httpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    }
+
+    private async Task<string?> GetInstagramImagePreflightNoteAsync(string imageUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await SendInstagramPreflightRequestAsync(imageUrl, cancellationToken);
+            var ok = response.IsSuccessStatusCode
+                     || response.StatusCode == HttpStatusCode.PartialContent;
+            if (!ok)
+            {
+                return $" Preflight: HTTP {(int)response.StatusCode} when fetching image headers (Instagram may fail too).";
+            }
+
+            long? totalBytes = response.Content.Headers.ContentLength;
+            var range = response.Content.Headers.ContentRange;
+            if (response.StatusCode == HttpStatusCode.PartialContent && range?.HasLength == true && range.Length.HasValue)
+            {
+                totalBytes = range.Length.Value;
+            }
+
+            if (totalBytes.HasValue && totalBytes.Value > 8_300_000)
+            {
+                return " Preflight: file appears larger than ~8MB (Instagram often rejects oversized feed images). "
+                       + "Re-export as JPEG, typically under ~4–8MB.";
+            }
+
+            var mt = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            if (!string.IsNullOrEmpty(mt) && !mt.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                return $" Preflight: Content-Type was '{mt}' (expected image/jpeg or image/png).";
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Instagram image preflight failed for {Url}", imageUrl);
+        }
+
+        return null;
+    }
 
     public async Task<(bool isSuccess, string? platformPostId, string? errorMessage)> PublishAsync(
         ScheduledSocialPost post,
@@ -254,12 +353,21 @@ public sealed class MetaGraphSocialPublisher(
         string accessToken,
         CancellationToken cancellationToken)
     {
-        var endpoint = $"https://graph.facebook.com/{GraphVersion}/{connection.page_id}/feed";
-        var payload = new Dictionary<string, string>
+        var hasMedia = !string.IsNullOrWhiteSpace(post.media_url);
+        var endpoint = hasMedia
+            ? $"https://graph.facebook.com/{GraphVersion}/{connection.page_id}/photos"
+            : $"https://graph.facebook.com/{GraphVersion}/{connection.page_id}/feed";
+        var payload = new Dictionary<string, string> { ["access_token"] = accessToken };
+        var captionText = SocialCaptionFormatting.EnsurePanahgahHashtag(post.caption);
+        if (hasMedia)
         {
-            ["message"] = post.caption,
-            ["access_token"] = accessToken,
-        };
+            payload["url"] = WithFacebookPhotoCacheBuster(post.media_url!, post.scheduled_post_id);
+            payload["caption"] = captionText;
+        }
+        else
+        {
+            payload["message"] = captionText;
+        }
 
         var response = await httpClient.PostAsync(endpoint, new FormUrlEncodedContent(payload), cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -269,7 +377,9 @@ public sealed class MetaGraphSocialPublisher(
             logger.LogWarning("Facebook publish failed for page {PageId}: {GraphError}", connection.page_id, graphError);
             var hint = graphError.Contains("code=2500", StringComparison.OrdinalIgnoreCase)
                 ? " Hint: token/page mismatch. Verify token has asset access to configured page_id."
-                : string.Empty;
+                : (hasMedia && graphError.Contains("code=100", StringComparison.OrdinalIgnoreCase)
+                    ? $" Hint: invalid media parameter. Verify media_url is a publicly reachable direct PNG/JPG URL. media_url={post.media_url}"
+                    : string.Empty);
             return (false, null, $"Facebook publish failed ({(int)response.StatusCode}): {graphError}{hint}");
         }
 
@@ -295,23 +405,54 @@ public sealed class MetaGraphSocialPublisher(
 
         var createMediaEndpoint =
             $"https://graph.facebook.com/{GraphVersion}/{connection.instagram_business_account_id}/media";
-        var createPayload = new Dictionary<string, string>
-        {
-            ["caption"] = post.caption,
-            ["image_url"] = post.media_url!,
-            ["access_token"] = accessToken,
-        };
+        var imageUrl = post.media_url!.Trim();
+        var preflightNote = await GetInstagramImagePreflightNoteAsync(imageUrl, cancellationToken);
+        HttpResponseMessage? createResponse = null;
+        string createBody = string.Empty;
 
-        var createResponse = await httpClient.PostAsync(
-            createMediaEndpoint,
-            new FormUrlEncodedContent(createPayload),
-            cancellationToken);
-        var createBody = await createResponse.Content.ReadAsStringAsync(cancellationToken);
-        if (!createResponse.IsSuccessStatusCode)
+        for (var createAttempt = 1; createAttempt <= InstagramMediaCreateMaxAttempts; createAttempt += 1)
+        {
+            var createPayload = BuildInstagramCreatePayload(imageUrl, post.caption, accessToken, createAttempt);
+
+            createResponse = await httpClient.PostAsync(
+                createMediaEndpoint,
+                new FormUrlEncodedContent(createPayload),
+                cancellationToken);
+            createBody = await createResponse.Content.ReadAsStringAsync(cancellationToken);
+
+            if (createResponse.IsSuccessStatusCode)
+            {
+                break;
+            }
+
+            var graphError = TryGetGraphError(createBody);
+            logger.LogWarning(
+                "Instagram media creation failed for ig {IgBusinessId} (attempt {Attempt}/{Max}): {GraphError} image_url={ImageUrl}",
+                connection.instagram_business_account_id,
+                createAttempt,
+                InstagramMediaCreateMaxAttempts,
+                graphError,
+                imageUrl);
+
+            var shouldRetryCreate = createAttempt < InstagramMediaCreateMaxAttempts
+                                    && ShouldRetryInstagramMediaCreate(graphError);
+            if (shouldRetryCreate)
+            {
+                var jitterMs = Random.Shared.Next(400, 1800);
+                var backoffMs = 2000 + createAttempt * 2800 + jitterMs;
+                await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(backoffMs, 45_000)), cancellationToken);
+                continue;
+            }
+
+            var hint = BuildInstagramMediaCreateFailureHint(graphError, imageUrl) + (preflightNote ?? string.Empty);
+            return (false, null, $"Instagram media creation failed ({(int)createResponse.StatusCode}): {graphError}{hint}");
+        }
+
+        if (createResponse is null || !createResponse.IsSuccessStatusCode)
         {
             var graphError = TryGetGraphError(createBody);
-            logger.LogWarning("Instagram media creation failed for ig {IgBusinessId}: {GraphError}", connection.instagram_business_account_id, graphError);
-            return (false, null, $"Instagram media creation failed ({(int)createResponse.StatusCode}): {graphError}");
+            var hint = BuildInstagramMediaCreateFailureHint(graphError, imageUrl) + (preflightNote ?? string.Empty);
+            return (false, null, $"Instagram media creation failed ({(int)(createResponse?.StatusCode ?? 0)}): {graphError}{hint}");
         }
 
         var creationId = TryReadJsonString(createBody, "id");
@@ -319,6 +460,12 @@ public sealed class MetaGraphSocialPublisher(
         {
             logger.LogWarning("Instagram create media response missing creation id: {Body}", createBody);
             return (false, null, "Instagram media creation did not return an id.");
+        }
+
+        var waitError = await WaitForInstagramMediaContainerAsync(creationId, accessToken, cancellationToken);
+        if (waitError is not null)
+        {
+            return (false, null, waitError);
         }
 
         var publishEndpoint =
@@ -361,6 +508,104 @@ public sealed class MetaGraphSocialPublisher(
         }
 
         return (false, null, "Instagram publish failed after retries.");
+    }
+
+    /// <summary>
+    /// Instagram processes images asynchronously. Publishing before <c>status_code</c> is <c>FINISHED</c>
+    /// returns OAuthException 9007 ("Media ID is not available").
+    /// </summary>
+    private async Task<string?> WaitForInstagramMediaContainerAsync(
+        string containerId,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow.AddMinutes(3);
+        var pollDelay = TimeSpan.FromSeconds(1.5);
+
+        while (DateTime.UtcNow < deadline)
+        {
+            var statusUrl =
+                $"https://graph.facebook.com/{GraphVersion}/{containerId}?fields=status_code&access_token={Uri.EscapeDataString(accessToken)}";
+
+            using var response = await httpClient.GetAsync(statusUrl, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogInformation(
+                    "Instagram container status check HTTP {Status} for container {ContainerId}",
+                    (int)response.StatusCode,
+                    containerId);
+                await Task.Delay(pollDelay, cancellationToken);
+                pollDelay = MinPollDelay(pollDelay);
+                continue;
+            }
+
+            if (!TryParseInstagramContainerStatus(body, out var status))
+            {
+                await Task.Delay(pollDelay, cancellationToken);
+                pollDelay = MinPollDelay(pollDelay);
+                continue;
+            }
+
+            logger.LogDebug("Instagram media container {ContainerId} status_code={Status}", containerId, status);
+
+            if (string.Equals(status, "FINISHED", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (string.Equals(status, "PUBLISHED", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (string.Equals(status, "ERROR", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(status, "EXPIRED", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Instagram rejected the media container (status_code={status}). Response: {body}";
+            }
+
+            // IN_PROGRESS — keep polling
+            await Task.Delay(pollDelay, cancellationToken);
+            pollDelay = MinPollDelay(pollDelay);
+        }
+
+        return "Timed out waiting for Instagram to finish processing the image (container status never reached FINISHED).";
+    }
+
+    private static TimeSpan MinPollDelay(TimeSpan current) =>
+        current >= TimeSpan.FromSeconds(5) ? current : current + TimeSpan.FromMilliseconds(400);
+
+    private static bool TryParseInstagramContainerStatus(string body, out string status)
+    {
+        status = string.Empty;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (!doc.RootElement.TryGetProperty("status_code", out var sc))
+            {
+                return false;
+            }
+
+            if (sc.ValueKind == JsonValueKind.String)
+            {
+                status = sc.GetString() ?? string.Empty;
+                return !string.IsNullOrEmpty(status);
+            }
+
+            if (sc.ValueKind == JsonValueKind.Number)
+            {
+                status = sc.GetRawText();
+                return true;
+            }
+        }
+        catch
+        {
+            // Ignore parse errors.
+        }
+
+        return false;
     }
 
     private static string TryReadJsonString(string json, string propertyName)
@@ -420,7 +665,48 @@ public sealed class MetaGraphSocialPublisher(
         return error.Contains("not ready", StringComparison.Ordinal)
                || error.Contains("processing", StringComparison.Ordinal)
                || error.Contains("please wait", StringComparison.Ordinal)
-               || error.Contains("media is still being processed", StringComparison.Ordinal);
+               || error.Contains("media is still being processed", StringComparison.Ordinal)
+               || error.Contains("9007", StringComparison.Ordinal)
+               || error.Contains("media id is not available", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Subcode 2207052 / code 9004 is often a transient fetch failure on Meta's side or CDN/WAF differences for crawlers.
+    /// </summary>
+    private static bool ShouldRetryInstagramMediaCreate(string graphError)
+    {
+        if (string.IsNullOrWhiteSpace(graphError))
+        {
+            return false;
+        }
+
+        var e = graphError.ToLowerInvariant();
+        return e.Contains("9004", StringComparison.Ordinal)
+               || e.Contains("2207052", StringComparison.Ordinal)
+               || e.Contains("could not be fetched", StringComparison.Ordinal);
+    }
+
+    private static string BuildInstagramMediaCreateFailureHint(string graphError, string? mediaUrl)
+    {
+        if (string.IsNullOrWhiteSpace(graphError))
+        {
+            return string.Empty;
+        }
+
+        if (graphError.Contains("36001", StringComparison.OrdinalIgnoreCase))
+        {
+            return $" Hint: unsupported image format. Use a public direct PNG/JPG image URL. media_url={mediaUrl}";
+        }
+
+        if (graphError.Contains("9004", StringComparison.OrdinalIgnoreCase)
+            || graphError.Contains("2207052", StringComparison.OrdinalIgnoreCase))
+        {
+            return " Hint: Instagram could not download or classify this URL as an image (SPA/bot blocking, robots.txt, " +
+                   "wrong Content-Type, very large PNG, or intermittent Meta fetch). Feed photos are safest as public JPEG/PNG under ~8MB. " +
+                   $"Try: curl -I -L -A facebookexternalhit \"{mediaUrl}\"";
+        }
+
+        return string.Empty;
     }
 }
 

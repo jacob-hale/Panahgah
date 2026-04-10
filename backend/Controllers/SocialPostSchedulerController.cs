@@ -16,7 +16,9 @@ namespace Panahgah.Api.Controllers;
 public sealed class SocialPostSchedulerController(
     ApplicationDbContext dbContext,
     ISocialConnectionSecretResolver connectionSecretResolver,
-    IHttpClientFactory httpClientFactory) : ControllerBase
+    IHttpClientFactory httpClientFactory,
+    ICampaignSchedulerService campaignSchedulerService,
+    IMediaAssetSelector mediaAssetSelector) : ControllerBase
 {
     [HttpGet("connections")]
     public async Task<IActionResult> GetConnections()
@@ -110,12 +112,17 @@ public sealed class SocialPostSchedulerController(
     }
 
     [HttpGet("scheduled-posts")]
-    public async Task<IActionResult> GetScheduledPosts([FromQuery] int? campaign_id)
+    public async Task<IActionResult> GetScheduledPosts([FromQuery] int? campaign_id, [FromQuery] string? status)
     {
         var query = dbContext.scheduled_social_posts.AsNoTracking().AsQueryable();
         if (campaign_id.HasValue)
         {
             query = query.Where(p => p.campaign_id == campaign_id.Value);
+        }
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var normalized = status.Trim().ToLowerInvariant();
+            query = query.Where(p => p.status.ToLower() == normalized);
         }
 
         var posts = await query
@@ -123,7 +130,7 @@ public sealed class SocialPostSchedulerController(
             .Take(250)
             .ToListAsync();
 
-        return Ok(posts);
+        return Ok(posts.Select(MapScheduledPost));
     }
 
     [HttpPost("scheduled-posts")]
@@ -150,7 +157,7 @@ public sealed class SocialPostSchedulerController(
             campaign_id = request.campaign_id,
             platform = request.platform.Trim(),
             scheduled_for_utc = request.scheduled_for_utc,
-            caption = request.caption.Trim(),
+            caption = SocialCaptionFormatting.EnsurePanahgahHashtag(request.caption.Trim()),
             media_url = string.IsNullOrWhiteSpace(request.media_url) ? null : request.media_url.Trim(),
             status = "scheduled",
             attempt_count = 0,
@@ -159,7 +166,162 @@ public sealed class SocialPostSchedulerController(
 
         dbContext.scheduled_social_posts.Add(scheduledPost);
         await dbContext.SaveChangesAsync();
-        return Ok(scheduledPost);
+        return Ok(MapScheduledPost(scheduledPost));
+    }
+
+    [HttpGet("media-categories")]
+    public async Task<IActionResult> GetMediaCategories(CancellationToken cancellationToken)
+    {
+        var categories = await mediaAssetSelector.ListCategoriesAsync(cancellationToken);
+        return Ok(categories);
+    }
+
+    [HttpPost("campaigns/generate")]
+    public async Task<IActionResult> GenerateCampaign([FromBody] CampaignGenerateRequestDto request, CancellationToken cancellationToken)
+    {
+        if (request.start_utc == default || request.end_utc == default || request.end_utc <= request.start_utc)
+        {
+            return BadRequest("Valid start_utc and end_utc are required.");
+        }
+
+        if (request.posts_per_week <= 0)
+        {
+            return BadRequest("posts_per_week must be greater than zero.");
+        }
+
+        try
+        {
+            var generated = await campaignSchedulerService.GenerateCampaignAsync(request, cancellationToken);
+            return Ok(generated.Select(MapScheduledPost));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("scheduled-posts/generate-single")]
+    public async Task<IActionResult> GenerateSinglePostDraft([FromBody] SinglePostGenerateRequestDto request, CancellationToken cancellationToken)
+    {
+        if (request.scheduled_for_utc == default)
+        {
+            return BadRequest("scheduled_for_utc is required.");
+        }
+
+        try
+        {
+            var generated = await campaignSchedulerService.GenerateSingleDraftAsync(request, cancellationToken);
+            return Ok(generated.Select(MapScheduledPost));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPatch("scheduled-posts/{scheduledPostId:int}")]
+    public async Task<IActionResult> UpdateScheduledPost(int scheduledPostId, [FromBody] ScheduledSocialPostUpdateDto request)
+    {
+        var post = await dbContext.scheduled_social_posts.FirstOrDefaultAsync(p => p.scheduled_post_id == scheduledPostId);
+        if (post is null)
+        {
+            return NotFound();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.caption))
+        {
+            post.caption = SocialCaptionFormatting.EnsurePanahgahHashtag(request.caption.Trim());
+        }
+
+        if (request.media_url is not null)
+        {
+            post.media_url = string.IsNullOrWhiteSpace(request.media_url) ? null : request.media_url.Trim();
+        }
+
+        if (request.scheduled_for_utc.HasValue && request.scheduled_for_utc.Value != default)
+        {
+            post.scheduled_for_utc = request.scheduled_for_utc.Value;
+        }
+
+        if (string.Equals(post.status, "failed", StringComparison.OrdinalIgnoreCase))
+        {
+            post.status = "scheduled";
+            post.error_message = null;
+        }
+
+        await dbContext.SaveChangesAsync();
+        return Ok(MapScheduledPost(post));
+    }
+
+    [HttpPost("scheduled-posts/regenerate-drafts")]
+    public async Task<IActionResult> RegenerateDraftPosts([FromBody] DraftRegenerateRequestDto request, CancellationToken cancellationToken)
+    {
+        if (request.scheduled_post_ids.Count == 0)
+        {
+            return BadRequest("scheduled_post_ids is required.");
+        }
+
+        try
+        {
+            var updated = await campaignSchedulerService.RegenerateDraftPostsAsync(request, cancellationToken);
+            return Ok(updated.Select(MapScheduledPost));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("scheduled-posts/{scheduledPostId:int}")]
+    public async Task<IActionResult> DeleteScheduledPost(int scheduledPostId)
+    {
+        var post = await dbContext.scheduled_social_posts.FirstOrDefaultAsync(p => p.scheduled_post_id == scheduledPostId);
+        if (post is null)
+        {
+            return NotFound();
+        }
+
+        dbContext.scheduled_social_posts.Remove(post);
+        await dbContext.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpPost("scheduled-posts/confirm")]
+    public async Task<IActionResult> ConfirmScheduledPosts([FromBody] ScheduledSocialPostBulkActionDto request)
+    {
+        if (request.scheduled_post_ids.Count == 0)
+        {
+            return BadRequest("scheduled_post_ids is required.");
+        }
+
+        var posts = await dbContext.scheduled_social_posts
+            .Where(p => request.scheduled_post_ids.Contains(p.scheduled_post_id))
+            .ToListAsync();
+
+        foreach (var post in posts)
+        {
+            post.status = "scheduled";
+            post.error_message = null;
+        }
+
+        await dbContext.SaveChangesAsync();
+        return Ok(posts.Select(MapScheduledPost));
+    }
+
+    [HttpPost("scheduled-posts/delete")]
+    public async Task<IActionResult> DeleteScheduledPostsBulk([FromBody] ScheduledSocialPostBulkActionDto request)
+    {
+        if (request.scheduled_post_ids.Count == 0)
+        {
+            return BadRequest("scheduled_post_ids is required.");
+        }
+
+        var posts = await dbContext.scheduled_social_posts
+            .Where(p => request.scheduled_post_ids.Contains(p.scheduled_post_id))
+            .ToListAsync();
+        dbContext.scheduled_social_posts.RemoveRange(posts);
+        await dbContext.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpGet("diagnostics/{platform}")]
@@ -322,5 +484,25 @@ public sealed class SocialPostSchedulerController(
         }
 
         return "Unknown graph error";
+    }
+
+    private static ScheduledSocialPostResponseDto MapScheduledPost(ScheduledSocialPost post)
+    {
+        return new ScheduledSocialPostResponseDto
+        {
+            scheduled_post_id = post.scheduled_post_id,
+            campaign_id = post.campaign_id,
+            media_asset_id = null,
+            platform = post.platform,
+            scheduled_for_utc = post.scheduled_for_utc,
+            caption = post.caption,
+            media_url = post.media_url,
+            status = post.status,
+            attempt_count = post.attempt_count,
+            error_message = post.error_message,
+            platform_post_id = post.platform_post_id,
+            created_at_utc = post.created_at_utc,
+            published_at_utc = post.published_at_utc
+        };
     }
 }

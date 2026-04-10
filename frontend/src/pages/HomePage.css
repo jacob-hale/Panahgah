@@ -1,4 +1,8 @@
 ﻿.pg-home {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   --pg-blue: var(--pg-color-blue);
   --pg-navy: var(--pg-color-navy);
   --pg-gold: var(--pg-color-gold);
@@ -10,10 +14,17 @@
     linear-gradient(135deg, #FDEBD0 0%, #f8edeb 48%, #f5cba7 78%, #fad7a0 100%);
 }
 
+/*
+ * Full-bleed bands: do NOT use width:100vw — vw includes the scrollbar gutter on many
+ * browsers, so 100vw is often slightly wider than the layout viewport → horizontal scroll.
+ * Home renders inside <main> which is already full width on `/`, so percentage width is enough.
+ */
 .pg-fullbleed {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
 }
 
 .pg-home__hero {
@@ -21,12 +32,71 @@
   background: var(--pg-warm-hero-bg);
 }
 
-.pg-home__hero-container {
+/* Full-height side-by-side hero: container-driven height, not image intrinsic height */
+.pg-home__hero-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+}
+
+@media (min-width: 992px) {
+  .pg-home__hero-layout {
+    flex-direction: row;
+    align-items: stretch;
+    min-height: clamp(28rem, 70vh, 50rem);
+  }
+}
+
+.pg-home__hero-content {
+  flex: 1 1 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
   padding-block: clamp(2.75rem, 6vw, 4.75rem);
+  padding-inline: clamp(1.25rem, 4vw, 3.5rem);
 }
 
 .pg-home__hero-text {
   max-width: 38rem;
+}
+
+.pg-home__hero-media {
+  flex: 1 1 50%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: clamp(15rem, 46vw, 24rem);
+}
+
+@media (min-width: 992px) {
+  .pg-home__hero-media {
+    min-height: 0;
+    align-self: stretch;
+  }
+}
+
+.pg-home__hero-image-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (max-width: 991.98px) {
+  .pg-home__hero-image-wrap {
+    flex: 0 0 auto;
+    min-height: clamp(15rem, 46vw, 24rem);
+  }
+}
+
+@media (min-width: 992px) {
+  .pg-home__hero-image-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
 }
 
 .pg-home__hero .pg-home__headline {
@@ -47,53 +117,16 @@
   font-weight: 400;
 }
 
-.pg-home__hero-visual-col {
-  min-height: 0;
-}
-
-@media (min-width: 992px) {
-  .pg-home__hero-visual-col {
-    align-self: stretch;
-  }
-}
-
-.pg-home__hero-figure {
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-  margin: 0;
-  min-height: 0;
-}
-
-@media (min-width: 992px) {
-  .pg-home__hero-figure {
-    flex: 1 1 auto;
-    position: relative;
-    height: 100%;
-    min-height: 14rem;
-  }
-}
-
 .pg-home__hero-img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  max-width: min(100%, 28rem);
-  height: auto;
+  max-width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   border-radius: 0;
-  filter: drop-shadow(0 18px 36px color-mix(in srgb, #5c4a3a 18%, transparent));
-  opacity: 0.97;
-}
-
-@media (min-width: 992px) {
-  .pg-home__hero-img {
-    position: absolute;
-    inset: 0;
-    max-width: none;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-  }
 }
 
 .pg-home__hero .pg-hero-ctas .btn {

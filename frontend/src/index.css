@@ -1,7 +1,12 @@
-﻿body {
+﻿html {
+  overflow-x: hidden;
+}
+
+body {
   margin: 0;
   background-color: #f8f9fa;
   color: #152237;
+  overflow-x: hidden;
 }
 
 /* Panahgah brand palette */
