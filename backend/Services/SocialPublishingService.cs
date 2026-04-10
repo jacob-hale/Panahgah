@@ -9,7 +9,8 @@ namespace Panahgah.Api.Services;
 
 public interface ISocialPublisher
 {
-    Task<(bool isSuccess, string? platformPostId, string? errorMessage)> PublishAsync(
+    /// <summary>publishedPostUrl is a public permalink when Graph returns one (or a best-effort fallback).</summary>
+    Task<(bool isSuccess, string? platformPostId, string? publishedPostUrl, string? errorMessage)> PublishAsync(
         ScheduledSocialPost post,
         CancellationToken cancellationToken);
 }
@@ -212,13 +213,13 @@ public sealed class SocialPublishingService(
 
 public sealed class DryRunSocialPublisher : ISocialPublisher
 {
-    public Task<(bool isSuccess, string? platformPostId, string? errorMessage)> PublishAsync(
+    public Task<(bool isSuccess, string? platformPostId, string? publishedPostUrl, string? errorMessage)> PublishAsync(
         ScheduledSocialPost post,
         CancellationToken cancellationToken)
     {
         string fakePlatformId = $"dryrun-{post.platform}-{Guid.NewGuid():N}";
-        return Task.FromResult<(bool isSuccess, string? platformPostId, string? errorMessage)>(
-            (isSuccess: true, platformPostId: fakePlatformId, errorMessage: null));
+        return Task.FromResult<(bool isSuccess, string? platformPostId, string? publishedPostUrl, string? errorMessage)>(
+            (true, fakePlatformId, null, null));
     }
 }
 
@@ -245,6 +246,72 @@ public sealed class MetaGraphSocialPublisher(
 
         var sep = u.Contains('?', StringComparison.Ordinal) ? "&" : "?";
         return $"{u}{sep}fb_cb={postId}";
+    }
+
+    private async Task<string?> TryGetGraphPermalinkAsync(
+        string? objectId,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(objectId))
+        {
+            return null;
+        }
+
+        try
+        {
+            var url =
+                $"https://graph.facebook.com/{GraphVersion}/{Uri.EscapeDataString(objectId)}?fields=permalink,permalink_url&access_token={Uri.EscapeDataString(accessToken)}";
+            using var response = await httpClient.GetAsync(url, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("permalink", out var p) && p.ValueKind == JsonValueKind.String)
+            {
+                var s = p.GetString();
+                if (!string.IsNullOrWhiteSpace(s))
+                {
+                    return s;
+                }
+            }
+
+            if (doc.RootElement.TryGetProperty("permalink_url", out var pu) && pu.ValueKind == JsonValueKind.String)
+            {
+                var s = pu.GetString();
+                if (!string.IsNullOrWhiteSpace(s))
+                {
+                    return s;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Permalink lookup failed for object {ObjectId}", objectId);
+        }
+
+        return null;
+    }
+
+    private static string? BuildFacebookPermalinkFallback(string objectId)
+    {
+        if (string.IsNullOrWhiteSpace(objectId))
+        {
+            return null;
+        }
+
+        var idx = objectId.IndexOf('_');
+        if (idx > 0 && idx < objectId.Length - 1)
+        {
+            var pagePart = objectId[..idx];
+            var postPart = objectId[(idx + 1)..];
+            return $"https://www.facebook.com/{pagePart}/posts/{postPart}";
+        }
+
+        return null;
     }
 
     private static Dictionary<string, string> BuildInstagramCreatePayload(
@@ -328,14 +395,14 @@ public sealed class MetaGraphSocialPublisher(
         return null;
     }
 
-    public async Task<(bool isSuccess, string? platformPostId, string? errorMessage)> PublishAsync(
+    public async Task<(bool isSuccess, string? platformPostId, string? publishedPostUrl, string? errorMessage)> PublishAsync(
         ScheduledSocialPost post,
         CancellationToken cancellationToken)
     {
         var resolved = await connectionResolver.ResolveByPlatformAsync(post.platform, cancellationToken);
         if (resolved.connection is null || string.IsNullOrWhiteSpace(resolved.accessToken))
         {
-            return (false, null, resolved.errorMessage ?? "Missing connection/token.");
+            return (false, null, null, resolved.errorMessage ?? "Missing connection/token.");
         }
 
         var platform = post.platform.Trim().ToLowerInvariant();
@@ -343,11 +410,11 @@ public sealed class MetaGraphSocialPublisher(
         {
             "facebook" => await PublishFacebookAsync(post, resolved.connection, resolved.accessToken, cancellationToken),
             "instagram" => await PublishInstagramAsync(post, resolved.connection, resolved.accessToken, cancellationToken),
-            _ => (false, null, $"Unsupported platform '{post.platform}'."),
+            _ => (false, null, null, $"Unsupported platform '{post.platform}'."),
         };
     }
 
-    private async Task<(bool isSuccess, string? platformPostId, string? errorMessage)> PublishFacebookAsync(
+    private async Task<(bool isSuccess, string? platformPostId, string? publishedPostUrl, string? errorMessage)> PublishFacebookAsync(
         ScheduledSocialPost post,
         SocialPlatformConnection connection,
         string accessToken,
@@ -380,14 +447,16 @@ public sealed class MetaGraphSocialPublisher(
                 : (hasMedia && graphError.Contains("code=100", StringComparison.OrdinalIgnoreCase)
                     ? $" Hint: invalid media parameter. Verify media_url is a publicly reachable direct PNG/JPG URL. media_url={post.media_url}"
                     : string.Empty);
-            return (false, null, $"Facebook publish failed ({(int)response.StatusCode}): {graphError}{hint}");
+            return (false, null, null, $"Facebook publish failed ({(int)response.StatusCode}): {graphError}{hint}");
         }
 
         var postId = TryReadJsonString(body, "id");
-        return (true, postId, null);
+        var permalink = await TryGetGraphPermalinkAsync(postId, accessToken, cancellationToken)
+                          ?? BuildFacebookPermalinkFallback(postId);
+        return (true, postId, permalink, null);
     }
 
-    private async Task<(bool isSuccess, string? platformPostId, string? errorMessage)> PublishInstagramAsync(
+    private async Task<(bool isSuccess, string? platformPostId, string? publishedPostUrl, string? errorMessage)> PublishInstagramAsync(
         ScheduledSocialPost post,
         SocialPlatformConnection connection,
         string accessToken,
@@ -395,12 +464,12 @@ public sealed class MetaGraphSocialPublisher(
     {
         if (string.IsNullOrWhiteSpace(connection.instagram_business_account_id))
         {
-            return (false, null, "instagram_business_account_id is required for Instagram publishing.");
+            return (false, null, null, "instagram_business_account_id is required for Instagram publishing.");
         }
 
         if (string.IsNullOrWhiteSpace(post.media_url))
         {
-            return (false, null, "Instagram publishing currently requires media_url.");
+            return (false, null, null, "Instagram publishing currently requires media_url.");
         }
 
         var createMediaEndpoint =
@@ -445,27 +514,27 @@ public sealed class MetaGraphSocialPublisher(
             }
 
             var hint = BuildInstagramMediaCreateFailureHint(graphError, imageUrl) + (preflightNote ?? string.Empty);
-            return (false, null, $"Instagram media creation failed ({(int)createResponse.StatusCode}): {graphError}{hint}");
+            return (false, null, null, $"Instagram media creation failed ({(int)createResponse.StatusCode}): {graphError}{hint}");
         }
 
         if (createResponse is null || !createResponse.IsSuccessStatusCode)
         {
             var graphError = TryGetGraphError(createBody);
             var hint = BuildInstagramMediaCreateFailureHint(graphError, imageUrl) + (preflightNote ?? string.Empty);
-            return (false, null, $"Instagram media creation failed ({(int)(createResponse?.StatusCode ?? 0)}): {graphError}{hint}");
+            return (false, null, null, $"Instagram media creation failed ({(int)(createResponse?.StatusCode ?? 0)}): {graphError}{hint}");
         }
 
         var creationId = TryReadJsonString(createBody, "id");
         if (string.IsNullOrWhiteSpace(creationId))
         {
             logger.LogWarning("Instagram create media response missing creation id: {Body}", createBody);
-            return (false, null, "Instagram media creation did not return an id.");
+            return (false, null, null, "Instagram media creation did not return an id.");
         }
 
         var waitError = await WaitForInstagramMediaContainerAsync(creationId, accessToken, cancellationToken);
         if (waitError is not null)
         {
-            return (false, null, waitError);
+            return (false, null, null, waitError);
         }
 
         var publishEndpoint =
@@ -486,7 +555,8 @@ public sealed class MetaGraphSocialPublisher(
             if (publishResponse.IsSuccessStatusCode)
             {
                 var mediaId = TryReadJsonString(publishBody, "id");
-                return (true, mediaId, null);
+                var permalink = await TryGetGraphPermalinkAsync(mediaId, accessToken, cancellationToken);
+                return (true, mediaId, permalink, null);
             }
 
             var graphError = TryGetGraphError(publishBody);
@@ -504,10 +574,10 @@ public sealed class MetaGraphSocialPublisher(
             }
 
             logger.LogWarning("Instagram publish failed for ig {IgBusinessId}: {GraphError}", connection.instagram_business_account_id, graphError);
-            return (false, null, $"Instagram publish failed ({(int)publishResponse.StatusCode}): {graphError}");
+            return (false, null, null, $"Instagram publish failed ({(int)publishResponse.StatusCode}): {graphError}");
         }
 
-        return (false, null, "Instagram publish failed after retries.");
+        return (false, null, null, "Instagram publish failed after retries.");
     }
 
     /// <summary>
@@ -765,6 +835,7 @@ public sealed class SocialPublishWorker(IServiceScopeFactory scopeFactory, ILogg
                     {
                         post.status = "published";
                         post.platform_post_id = publishResult.platformPostId;
+                        post.published_post_url = publishResult.publishedPostUrl;
                         post.error_message = null;
                         post.published_at_utc = DateTime.UtcNow;
                     }

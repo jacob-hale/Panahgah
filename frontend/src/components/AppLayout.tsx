@@ -53,6 +53,11 @@ export function AppLayout() {
                   Impact Dashboard
                 </NavLink>
               </li>
+              <li className="nav-item">
+                <NavLink className="nav-link" to="/news">
+                  News &amp; updates
+                </NavLink>
+              </li>
               {!isLoading && authSession?.roles.includes('Admin') && (
                 <>
                   <li className="nav-item dropdown">
@@ -198,6 +203,7 @@ export function AppLayout() {
               <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>Platform</p>
               <ul className="list-unstyled small mb-0">
                 <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/impact-dashboard">Impact Dashboard</Link></li>
+                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/news">News &amp; updates</Link></li>
                 <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/admin">Staff Portal</Link></li>
               </ul>
             </div>

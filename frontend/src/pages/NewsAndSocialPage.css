@@ -1,0 +1,54 @@
+/* Card height follows the image column; caption panel matches that height and scrolls. */
+
+@media (min-width: 992px) {
+  .news-post-card-inner {
+    position: relative;
+  }
+
+  .news-post-card-inner > .row {
+    position: relative;
+  }
+
+  .news-post-media-col {
+    flex: 0 0 58.33333333%;
+    width: 58.33333333%;
+    max-width: 58.33333333%;
+  }
+
+  .news-post-sidebar-col {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 41.66666667%;
+    max-width: 41.66666667%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+.news-caption-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--bs-secondary) 40%, transparent) transparent;
+}
+
+.news-caption-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.news-caption-scroll::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--bs-body-color) 28%, transparent);
+  border-radius: 999px;
+}
+
+.news-caption-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (max-width: 991.98px) {
+  .news-post-sidebar-col {
+    max-height: min(52vh, 440px);
+  }
+}
