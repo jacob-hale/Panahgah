@@ -30,10 +30,47 @@ body {
   --bs-border-radius-lg: 0.5rem;
 }
 
-.cookie-banner {
-  position: sticky;
+/* Cookie consent: viewport-fixed overlay (portaled to body). Does not affect document layout. */
+.cookie-consent-overlay {
+  position: fixed;
+  z-index: 1080;
+  left: 0;
+  right: 0;
   bottom: 0;
-  z-index: 1030;
+  padding: 0 1rem 1.75rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  box-sizing: border-box;
+  max-width: 100vw;
+  pointer-events: none;
+}
+
+.cookie-consent-card {
+  pointer-events: auto;
+  box-sizing: border-box;
+  max-width: min(40rem, calc(100vw - 2rem));
+  width: min(40rem, max(23.75rem, 33vw), calc(100vw - 2rem));
+  min-width: min(23.75rem, calc(100vw - 2rem));
+  margin: 0;
+  border-radius: var(--bs-border-radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 0.5rem 2rem rgba(21, 34, 55, 0.28),
+    0 0.25rem 0.75rem rgba(21, 34, 55, 0.18),
+    0 0 0 1px rgba(21, 34, 55, 0.06);
+}
+
+@media (max-width: 575.98px) {
+  .cookie-consent-overlay {
+    padding: 0 1rem 1.5rem;
+  }
+
+  .cookie-consent-card {
+    width: calc(100vw - 2rem);
+    min-width: 0;
+    max-width: calc(100vw - 2rem);
+  }
 }
 
 /* Staff portal dropdown: only exact /admin matches "Admin dashboard"; clear hover highlight */

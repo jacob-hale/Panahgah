@@ -123,7 +123,7 @@ export function AppLayout() {
                       </li>
                       <li>
                         <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/girls-reintegration-insights">
-                          Girls reintegration insights
+                          Resident reintegration insights
                         </NavLink>
                       </li>
                       <li>
@@ -227,6 +227,7 @@ export function AppLayout() {
         </div>
       </footer>
 
+      {/* Fixed overlay; portaled to document.body inside component — not in main/footer flow */}
       <CookieConsentBanner />
     </div>
   );

@@ -27,7 +27,7 @@ export function DonatePage() {
           <div className="col-lg-10 col-xl-8">
             <h1 className="display-6 fw-semibold mb-2">Choose your donation</h1>
             <p className="text-body-secondary mb-4">
-              Your support helps provide safe shelter, education, counseling, and recovery support for girls at
+              Your support helps provide safe shelter, education, counseling, and recovery support for residents at
               Panahgah safehouses.
             </p>
 

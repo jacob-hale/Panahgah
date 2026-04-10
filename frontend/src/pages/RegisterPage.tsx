@@ -19,6 +19,7 @@ export function RegisterPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -41,6 +42,10 @@ export function RegisterPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    if (password !== confirmPassword) {
+      setError('Password and confirm password must match.');
+      return;
+    }
     setSubmitting(true);
     try {
       const contributionInterests = CONTRIBUTION_OPTIONS.filter((o) => interests[o.key]).map((o) => o.key);
@@ -101,6 +106,21 @@ export function RegisterPage() {
                   className="form-control"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={14}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" className="form-label">
+                  Confirm password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  className="form-control"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                   required
                   minLength={14}
                   autoComplete="new-password"

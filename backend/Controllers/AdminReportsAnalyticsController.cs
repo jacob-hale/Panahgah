@@ -75,16 +75,15 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
             });
         }
 
-        // Match PublicImpactController: prod rows may have NULL month_start despite the CLR model.
-        // Use EF.Property with nullable types so EF never materializes NULL into DateOnly.
+        // SafehouseMonthlyMetric columns are nullable in DB/model (prod may have NULLs).
         var networkMonthly = await dbContext.safehouse_monthly_metrics.AsNoTracking()
-            .GroupBy(m => EF.Property<DateOnly?>(m, nameof(SafehouseMonthlyMetric.month_start)))
+            .GroupBy(m => m.month_start)
             .Select(g => new AdminReportsNetworkMonthTrendDto
             {
                 month_start = g.Key,
-                avg_health_score = g.Average(x => EF.Property<decimal?>(x, nameof(SafehouseMonthlyMetric.avg_health_score))) ?? 0m,
-                avg_education_progress = g.Average(x => EF.Property<decimal?>(x, nameof(SafehouseMonthlyMetric.avg_education_progress))) ?? 0m,
-                sessions_count = g.Sum(x => EF.Property<int?>(x, nameof(SafehouseMonthlyMetric.process_recording_count))) ?? 0
+                avg_health_score = g.Average(x => x.avg_health_score) ?? 0m,
+                avg_education_progress = g.Average(x => x.avg_education_progress) ?? 0m,
+                sessions_count = g.Sum(x => x.process_recording_count) ?? 0
             })
             .OrderBy(x => x.month_start)
             .ToListAsync();
@@ -98,13 +97,12 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
             networkLast12 = networkLast12.TakeLast(12).ToList();
         }
 
-        // Do not materialize full SafehouseMonthlyMetric rows — NULL month_start breaks DateOnly mapping.
         var maxPerHouse = await dbContext.safehouse_monthly_metrics.AsNoTracking()
             .GroupBy(m => m.safehouse_id)
             .Select(g => new
             {
                 safehouse_id = g.Key,
-                maxMonth = g.Max(x => EF.Property<DateOnly?>(x, nameof(SafehouseMonthlyMetric.month_start)))
+                maxMonth = g.Max(x => x.month_start)
             })
             .ToListAsync();
 
@@ -125,18 +123,16 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
                 var houseIds = maxWithMonth.Select(x => x.safehouse_id).Distinct().ToList();
                 var maxDict = maxWithMonth.ToDictionary(x => x.safehouse_id, x => x.maxMonth!.Value);
 
-                // Single-table projection only: in a join, EF can still emit bare columns and Npgsql
-                // throws InvalidCastException when DB has NULL in avg_* despite non-nullable CLR props.
                 var metricRows = await dbContext.safehouse_monthly_metrics.AsNoTracking()
                     .Where(m => houseIds.Contains(m.safehouse_id))
                     .Select(m => new
                     {
                         m.safehouse_id,
-                        month_start = EF.Property<DateOnly?>(m, nameof(SafehouseMonthlyMetric.month_start)),
-                        active_residents = EF.Property<int?>(m, nameof(SafehouseMonthlyMetric.active_residents)) ?? 0,
-                        avg_health_score = EF.Property<decimal?>(m, nameof(SafehouseMonthlyMetric.avg_health_score)) ?? 0m,
-                        avg_education_progress = EF.Property<decimal?>(m, nameof(SafehouseMonthlyMetric.avg_education_progress)) ?? 0m,
-                        process_recording_count = EF.Property<int?>(m, nameof(SafehouseMonthlyMetric.process_recording_count)) ?? 0
+                        month_start = m.month_start,
+                        active_residents = m.active_residents ?? 0,
+                        avg_health_score = m.avg_health_score ?? 0m,
+                        avg_education_progress = m.avg_education_progress ?? 0m,
+                        process_recording_count = m.process_recording_count ?? 0
                     })
                     .ToListAsync();
 

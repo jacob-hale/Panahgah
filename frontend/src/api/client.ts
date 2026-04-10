@@ -2,14 +2,8 @@ function resolveApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
   if (explicit) return explicit;
 
-  // Railway fallback: if frontend and backend are split services and no env var is available,
-  // route API calls directly to the known backend host.
-  const host = window.location.hostname.toLowerCase();
-  if (host === 'panahgah.up.railway.app' || host.endsWith('.up.railway.app')) {
-    return 'https://panahgah-backend-production.up.railway.app';
-  }
-
-  // Default to same-origin so deployments can proxy `/api` from the web server.
+  // Same-origin `/api` (Vite dev proxy or production nginx). Keeps auth cookies first-party so
+  // Safari, mobile WebKit, and strict Chrome profiles accept the session (direct cross-origin API calls break).
   return '';
 }
 
