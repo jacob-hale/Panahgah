@@ -49,7 +49,7 @@ export function HomePage() {
             <div className="col-lg-10 col-xl-8">
               <h2 className="h2 fw-semibold mb-3">What we do</h2>
               <p className="text-body-secondary mb-3">
-                Panahgah exists to protect and restore the lives of residents who have experienced abuse, exploitation, and
+                Panahgah is a non-profit organization in India that exists to protect and restore the lives of young women who have experienced sexual abuse, exploitation, and
                 trafficking.
               </p>
               <p className="text-body-secondary mb-3">We partner with local communities to provide:</p>
