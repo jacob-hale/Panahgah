@@ -12,12 +12,14 @@ function MonthlyBars({
   formatValue,
   emptyHint,
   barClassName,
+  yAxisLabel,
 }: {
   points: SocialMediaMonthlyTimeseriesPoint[];
   getValue: (p: SocialMediaMonthlyTimeseriesPoint) => number;
   formatValue: (n: number) => string;
   emptyHint: string;
   barClassName?: string;
+  yAxisLabel: string;
 }) {
   if (points.length === 0) {
     return <p className="small text-body-secondary mb-0">{emptyHint}</p>;
@@ -27,39 +29,42 @@ function MonthlyBars({
   const barColor = barClassName ?? 'bg-primary';
 
   return (
-    <div className="d-flex align-items-stretch gap-2" style={{ height: 200 }}>
-      {points.map((p) => {
-        const v = getValue(p);
-        const pct = max > 0 ? (v / max) * 100 : 0;
-        const barPct = v > 0 ? Math.max(pct, 5) : 0;
-        return (
-          <div
-            key={p.period}
-            className="d-flex flex-column align-items-center flex-grow-1"
-            style={{ minWidth: 0, maxWidth: 56 }}
-          >
-            <div className="flex-grow-1 w-100 d-flex flex-column justify-content-end" style={{ minHeight: 140 }}>
-              <div
-                className={`rounded-top mx-auto ${barColor}`}
-                role="img"
-                aria-label={`${formatMonthLabel(p.period)}: ${formatValue(v)}`}
-                style={{
-                  width: '80%',
-                  height: `${barPct}%`,
-                  minHeight: v > 0 ? 8 : 0,
-                }}
-                title={`${formatMonthLabel(p.period)}: ${formatValue(v)} (${p.post_count} posts)`}
-              />
-            </div>
+    <div>
+      <div className="small text-body-secondary mb-2">{yAxisLabel}</div>
+      <div className="d-flex align-items-stretch gap-2" style={{ height: 200 }}>
+        {points.map((p) => {
+          const v = getValue(p);
+          const pct = max > 0 ? (v / max) * 100 : 0;
+          const barPct = v > 0 ? Math.max(pct, 5) : 0;
+          return (
             <div
-              className="text-body-secondary text-center mt-2 text-truncate w-100 small"
-              style={{ fontSize: '0.7rem', lineHeight: 1.2 }}
+              key={p.period}
+              className="d-flex flex-column align-items-center flex-grow-1"
+              style={{ minWidth: 0, maxWidth: 56 }}
             >
-              {formatMonthLabel(p.period)}
+              <div className="flex-grow-1 w-100 d-flex flex-column justify-content-end" style={{ minHeight: 140 }}>
+                <div
+                  className={`rounded-top mx-auto ${barColor}`}
+                  role="img"
+                  aria-label={`${formatMonthLabel(p.period)}: ${formatValue(v)}`}
+                  style={{
+                    width: '80%',
+                    height: `${barPct}%`,
+                    minHeight: v > 0 ? 8 : 0,
+                  }}
+                  title={`${formatMonthLabel(p.period)}: ${formatValue(v)} (${p.post_count} posts)`}
+                />
+              </div>
+              <div
+                className="text-body-secondary text-center mt-2 text-truncate w-100 small"
+                style={{ fontSize: '0.7rem', lineHeight: 1.2 }}
+              >
+                {formatMonthLabel(p.period)}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -121,6 +126,7 @@ export function SocialTrendsFromPosts({
                   formatValue={(n) => `${n.toLocaleString()} interactions`}
                   emptyHint="No data."
                   barClassName="bg-primary"
+                  yAxisLabel="Y-axis: total interactions"
                 />
               </div>
               <div className="col-12 col-lg-6">
@@ -134,6 +140,7 @@ export function SocialTrendsFromPosts({
                   }
                   emptyHint="No data."
                   barClassName="bg-info"
+                  yAxisLabel="Y-axis: total estimated donation value ($)"
                 />
               </div>
             </div>
