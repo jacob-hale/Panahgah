@@ -65,7 +65,7 @@ export function GirlsReintegrationInsightsPage() {
     try {
       setData(await apiFetch<GirlsReintegrationInsights>('/api/ml/girls-reintegration/insights'));
     } catch {
-      setError('Unable to load girls reintegration insights.');
+      setError('Unable to load resident reintegration insights.');
     } finally {
       setLoading(false);
     }
@@ -105,12 +105,12 @@ export function GirlsReintegrationInsightsPage() {
             <Link to="/admin">Admin</Link>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
-            Girls reintegration insights
+            Resident reintegration insights
           </li>
         </ol>
       </nav>
 
-      <h1 className="h3 mb-2">Girls reintegration insights</h1>
+      <h1 className="h3 mb-2">Resident reintegration insights</h1>
       <p className="text-body-secondary">
         Reintegration-readiness scoring to prioritize case conference worklists and intervention planning.
       </p>
@@ -125,7 +125,7 @@ export function GirlsReintegrationInsightsPage() {
         ) : null}
       </div>
 
-      {loading ? <p>Loading girls reintegration insights...</p> : null}
+      {loading ? <p>Loading resident reintegration insights...</p> : null}
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {!loading && !error && notTrained ? (
         <div className="alert alert-warning">Model not trained yet. Run retraining to generate insights.</div>

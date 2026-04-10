@@ -116,7 +116,7 @@ export function AppLayout() {
                       </li>
                       <li>
                         <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/girls-reintegration-insights">
-                          Girls reintegration insights
+                          Resident reintegration insights
                         </NavLink>
                       </li>
                       <li>

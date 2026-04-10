@@ -10,11 +10,11 @@ export function HomePage() {
             <div className="col-12 col-lg-6 d-lg-flex flex-lg-column justify-content-lg-center">
               <div className="pg-home__hero-text">
                 <h1 className="display-4 fw-semibold mb-3 pg-home__headline">
-                  Every girl deserves a place where she is safe, seen, and given a future.
+                  Every resident deserves a place where they are safe, seen, and given a future.
                 </h1>
 
                 <p className="lead mb-4 pg-home__hero-lead">
-                  Panahgah provides refuge, healing, and hope for girls who have experienced abuse—offering not just
+                  Panahgah provides refuge, healing, and hope for residents who have experienced abuse—offering not just
                   safety, but a path forward.
                 </p>
 
@@ -51,7 +51,7 @@ export function HomePage() {
             <div className="col-lg-10 col-xl-8">
               <h2 className="h2 fw-semibold mb-3">What we do</h2>
               <p className="text-body-secondary mb-3">
-                Panahgah exists to protect and restore the lives of girls who have experienced abuse, exploitation, and
+                Panahgah exists to protect and restore the lives of residents who have experienced abuse, exploitation, and
                 trafficking.
               </p>
               <p className="text-body-secondary mb-3">We partner with local communities to provide:</p>
@@ -62,7 +62,7 @@ export function HomePage() {
                 <li className="mb-2">Reintegration support for a stable future</li>
               </ul>
               <p className="text-body-secondary mb-0">
-                Every step is carefully tracked and supported—so no girl falls through the cracks.
+                Every step is carefully tracked and supported—so no resident falls through the cracks.
               </p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section id="impact" className="py-5">
+      <section id="impact" className="pt-5 pb-3">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-8">
@@ -98,7 +98,7 @@ export function HomePage() {
                 These are the kinds of care your generosity helps make possible—transparently tracked so you can trust
                 the difference you make.
               </p>
-              <div className="row g-3 mb-4">
+              <div className="row g-3 mb-0">
                 <div className="col-md-6">
                   <div className="pg-impact-item h-100">
                     Safe shelter, meals, and essential supplies.
@@ -120,15 +120,12 @@ export function HomePage() {
                   </div>
                 </div>
               </div>
-              <Link className="btn btn-outline-secondary btn-lg" to="/impact-dashboard">
-                Open impact dashboard
-              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-5">
+      <section className="pt-3 pb-5">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 col-xl-8 text-center">
@@ -139,9 +136,6 @@ export function HomePage() {
               <div className="d-flex flex-wrap gap-2 justify-content-center pg-hero-ctas">
                 <Link className="btn btn-primary btn-lg" to="/donate">
                   Help Protect a Life
-                </Link>
-                <Link className="btn btn-outline-primary btn-lg" to="/impact-dashboard">
-                  Become Part of the Story
                 </Link>
               </div>
             </div>
