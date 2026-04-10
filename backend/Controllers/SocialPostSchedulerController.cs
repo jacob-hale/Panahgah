@@ -155,7 +155,6 @@ public sealed class SocialPostSchedulerController(
         var scheduledPost = new ScheduledSocialPost
         {
             campaign_id = request.campaign_id,
-            media_asset_id = null,
             platform = request.platform.Trim(),
             scheduled_for_utc = request.scheduled_for_utc,
             caption = SocialCaptionFormatting.EnsurePanahgahHashtag(request.caption.Trim()),
@@ -493,7 +492,7 @@ public sealed class SocialPostSchedulerController(
         {
             scheduled_post_id = post.scheduled_post_id,
             campaign_id = post.campaign_id,
-            media_asset_id = post.media_asset_id,
+            media_asset_id = null,
             platform = post.platform,
             scheduled_for_utc = post.scheduled_for_utc,
             caption = post.caption,
