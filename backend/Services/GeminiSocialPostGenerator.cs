@@ -83,50 +83,65 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
                 {
                     break;
                 }
-                var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
-                using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
-                using var response = await httpClient.PostAsync(
-                    endpoint,
-                    new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
-                    perAttemptCts.Token);
-                responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    lastFailure = $"Model {model} failed: {responseBody}";
-                    continue;
-                }
 
                 try
                 {
-                    var completionText = ExtractTextFromGeminiResponse(responseBody);
-                    var normalized = NormalizeModelJson(completionText);
-                    var jsonPayload = ExtractFirstJsonObject(normalized);
-                    var generated = JsonSerializer.Deserialize<SocialPostGenerateResponseDto>(jsonPayload, JsonOptions);
-                    if (generated is null)
+                    var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+                    using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
+                    using var response = await httpClient.PostAsync(
+                        endpoint,
+                        new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+                        perAttemptCts.Token);
+                    responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                    if (!response.IsSuccessStatusCode)
                     {
-                        lastFailure = "Gemini returned an empty response.";
+                        lastFailure = $"Model {model} failed: {responseBody}";
                         continue;
                     }
 
-                    if (generated.generated_posts.Count == 0)
+                    try
                     {
-                        lastFailure = "Gemini response did not include generated posts.";
+                        var completionText = ExtractTextFromGeminiResponse(responseBody);
+                        var normalized = NormalizeModelJson(completionText);
+                        var jsonPayload = ExtractFirstJsonObject(normalized);
+                        var generated = JsonSerializer.Deserialize<SocialPostGenerateResponseDto>(jsonPayload, JsonOptions);
+                        if (generated is null)
+                        {
+                            lastFailure = "Gemini returned an empty response.";
+                            continue;
+                        }
+
+                        if (generated.generated_posts.Count == 0)
+                        {
+                            lastFailure = "Gemini response did not include generated posts.";
+                            continue;
+                        }
+
+                        SocialCaptionFormatting.FinalizeGeneratorResponse(generated);
+                        return generated;
+                    }
+                    catch (InvalidOperationException ex) when (ex.Message.Contains("truncated", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lastFailure = $"Model {model} output was truncated at {tokenBudget} tokens.";
                         continue;
                     }
-
-                    SocialCaptionFormatting.FinalizeGeneratorResponse(generated);
-                    return generated;
+                    catch (JsonException ex)
+                    {
+                        lastFailure = $"Model {model} returned invalid JSON: {ex.Message}";
+                        continue;
+                    }
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("truncated", StringComparison.OrdinalIgnoreCase))
+                catch (OperationCanceledException)
                 {
-                    lastFailure = $"Model {model} output was truncated at {tokenBudget} tokens.";
+                    cancellationToken.ThrowIfCancellationRequested();
+                    lastFailure = $"Model {model} request timed out.";
                     continue;
                 }
-                catch (JsonException ex)
+                catch (HttpRequestException ex)
                 {
-                    lastFailure = $"Model {model} returned invalid JSON: {ex.Message}";
+                    lastFailure = $"Model {model} network error: {ex.Message}";
                     continue;
                 }
             }
@@ -134,7 +149,17 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
 
         if (lastFailure is not null && stopwatch.Elapsed <= TimeSpan.FromSeconds(maxRequestSeconds))
         {
-            var discovered = await DiscoverGenerateContentModelsAsync(apiKey, cancellationToken);
+            List<string> discovered;
+            try
+            {
+                discovered = await DiscoverGenerateContentModelsAsync(apiKey, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                discovered = [];
+                lastFailure = $"Gemini model discovery failed: {ex.Message}";
+            }
+
             foreach (var tokenBudget in tokenBudgets)
             {
                 if (stopwatch.Elapsed > TimeSpan.FromSeconds(maxRequestSeconds))
@@ -148,39 +173,52 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
                     {
                         break;
                     }
-                    var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{discoveredModel}:generateContent?key={apiKey}";
-                    using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
-                    using var retryResponse = await httpClient.PostAsync(
-                        endpoint,
-                        new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
-                        perAttemptCts.Token);
-                    responseBody = await retryResponse.Content.ReadAsStringAsync(cancellationToken);
-
-                    if (!retryResponse.IsSuccessStatusCode)
-                    {
-                        lastFailure = $"Model {discoveredModel} failed: {responseBody}";
-                        continue;
-                    }
 
                     try
                     {
-                        var completionText = ExtractTextFromGeminiResponse(responseBody);
-                        var normalized = NormalizeModelJson(completionText);
-                        var jsonPayload = ExtractFirstJsonObject(normalized);
-                        var generated = JsonSerializer.Deserialize<SocialPostGenerateResponseDto>(jsonPayload, JsonOptions);
-                        if (generated is null || generated.generated_posts.Count == 0)
+                        var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{discoveredModel}:generateContent?key={apiKey}";
+                        using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
+                        using var retryResponse = await httpClient.PostAsync(
+                            endpoint,
+                            new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+                            perAttemptCts.Token);
+                        responseBody = await retryResponse.Content.ReadAsStringAsync(cancellationToken);
+
+                        if (!retryResponse.IsSuccessStatusCode)
                         {
-                            lastFailure = $"Model {discoveredModel} returned empty data.";
+                            lastFailure = $"Model {discoveredModel} failed: {responseBody}";
                             continue;
                         }
 
-                        SocialCaptionFormatting.FinalizeGeneratorResponse(generated);
-                        return generated;
+                        try
+                        {
+                            var completionText = ExtractTextFromGeminiResponse(responseBody);
+                            var normalized = NormalizeModelJson(completionText);
+                            var jsonPayload = ExtractFirstJsonObject(normalized);
+                            var generated = JsonSerializer.Deserialize<SocialPostGenerateResponseDto>(jsonPayload, JsonOptions);
+                            if (generated is null || generated.generated_posts.Count == 0)
+                            {
+                                lastFailure = $"Model {discoveredModel} returned empty data.";
+                                continue;
+                            }
+
+                            SocialCaptionFormatting.FinalizeGeneratorResponse(generated);
+                            return generated;
+                        }
+                        catch (Exception ex)
+                        {
+                            lastFailure = $"Model {discoveredModel} parse failed: {ex.Message}";
+                        }
                     }
-                    catch (Exception ex)
+                    catch (OperationCanceledException)
                     {
-                        lastFailure = $"Model {discoveredModel} parse failed: {ex.Message}";
+                        cancellationToken.ThrowIfCancellationRequested();
+                        lastFailure = $"Model {discoveredModel} request timed out.";
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        lastFailure = $"Model {discoveredModel} network error: {ex.Message}";
                     }
                 }
             }

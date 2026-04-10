@@ -120,6 +120,16 @@ function toDateTimeLocalValue(value: string): string {
   return `${y}-${m}-${day}T${h}:${min}`;
 }
 
+/** Local wall-clock time for datetime-local inputs (not “next week” from ML window). */
+function formatDateTimeLocalFromDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day}T${h}:${min}`;
+}
+
 function resolvePreviewMediaUrl(mediaUrl: string | null): string | null {
   if (!mediaUrl) return null;
   const marker = '/campaign-media/';
@@ -232,15 +242,10 @@ export function SocialPostStudioPage() {
       ? nextDatetimeLocalForWindow(windowPick.day_of_week, windowPick.post_hour)
       : '';
 
-    setCampaignGeneratePayload((curr) => ({
-      ...curr,
-      start_utc: scheduleLocal || curr.start_utc,
-    }));
     setSinglePostPayload((curr) => ({
       ...curr,
       scheduled_for_utc: scheduleLocal || curr.scheduled_for_utc,
     }));
-
   };
 
   useEffect(() => {
@@ -259,6 +264,23 @@ export function SocialPostStudioPage() {
     };
 
     void loadPostTypes();
+  }, []);
+
+  useEffect(() => {
+    const now = new Date();
+    const start = formatDateTimeLocalFromDate(now);
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 28);
+    const end = formatDateTimeLocalFromDate(endDate);
+    setCampaignGeneratePayload((curr) => ({
+      ...curr,
+      start_utc: start,
+      end_utc: end,
+    }));
+    setSinglePostPayload((curr) => ({
+      ...curr,
+      scheduled_for_utc: curr.scheduled_for_utc || start,
+    }));
   }, []);
 
   useEffect(() => {
@@ -316,6 +338,12 @@ export function SocialPostStudioPage() {
     event.preventDefault();
     setScheduleError(null);
     setGenerateCampaignError(null);
+    const startMs = new Date(campaignGeneratePayload.start_utc).getTime();
+    const endMs = new Date(campaignGeneratePayload.end_utc).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+      setGenerateCampaignError('Choose valid start and end dates for the campaign.');
+      return;
+    }
     setGenerateCampaignMessage('Generating draft posts... this can take up to 1-2 minutes.');
     setIsGeneratingCampaign(true);
     try {

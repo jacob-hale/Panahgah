@@ -221,6 +221,10 @@ public sealed class SocialPostSchedulerController(
         {
             return BadRequest(ex.Message);
         }
+        catch (Exception ex)
+        {
+            return BadRequest($"Campaign generation failed: {ex.Message}");
+        }
     }
 
     [HttpPost("scheduled-posts/generate-single")]
