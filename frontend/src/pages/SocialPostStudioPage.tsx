@@ -609,12 +609,12 @@ export function SocialPostStudioPage() {
             <Link to="/admin">Admin</Link>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
-            Social post studio
+            Social media studio
           </li>
         </ol>
       </nav>
 
-      <h1 className="h3 mb-2">Social post studio</h1>
+      <h1 className="h3 mb-2">Social media studio</h1>
       <p className="text-body-secondary mb-3">
         Generate campaign drafts and single scheduled posts with category images and AI captions.
       </p>
