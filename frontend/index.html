@@ -6,9 +6,15 @@
     <link rel="apple-touch-icon" href="/panahgah-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Panahgah</title>
+    <!-- Single CSP for the SPA document (avoids a second nginx/header policy that only allows script-src 'self' and blocks Chatbase). -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' https://www.chatbase.co https://*.chatbase.co; script-src-elem 'self' https://www.chatbase.co https://*.chatbase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; frame-src 'self' https://www.facebook.com https://www.instagram.com https://www.chatbase.co https://*.chatbase.co; connect-src 'self' https://panahgah-backend-production.up.railway.app https://www.chatbase.co https://*.chatbase.co wss://*.chatbase.co"
+    />
   </head>
   <body>
     <div id="root"></div>
+    <script src="/chatbase-snippet.js" defer></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
