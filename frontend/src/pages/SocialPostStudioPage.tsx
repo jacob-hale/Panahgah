@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 import type {
   CampaignGeneratePayload,
+  CampaignMediaUploadResponse,
   DraftRegeneratePayload,
   Model5InsightsResponse,
   Model5PostingWindow,
@@ -196,6 +197,11 @@ export function SocialPostStudioPage() {
     post_to_facebook: true,
     post_to_instagram: true,
   });
+  const [libraryUploadCategory, setLibraryUploadCategory] = useState('');
+  const [libraryUploadMessage, setLibraryUploadMessage] = useState<string | null>(null);
+  const [libraryUploadError, setLibraryUploadError] = useState<string | null>(null);
+  const [isUploadingLibrary, setIsUploadingLibrary] = useState(false);
+  const libraryFileInputRef = useRef<HTMLInputElement>(null);
 
   const applyInsightsToForms = (
     ins: Model5InsightsResponse,
@@ -299,6 +305,12 @@ export function SocialPostStudioPage() {
       void loadSchedulingData();
     }
   }, [activeTab, loadSchedulingData]);
+
+  useEffect(() => {
+    if (mediaCategories.length > 0 && !libraryUploadCategory) {
+      setLibraryUploadCategory(mediaCategories[0]);
+    }
+  }, [mediaCategories, libraryUploadCategory]);
 
   const handleGenerateCampaign = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -434,7 +446,7 @@ export function SocialPostStudioPage() {
   const queued = scheduledPosts.filter((p) => norm(p.status) !== 'draft');
   const queuedGroups = Object.values(
     queued.reduce<Record<string, ScheduledSocialPost[]>>((acc, post) => {
-      const key = `${norm(post.status)}|${post.scheduled_for_utc}|${post.caption.trim()}|${post.media_url ?? ''}`;
+      const key = `${norm(post.status)}|${post.scheduled_for_utc}|${post.caption.trim()}|${post.media_url ?? ''}|${(post.campaign_title ?? '').trim()}`;
       if (!acc[key]) {
         acc[key] = [];
       }
@@ -462,7 +474,7 @@ export function SocialPostStudioPage() {
   const bestPostTypeIg = (scheduleInsights?.best_post_type_by_platform ?? []).find((x) => norm(x.platform) === 'instagram');
   const draftGroups = Object.values(
     drafts.reduce<Record<string, ScheduledSocialPost[]>>((acc, post) => {
-      const key = `${post.scheduled_for_utc}|${post.caption.trim()}|${post.media_url ?? ''}`;
+      const key = `${post.scheduled_for_utc}|${post.caption.trim()}|${post.media_url ?? ''}|${(post.campaign_title ?? '').trim()}`;
       if (!acc[key]) {
         acc[key] = [];
       }
@@ -530,6 +542,37 @@ export function SocialPostStudioPage() {
     }
   };
 
+  const handleLibraryImageUpload = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLibraryUploadError(null);
+    setLibraryUploadMessage(null);
+    const input = libraryFileInputRef.current;
+    const file = input?.files?.[0];
+    if (!libraryUploadCategory || !file) {
+      setLibraryUploadError('Choose a category and an image file.');
+      return;
+    }
+    setIsUploadingLibrary(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const result = await apiFetch<CampaignMediaUploadResponse>(
+        `/api/social-post-scheduler/media-categories/${encodeURIComponent(libraryUploadCategory)}/upload`,
+        { method: 'POST', body: fd },
+      );
+      setLibraryUploadMessage(
+        `Saved ${result.file_name} (${result.width}×${result.height}, ${(result.size_bytes / 1024).toFixed(1)} KB, ${result.format}). Public URL: ${result.public_url}`,
+      );
+      if (input) {
+        input.value = '';
+      }
+    } catch (err) {
+      setLibraryUploadError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setIsUploadingLibrary(false);
+    }
+  };
+
   return (
     <section>
       <nav aria-label="breadcrumb" className="mb-3">
@@ -564,51 +607,111 @@ export function SocialPostStudioPage() {
               {generateCampaignMessage ? <div className="alert alert-info py-2 small">{generateCampaignMessage}</div> : null}
               {generateCampaignError ? <div className="alert alert-danger py-2 small">{generateCampaignError}</div> : null}
               <form onSubmit={handleGenerateCampaign} className="d-grid gap-2 mb-4">
-                <input
-                  className="form-control"
-                  placeholder="Campaign name"
-                  value={campaignGeneratePayload.campaign_name}
-                  onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, campaign_name: e.target.value }))}
-                  required
-                />
-                <input
-                  className="form-control"
-                  placeholder="Campaign goal (example: Donations)"
-                  value={campaignGeneratePayload.campaign_goal}
-                  onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, campaign_goal: e.target.value }))}
-                  required
-                />
-                <input
-                  className="form-control"
-                  placeholder="Post topic"
-                  value={campaignGeneratePayload.post_topic}
-                  onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, post_topic: e.target.value }))}
-                  required
-                />
-                <select
-                  className="form-select"
-                  value={campaignGeneratePayload.post_type}
-                  onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, post_type: e.target.value }))}
-                >
-                  <option value="">Auto best post type</option>
-                  {postTypeOptions.map((postType) => (
-                    <option key={postType} value={postType}>
-                      {postType}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="form-select"
-                  value={campaignGeneratePayload.media_category}
-                  onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, media_category: e.target.value }))}
-                >
-                  <option value="random">random (auto-pick)</option>
-                  {mediaCategories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label htmlFor="studio-campaign-name" className="form-label">
+                    Campaign name
+                  </label>
+                  <input
+                    id="studio-campaign-name"
+                    className="form-control"
+                    autoComplete="off"
+                    value={campaignGeneratePayload.campaign_name}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, campaign_name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="studio-campaign-goal" className="form-label">
+                    Campaign goal
+                  </label>
+                  <input
+                    id="studio-campaign-goal"
+                    className="form-control"
+                    placeholder="e.g. Donations"
+                    value={campaignGeneratePayload.campaign_goal}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, campaign_goal: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="studio-campaign-topic" className="form-label">
+                    Post topic
+                  </label>
+                  <input
+                    id="studio-campaign-topic"
+                    className="form-control"
+                    value={campaignGeneratePayload.post_topic}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, post_topic: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="studio-campaign-tone" className="form-label">
+                    Tone
+                  </label>
+                  <select
+                    id="studio-campaign-tone"
+                    className="form-select"
+                    value={campaignGeneratePayload.tone}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, tone: e.target.value }))}
+                  >
+                    {toneOptions.map((tone) => (
+                      <option key={tone} value={tone}>
+                        {tone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="studio-campaign-post-type" className="form-label">
+                    Post type
+                  </label>
+                  <select
+                    id="studio-campaign-post-type"
+                    className="form-select"
+                    value={campaignGeneratePayload.post_type}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, post_type: e.target.value }))}
+                  >
+                    <option value="">Auto (best from insights)</option>
+                    {postTypeOptions.map((postType) => (
+                      <option key={postType} value={postType}>
+                        {postType}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="studio-campaign-media-cat" className="form-label">
+                    Image category
+                  </label>
+                  <select
+                    id="studio-campaign-media-cat"
+                    className="form-select"
+                    value={campaignGeneratePayload.media_category}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, media_category: e.target.value }))}
+                  >
+                    <option value="random">Random (auto-pick)</option>
+                    {mediaCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-check">
+                  <input
+                    id="studio-campaign-resident-story"
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={campaignGeneratePayload.include_resident_story}
+                    onChange={(e) =>
+                      setCampaignGeneratePayload((curr) => ({ ...curr, include_resident_story: e.target.checked }))
+                    }
+                  />
+                  <label htmlFor="studio-campaign-resident-story" className="form-check-label">
+                    Prefer resident-story framing when the model supports it
+                  </label>
+                </div>
                 <div className="form-check">
                   <input
                     id="auto-post-facebook"
@@ -617,7 +720,9 @@ export function SocialPostStudioPage() {
                     checked={campaignGeneratePayload.post_to_facebook}
                     onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, post_to_facebook: e.target.checked }))}
                   />
-                  <label htmlFor="auto-post-facebook" className="form-check-label">Create Facebook drafts</label>
+                  <label htmlFor="auto-post-facebook" className="form-check-label">
+                    Create Facebook drafts
+                  </label>
                 </div>
                 <div className="form-check">
                   <input
@@ -627,34 +732,52 @@ export function SocialPostStudioPage() {
                     checked={campaignGeneratePayload.post_to_instagram}
                     onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, post_to_instagram: e.target.checked }))}
                   />
-                  <label htmlFor="auto-post-instagram" className="form-check-label">Create Instagram drafts</label>
+                  <label htmlFor="auto-post-instagram" className="form-check-label">
+                    Create Instagram drafts
+                  </label>
                 </div>
-                <label className="form-label mb-0 small text-body-secondary">Start date/time (local)</label>
-                <input
-                  type="datetime-local"
-                  className="form-control"
-                  value={campaignGeneratePayload.start_utc}
-                  onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, start_utc: e.target.value }))}
-                  required
-                />
-                <label className="form-label mb-0 small text-body-secondary">End date/time (local)</label>
-                <input
-                  type="datetime-local"
-                  className="form-control"
-                  value={campaignGeneratePayload.end_utc}
-                  onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, end_utc: e.target.value }))}
-                  required
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={14}
-                  className="form-control"
-                  value={campaignGeneratePayload.posts_per_week}
-                  onChange={(e) =>
-                    setCampaignGeneratePayload((curr) => ({ ...curr, posts_per_week: Number(e.target.value) || 1 }))
-                  }
-                />
+                <div>
+                  <label htmlFor="studio-campaign-start" className="form-label">
+                    Start (local)
+                  </label>
+                  <input
+                    id="studio-campaign-start"
+                    type="datetime-local"
+                    className="form-control"
+                    value={campaignGeneratePayload.start_utc}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, start_utc: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="studio-campaign-end" className="form-label">
+                    End (local)
+                  </label>
+                  <input
+                    id="studio-campaign-end"
+                    type="datetime-local"
+                    className="form-control"
+                    value={campaignGeneratePayload.end_utc}
+                    onChange={(e) => setCampaignGeneratePayload((curr) => ({ ...curr, end_utc: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="studio-campaign-posts-per-week" className="form-label">
+                    Posts per week
+                  </label>
+                  <input
+                    id="studio-campaign-posts-per-week"
+                    type="number"
+                    min={1}
+                    max={14}
+                    className="form-control"
+                    value={campaignGeneratePayload.posts_per_week}
+                    onChange={(e) =>
+                      setCampaignGeneratePayload((curr) => ({ ...curr, posts_per_week: Number(e.target.value) || 1 }))
+                    }
+                  />
+                </div>
                 <button type="submit" className="btn btn-primary" disabled={isGeneratingCampaign}>
                   {isGeneratingCampaign ? 'Generating draft posts... please wait' : 'Generate campaign posts'}
                 </button>
@@ -666,55 +789,98 @@ export function SocialPostStudioPage() {
             <div className="card-body">
               <h3 className="h6 mb-3">Single post scheduler</h3>
               <form onSubmit={handleGenerateSinglePost} className="d-grid gap-2">
-                <input
-                  className="form-control"
-                  placeholder="Post topic"
-                  value={singlePostPayload.post_topic}
-                  onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, post_topic: e.target.value }))}
-                  required
-                />
-                <input
-                  className="form-control"
-                  placeholder="Goal (example: Donations)"
-                  value={singlePostPayload.goal}
-                  onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, goal: e.target.value }))}
-                  required
-                />
-                <select
-                  className="form-select"
-                  value={singlePostPayload.media_category}
-                  onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, media_category: e.target.value }))}
-                >
-                  <option value="random">random (auto-pick)</option>
-                  {mediaCategories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="form-select"
-                  value={singlePostPayload.tone}
-                  onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, tone: e.target.value }))}
-                >
-                  {toneOptions.map((tone) => (
-                    <option key={tone} value={tone}>
-                      {tone}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="form-select"
-                  value={singlePostPayload.post_type}
-                  onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, post_type: e.target.value }))}
-                >
-                  <option value="">Auto best post type</option>
-                  {postTypeOptions.map((postType) => (
-                    <option key={postType} value={postType}>
-                      {postType}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label htmlFor="studio-single-topic" className="form-label">
+                    Post topic
+                  </label>
+                  <input
+                    id="studio-single-topic"
+                    className="form-control"
+                    value={singlePostPayload.post_topic}
+                    onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, post_topic: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="studio-single-goal" className="form-label">
+                    Goal
+                  </label>
+                  <input
+                    id="studio-single-goal"
+                    className="form-control"
+                    placeholder="e.g. Donations"
+                    value={singlePostPayload.goal}
+                    onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, goal: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="studio-single-media" className="form-label">
+                    Image category
+                  </label>
+                  <select
+                    id="studio-single-media"
+                    className="form-select"
+                    value={singlePostPayload.media_category}
+                    onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, media_category: e.target.value }))}
+                  >
+                    <option value="random">Random (auto-pick)</option>
+                    {mediaCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="studio-single-tone" className="form-label">
+                    Tone
+                  </label>
+                  <select
+                    id="studio-single-tone"
+                    className="form-select"
+                    value={singlePostPayload.tone}
+                    onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, tone: e.target.value }))}
+                  >
+                    {toneOptions.map((tone) => (
+                      <option key={tone} value={tone}>
+                        {tone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="studio-single-post-type" className="form-label">
+                    Post type
+                  </label>
+                  <select
+                    id="studio-single-post-type"
+                    className="form-select"
+                    value={singlePostPayload.post_type}
+                    onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, post_type: e.target.value }))}
+                  >
+                    <option value="">Auto (best from insights)</option>
+                    {postTypeOptions.map((postType) => (
+                      <option key={postType} value={postType}>
+                        {postType}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-check">
+                  <input
+                    id="studio-single-resident-story"
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={singlePostPayload.include_resident_story}
+                    onChange={(e) =>
+                      setSinglePostPayload((curr) => ({ ...curr, include_resident_story: e.target.checked }))
+                    }
+                  />
+                  <label htmlFor="studio-single-resident-story" className="form-check-label">
+                    Prefer resident-story framing when the model supports it
+                  </label>
+                </div>
                 <div className="form-check">
                   <input
                     id="single-post-facebook"
@@ -723,7 +889,9 @@ export function SocialPostStudioPage() {
                     checked={singlePostPayload.post_to_facebook}
                     onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, post_to_facebook: e.target.checked }))}
                   />
-                  <label htmlFor="single-post-facebook" className="form-check-label">Post to Facebook</label>
+                  <label htmlFor="single-post-facebook" className="form-check-label">
+                    Create Facebook draft
+                  </label>
                 </div>
                 <div className="form-check">
                   <input
@@ -733,18 +901,77 @@ export function SocialPostStudioPage() {
                     checked={singlePostPayload.post_to_instagram}
                     onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, post_to_instagram: e.target.checked }))}
                   />
-                  <label htmlFor="single-post-instagram" className="form-check-label">Post to Instagram</label>
+                  <label htmlFor="single-post-instagram" className="form-check-label">
+                    Create Instagram draft
+                  </label>
                 </div>
-                <label className="form-label mb-0 small text-body-secondary">Publish at (local)</label>
-                <input
-                  type="datetime-local"
-                  className="form-control"
-                  value={singlePostPayload.scheduled_for_utc}
-                  onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, scheduled_for_utc: e.target.value }))}
-                  required
-                />
+                <div>
+                  <label htmlFor="studio-single-when" className="form-label">
+                    Publish at (local)
+                  </label>
+                  <input
+                    id="studio-single-when"
+                    type="datetime-local"
+                    className="form-control"
+                    value={singlePostPayload.scheduled_for_utc}
+                    onChange={(e) => setSinglePostPayload((curr) => ({ ...curr, scheduled_for_utc: e.target.value }))}
+                    required
+                  />
+                </div>
                 <button type="submit" className="btn btn-success" disabled={isGeneratingSinglePost}>
                   {isGeneratingSinglePost ? 'Generating single draft...' : 'Generate single post draft'}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className="card shadow-sm mt-3">
+            <div className="card-body">
+              <h3 className="h6 mb-2">Campaign image library</h3>
+              <p className="small text-body-secondary mb-3">
+                Add images to an existing category folder so draft generation can pick them up. Uploads are resized to a
+                maximum of 2048 px on the longest side, optimized to stay under about 2 MB, and saved as JPEG (or PNG
+                when transparency is needed). Source files: PNG, JPEG, or WebP, up to 5 MB.
+              </p>
+              {libraryUploadMessage ? <div className="alert alert-success py-2 small mb-2">{libraryUploadMessage}</div> : null}
+              {libraryUploadError ? <div className="alert alert-danger py-2 small mb-2">{libraryUploadError}</div> : null}
+              <form onSubmit={(e) => void handleLibraryImageUpload(e)} className="d-grid gap-2">
+                <div>
+                  <label htmlFor="studio-library-category" className="form-label">
+                    Category folder
+                  </label>
+                  <select
+                    id="studio-library-category"
+                    className="form-select"
+                    value={libraryUploadCategory}
+                    onChange={(e) => setLibraryUploadCategory(e.target.value)}
+                    disabled={mediaCategories.length === 0}
+                  >
+                    {mediaCategories.length === 0 ? (
+                      <option value="">Loading categories…</option>
+                    ) : (
+                      mediaCategories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="studio-library-file" className="form-label">
+                    Image file
+                  </label>
+                  <input
+                    id="studio-library-file"
+                    ref={libraryFileInputRef}
+                    type="file"
+                    className="form-control"
+                    accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                  />
+                </div>
+                <button type="submit" className="btn btn-outline-primary" disabled={isUploadingLibrary || mediaCategories.length === 0}>
+                  {isUploadingLibrary ? 'Uploading…' : 'Upload to category'}
                 </button>
               </form>
             </div>
@@ -832,6 +1059,9 @@ export function SocialPostStudioPage() {
                       <div key={groupIds.join('-')} className="border rounded p-3">
                         <div className="d-flex justify-content-between align-items-start gap-3">
                           <div>
+                            {(first.campaign_title ?? '').trim() ? (
+                              <div className="fw-semibold small mb-1">{first.campaign_title}</div>
+                            ) : null}
                             <div className="small text-body-secondary">{groupPlatforms} draft pair</div>
                             <div className="small">Scheduled: {new Date(first.scheduled_for_utc).toLocaleString()}</div>
                           </div>
@@ -952,11 +1182,13 @@ export function SocialPostStudioPage() {
                       <table className="table table-sm mb-0">
                         <thead>
                           <tr>
+                            <th>Campaign</th>
                             <th>Platforms</th>
                             <th>Scheduled</th>
                             <th>Status</th>
                             <th>Attempts</th>
                             <th>Error</th>
+                            <th>Live post</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -974,14 +1206,35 @@ export function SocialPostStudioPage() {
                             const st = norm(first.status);
                             const canEditQueue = st === 'scheduled' || st === 'failed';
                             const isEditing = queueEditKey === rowKey;
+                            const campaignLabel = (first.campaign_title ?? '').trim() || '—';
+                            const platformLabel = (p: ScheduledSocialPost) =>
+                              p.platform.toLowerCase().includes('face') ? 'Facebook' : 'Instagram';
                             return (
                               <Fragment key={rowKey}>
                                 <tr>
+                                  <td className="small">{campaignLabel}</td>
                                   <td>{platforms}</td>
                                   <td>{new Date(first.scheduled_for_utc).toLocaleString()}</td>
                                   <td>{first.status}</td>
                                   <td>{attempts}</td>
                                   <td className="small text-danger">{error}</td>
+                                  <td className="small">
+                                    {fresh.some((p) => (p.published_post_url ?? '').trim()) ? (
+                                      <div className="d-flex flex-column gap-1">
+                                        {fresh.map((p) => {
+                                          const url = (p.published_post_url ?? '').trim();
+                                          if (!url) return null;
+                                          return (
+                                            <a key={p.scheduled_post_id} href={url} target="_blank" rel="noopener noreferrer">
+                                              Open on {platformLabel(p)}
+                                            </a>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <span className="text-body-secondary">—</span>
+                                    )}
+                                  </td>
                                   <td className="d-flex flex-wrap gap-1">
                                     {canEditQueue ? (
                                       <button
@@ -1005,7 +1258,7 @@ export function SocialPostStudioPage() {
                                 </tr>
                                 {isEditing && canEditQueue ? (
                                   <tr className="table-light">
-                                    <td colSpan={6}>
+                                    <td colSpan={8}>
                                       <div className="small text-body-secondary mb-2">
                                         {st === 'failed'
                                           ? 'Saving moves this group back to scheduled so the worker can try again.'

@@ -15,15 +15,15 @@ export function AppLayout() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      <nav className="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+      <nav className="navbar navbar-expand-xl pg-navbar bg-white border-bottom shadow-sm">
         <div className="container">
-          <Link className="navbar-brand d-inline-flex align-items-center gap-3" to="/">
+          <Link className="navbar-brand d-inline-flex align-items-center gap-2 gap-xl-3 me-2" to="/">
             <img
+              className="navbar-brand-logo"
               src="/panahgah-logo.png"
               alt="Panahgah"
               width={104}
               height={104}
-              style={{ borderRadius: 16, objectFit: 'contain', display: 'block' }}
               loading="eager"
               decoding="async"
             />
@@ -42,7 +42,7 @@ export function AppLayout() {
           </button>
 
           <div className="collapse navbar-collapse" id="mainNav">
-            <ul className="navbar-nav mx-auto mb-2 mb-lg-0">
+            <ul className="navbar-nav mx-auto mb-2 mb-xl-0 align-items-xl-center">
               <li className="nav-item">
                 <NavLink className="nav-link" to="/">
                   Home
@@ -51,6 +51,11 @@ export function AppLayout() {
               <li className="nav-item">
                 <NavLink className="nav-link" to="/impact-dashboard">
                   Impact Dashboard
+                </NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink className="nav-link" to="/news">
+                  News &amp; updates
                 </NavLink>
               </li>
               {!isLoading && authSession?.roles.includes('Admin') && (
@@ -130,7 +135,7 @@ export function AppLayout() {
               )}
             </ul>
 
-            <div className="d-flex align-items-center gap-2">
+            <div className="d-flex align-items-center flex-wrap justify-content-end gap-1 gap-xl-2 pg-navbar-toolbar">
               {isLoading ? (
                 <span className="text-body-secondary small">Checking session...</span>
               ) : isAuthenticated ? (
@@ -145,7 +150,10 @@ export function AppLayout() {
                       Admin settings
                     </Link>
                   )}
-                  <span className="text-body-secondary small d-none d-md-inline">
+                  <span
+                    className="text-body-secondary small d-none d-md-inline pg-navbar-session text-truncate"
+                    title={`${sessionIdentity} (${authSession?.roles.join(', ') || 'No roles'})`}
+                  >
                     {sessionIdentity} ({authSession?.roles.join(', ') || 'No roles'})
                   </span>
                   <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleLogout}>
@@ -198,6 +206,7 @@ export function AppLayout() {
               <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>Platform</p>
               <ul className="list-unstyled small mb-0">
                 <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/impact-dashboard">Impact Dashboard</Link></li>
+                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/news">News &amp; updates</Link></li>
                 <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/admin">Staff Portal</Link></li>
               </ul>
             </div>
@@ -216,6 +225,7 @@ export function AppLayout() {
         </div>
       </footer>
 
+      {/* Fixed overlay; portaled to document.body inside component — not in main/footer flow */}
       <CookieConsentBanner />
     </div>
   );

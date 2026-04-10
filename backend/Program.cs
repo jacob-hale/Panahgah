@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
+using Panahgah.Api.Contracts;
 using Panahgah.Api.Data;
 using Panahgah.Api.Middleware;
 using Panahgah.Api.Models;
@@ -87,6 +88,9 @@ if (int.TryParse(portEnv, out var port) && port is > 0 and < 65536)
 }
 
 // Add services to the container.
+builder.Services.Configure<SocialPublicFeedOptions>(builder.Configuration.GetSection(SocialPublicFeedOptions.SectionName));
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<InstagramPublicMediaFeedService>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();

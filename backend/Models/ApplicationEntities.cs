@@ -406,6 +406,10 @@ public class ScheduledSocialPost
 {
     public int scheduled_post_id { get; set; }
     public int? campaign_id { get; set; }
+
+    /// <summary>Human-readable batch label (campaign name or single-post topic) for queue display.</summary>
+    public string? campaign_title { get; set; }
+
     public string platform { get; set; } = string.Empty;
     public DateTime scheduled_for_utc { get; set; }
     public string caption { get; set; } = string.Empty;
@@ -414,6 +418,10 @@ public class ScheduledSocialPost
     public int attempt_count { get; set; }
     public string? error_message { get; set; }
     public string? platform_post_id { get; set; }
+
+    /// <summary>Public permalink on Facebook or Instagram after publish (from Graph or fallback).</summary>
+    public string? published_post_url { get; set; }
+
     public DateTime created_at_utc { get; set; }
     public DateTime? published_at_utc { get; set; }
 

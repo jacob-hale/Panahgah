@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Panahgah.Api.Data;
@@ -11,9 +12,11 @@ using Panahgah.Api.Data;
 namespace Panahgah.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410005239_AddScheduledPostCampaignTitleAndPublishedUrl")]
+    partial class AddScheduledPostCampaignTitleAndPublishedUrl
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -904,32 +907,32 @@ namespace Panahgah.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("metric_id"));
 
-                    b.Property<int?>("active_residents")
+                    b.Property<int>("active_residents")
                         .HasColumnType("integer");
 
-                    b.Property<decimal?>("avg_education_progress")
+                    b.Property<decimal>("avg_education_progress")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal?>("avg_health_score")
+                    b.Property<decimal>("avg_health_score")
                         .HasColumnType("numeric");
 
-                    b.Property<int?>("home_visitation_count")
+                    b.Property<int>("home_visitation_count")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("incident_count")
+                    b.Property<int>("incident_count")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly?>("month_end")
+                    b.Property<DateOnly>("month_end")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("month_start")
+                    b.Property<DateOnly>("month_start")
                         .HasColumnType("date");
 
                     b.Property<string>("notes")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("process_recording_count")
+                    b.Property<int>("process_recording_count")
                         .HasColumnType("integer");
 
                     b.Property<int>("safehouse_id")

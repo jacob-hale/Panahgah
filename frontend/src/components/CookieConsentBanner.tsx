@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useCookieConsent } from '../contexts/CookieConsentContext';
 
@@ -8,22 +9,33 @@ export function CookieConsentBanner() {
     return null;
   }
 
-  return (
-    <div className="cookie-banner bg-dark text-light py-3 border-top border-secondary">
-      <div className="container d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center justify-content-between">
-        <p className="mb-0">
-          We use essential cookies for authentication and a preference cookie to remember your
-          theme setting.
+  return createPortal(
+    <div className="cookie-consent-overlay">
+      <div
+        className="cookie-consent-card bg-dark text-light p-4"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="cookie-consent-heading"
+        aria-describedby="cookie-consent-desc"
+        aria-live="polite"
+      >
+        <h2 className="h6 text-white mb-2" id="cookie-consent-heading">
+          Cookies &amp; privacy
+        </h2>
+        <p className="mb-3 text-white-50 small" id="cookie-consent-desc">
+          We use essential cookies for authentication and a preference to remember your theme
+          setting. You can read more in our privacy policy.
         </p>
-        <div className="d-flex gap-2">
-          <Link to="/privacy" className="btn btn-outline-light btn-sm">
+        <div className="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center justify-content-sm-end">
+          <Link to="/privacy" className="btn btn-outline-light btn-sm order-sm-0 text-center text-decoration-none">
             Privacy Policy
           </Link>
-          <button type="button" className="btn btn-primary btn-sm" onClick={acknowledgeConsent}>
-            I Understand
+          <button type="button" className="btn btn-primary btn-sm order-sm-1" onClick={acknowledgeConsent}>
+            I understand
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
