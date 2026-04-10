@@ -314,7 +314,9 @@ public sealed class CampaignSchedulerService(
         var maxConcurrency = int.TryParse(configuredConcurrency, out var c) ? Math.Clamp(c, 1, 4) : 2;
         using var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
 
-        var captionTasks = plans.Select(async plan =>
+        var aiPlansCount = ResolveMaxAiCaptionCallsPerCampaign(plans.Count);
+        var aiPlans = plans.Take(aiPlansCount).ToList();
+        var captionTasks = aiPlans.Select(async plan =>
         {
             await semaphore.WaitAsync(cancellationToken);
             try
@@ -344,8 +346,16 @@ public sealed class CampaignSchedulerService(
             }
         }).ToList();
 
-        var captions = await Task.WhenAll(captionTasks);
-        foreach (var row in captions)
+        var aiCaptions = await Task.WhenAll(captionTasks);
+        var rowsWithCaptions = new List<(DateTime slot, SelectedMediaAsset asset, string caption)>(plans.Count);
+        for (var i = 0; i < plans.Count; i += 1)
+        {
+            var plan = plans[i];
+            var chosenCaption = aiCaptions[i % aiCaptions.Length].caption;
+            rowsWithCaptions.Add((plan.slot, plan.asset, chosenCaption));
+        }
+
+        foreach (var row in rowsWithCaptions)
         {
             foreach (var platform in platforms)
             {
@@ -669,6 +679,15 @@ public sealed class CampaignSchedulerService(
         return int.TryParse(configured, out var n) && n > 0
             ? Math.Min(n, 50)
             : 24;
+    }
+
+    private int ResolveMaxAiCaptionCallsPerCampaign(int slotCount)
+    {
+        var configured = configuration["Social:CampaignGenerateMaxAiCalls"];
+        var maxCalls = int.TryParse(configured, out var n) && n > 0
+            ? Math.Min(n, 8)
+            : 2;
+        return Math.Min(Math.Max(1, maxCalls), Math.Max(1, slotCount));
     }
 
     private async Task<Model5InsightsResponseDto> ScoreInsightsAsync(CancellationToken cancellationToken)
