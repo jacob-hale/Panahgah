@@ -145,7 +145,11 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddHttpClient<AnthropicSocialPostGenerator>();
-builder.Services.AddHttpClient<GeminiSocialPostGenerator>();
+builder.Services.AddHttpClient<GeminiSocialPostGenerator>(client =>
+{
+    // Default HttpClient timeout is 100s; Gemini generateContent often needs longer when the client uses a 120s budget.
+    client.Timeout = TimeSpan.FromSeconds(180);
+});
 builder.Services.AddHttpClient<ISocialPublishingService, SocialPublishingService>();
 builder.Services.AddScoped<ISocialPostGenerator, ConfigurableSocialPostGenerator>();
 builder.Services.AddScoped<ISocialConnectionSecretResolver, SocialConnectionSecretResolver>();
