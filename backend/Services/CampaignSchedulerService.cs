@@ -280,6 +280,7 @@ public sealed class CampaignSchedulerService(
         }
 
         var usedMediaUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var plans = new List<(DateTime slot, SelectedMediaAsset asset, string primaryPlatform, string bestPostType, string imageContext)>();
         foreach (var slot in slots)
         {
             var primaryPlatform = platforms[0];
@@ -304,24 +305,48 @@ public sealed class CampaignSchedulerService(
             usedMediaUrls.Add(asset.url.Trim());
 
             var imageContext = BuildImageContext(asset, asset.category);
-            var generated = await socialPostGenerator.GenerateAsync(new SocialPostGenerateRequestDto
+            plans.Add((slot, asset, primaryPlatform, bestPostType, imageContext));
+        }
+
+        // Captions are the slow part (LLM). Run slot generations concurrently with a small cap so
+        // 3 posts doesn't have to wait for 3 sequential LLM calls.
+        var configuredConcurrency = configuration["Social:CampaignGenerateCaptionConcurrency"];
+        var maxConcurrency = int.TryParse(configuredConcurrency, out var c) ? Math.Clamp(c, 1, 4) : 2;
+        using var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+
+        var captionTasks = plans.Select(async plan =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
+            try
             {
-                platform = primaryPlatform,
-                goal = goal.Trim(),
-                post_type = bestPostType,
-                post_topic = postTopic.Trim(),
-                tone = tone.Trim(),
-                include_resident_story = includeResidentStory,
-                key_details = imageContext
-            }, insights, cancellationToken);
+                var generated = await socialPostGenerator.GenerateAsync(new SocialPostGenerateRequestDto
+                {
+                    platform = plan.primaryPlatform,
+                    goal = goal.Trim(),
+                    post_type = plan.bestPostType,
+                    post_topic = postTopic.Trim(),
+                    tone = tone.Trim(),
+                    include_resident_story = includeResidentStory,
+                    key_details = plan.imageContext
+                }, insights, cancellationToken);
 
-            var rawCaption = generated.generated_posts.FirstOrDefault()?.caption;
-            var normalizedCaption = SocialCaptionFormatting.NormalizeAiCaption(rawCaption);
-            var captionBody = string.IsNullOrEmpty(normalizedCaption)
-                ? $"Support {goal.Trim()} for Panahgah Refuge."
-                : normalizedCaption;
-            var caption = SocialCaptionFormatting.EnsurePanahgahHashtag(captionBody);
+                var rawCaption = generated.generated_posts.FirstOrDefault()?.caption;
+                var normalizedCaption = SocialCaptionFormatting.NormalizeAiCaption(rawCaption);
+                var captionBody = string.IsNullOrEmpty(normalizedCaption)
+                    ? $"Support {goal.Trim()} for Panahgah Refuge."
+                    : normalizedCaption;
+                var caption = SocialCaptionFormatting.EnsurePanahgahHashtag(captionBody);
+                return (plan.slot, plan.asset, caption);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }).ToList();
 
+        var captions = await Task.WhenAll(captionTasks);
+        foreach (var row in captions)
+        {
             foreach (var platform in platforms)
             {
                 var scheduledPost = new ScheduledSocialPost
@@ -329,9 +354,9 @@ public sealed class CampaignSchedulerService(
                     campaign_id = campaignId,
                     campaign_title = string.IsNullOrWhiteSpace(campaignTitle) ? null : campaignTitle.Trim(),
                     platform = platform,
-                    scheduled_for_utc = slot,
-                    caption = caption,
-                    media_url = asset.url,
+                    scheduled_for_utc = row.slot,
+                    caption = row.caption,
+                    media_url = row.asset.url,
                     status = "draft",
                     attempt_count = 0,
                     created_at_utc = DateTime.UtcNow
