@@ -39,7 +39,7 @@ public sealed class CampaignSchedulerService(
     {
         var platforms = ResolvePlatforms(request.post_to_facebook, request.post_to_instagram);
 
-        var insights = await ScoreInsightsAsync(cancellationToken);
+        var insights = await ScoreInsightsWithBudgetAsync(cancellationToken);
         var slots = BuildSlots(insights, request.start_utc, request.end_utc, request.posts_per_week);
         if (slots.Count == 0)
         {
@@ -321,23 +321,16 @@ public sealed class CampaignSchedulerService(
             await semaphore.WaitAsync(cancellationToken);
             try
             {
-                var generated = await socialPostGenerator.GenerateAsync(new SocialPostGenerateRequestDto
-                {
-                    platform = plan.primaryPlatform,
-                    goal = goal.Trim(),
-                    post_type = plan.bestPostType,
-                    post_topic = postTopic.Trim(),
-                    tone = tone.Trim(),
-                    include_resident_story = includeResidentStory,
-                    key_details = plan.imageContext
-                }, insights, cancellationToken);
-
-                var rawCaption = generated.generated_posts.FirstOrDefault()?.caption;
-                var normalizedCaption = SocialCaptionFormatting.NormalizeAiCaption(rawCaption);
-                var captionBody = string.IsNullOrEmpty(normalizedCaption)
-                    ? $"Support {goal.Trim()} for Panahgah Refuge."
-                    : normalizedCaption;
-                var caption = SocialCaptionFormatting.EnsurePanahgahHashtag(captionBody);
+                var caption = await GenerateCaptionWithBudgetAsync(
+                    plan.primaryPlatform,
+                    plan.bestPostType,
+                    postTopic.Trim(),
+                    goal.Trim(),
+                    tone.Trim(),
+                    includeResidentStory,
+                    plan.imageContext,
+                    insights,
+                    cancellationToken);
                 return (plan.slot, plan.asset, caption);
             }
             finally
@@ -688,6 +681,81 @@ public sealed class CampaignSchedulerService(
             ? Math.Min(n, 8)
             : 2;
         return Math.Min(Math.Max(1, maxCalls), Math.Max(1, slotCount));
+    }
+
+    private async Task<Model5InsightsResponseDto> ScoreInsightsWithBudgetAsync(CancellationToken cancellationToken)
+    {
+        var configured = configuration["Social:CampaignGenerateInsightsTimeoutSeconds"];
+        var timeoutSeconds = int.TryParse(configured, out var n) && n > 0
+            ? Math.Clamp(n, 5, 45)
+            : 20;
+
+        using var budgetCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budgetCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        try
+        {
+            return await ScoreInsightsAsync(budgetCts.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Campaign generation can proceed without insights; fallback defaults are used for slots/post type.
+            return new Model5InsightsResponseDto();
+        }
+    }
+
+    private async Task<string> GenerateCaptionWithBudgetAsync(
+        string platform,
+        string postType,
+        string postTopic,
+        string goal,
+        string tone,
+        bool includeResidentStory,
+        string imageContext,
+        Model5InsightsResponseDto insights,
+        CancellationToken cancellationToken)
+    {
+        var configured = configuration["Social:CampaignGeneratePerCaptionTimeoutSeconds"];
+        var timeoutSeconds = int.TryParse(configured, out var n) && n > 0
+            ? Math.Clamp(n, 8, 60)
+            : 25;
+
+        using var budgetCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budgetCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        try
+        {
+            var generated = await socialPostGenerator.GenerateAsync(new SocialPostGenerateRequestDto
+            {
+                platform = platform,
+                goal = goal,
+                post_type = postType,
+                post_topic = postTopic,
+                tone = tone,
+                include_resident_story = includeResidentStory,
+                key_details = imageContext
+            }, insights, budgetCts.Token);
+
+            var rawCaption = generated.generated_posts.FirstOrDefault()?.caption;
+            var normalizedCaption = SocialCaptionFormatting.NormalizeAiCaption(rawCaption);
+            var captionBody = string.IsNullOrEmpty(normalizedCaption)
+                ? BuildFallbackCaption(goal, postTopic)
+                : normalizedCaption;
+            return SocialCaptionFormatting.EnsurePanahgahHashtag(captionBody);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return SocialCaptionFormatting.EnsurePanahgahHashtag(BuildFallbackCaption(goal, postTopic));
+        }
+        catch
+        {
+            return SocialCaptionFormatting.EnsurePanahgahHashtag(BuildFallbackCaption(goal, postTopic));
+        }
+    }
+
+    private static string BuildFallbackCaption(string goal, string postTopic)
+    {
+        var cleanGoal = string.IsNullOrWhiteSpace(goal) ? "support" : goal.Trim();
+        var cleanTopic = string.IsNullOrWhiteSpace(postTopic) ? "our mission" : postTopic.Trim();
+        return $"Support {cleanGoal} for Panahgah Refuge. Today we spotlight {cleanTopic}.";
     }
 
     private async Task<Model5InsightsResponseDto> ScoreInsightsAsync(CancellationToken cancellationToken)
