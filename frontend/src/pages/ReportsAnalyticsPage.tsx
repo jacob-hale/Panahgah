@@ -176,7 +176,7 @@ export function ReportsAnalyticsPage() {
               <p className="small text-body-secondary mb-3">Last 12 months (monthly estimated value and monetary amount sums).</p>
               <DonationBars points={data.donation_trend_monthly} />
               <div className="table-responsive mt-3">
-                <table className="table table-sm table-striped mb-0">
+                <table className="table table-sm align-middle mb-0">
                   <thead>
                     <tr>
                       <th>Month</th>
@@ -221,7 +221,7 @@ export function ReportsAnalyticsPage() {
                 <p className="text-body-secondary small mb-0">No safehouse monthly metrics yet.</p>
               ) : (
                 <div className="table-responsive">
-                  <table className="table table-sm table-striped align-middle mb-0">
+                  <table className="table table-sm align-middle mb-0">
                     <thead>
                       <tr>
                         <th>Safehouse</th>
