@@ -102,16 +102,3 @@
   max-width: min(10.5rem, 18vw);
 }
 
-/* Chatbase: suppress widget on staff routes (/admin/*). Bubble may live in iframe or host div. */
-body.pg-admin-no-chatbase iframe[src*="chatbase" i],
-body.pg-admin-no-chatbase [id*="chatbase" i],
-body.pg-admin-no-chatbase [class*="chatbase" i] {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-}
-
