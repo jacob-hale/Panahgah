@@ -60,6 +60,11 @@ export function AppLayout() {
               </li>
               {!isLoading && authSession?.roles.includes('Admin') && (
                 <>
+                  <li className="nav-item">
+                    <NavLink className="nav-link" to="/admin/social-post-studio">
+                      Social media studio
+                    </NavLink>
+                  </li>
                   <li className="nav-item dropdown">
                     <button
                       type="button"
@@ -107,11 +112,6 @@ export function AppLayout() {
                       <li>
                         <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-insights">
                           Social media insights
-                        </NavLink>
-                      </li>
-                      <li>
-                        <NavLink className="dropdown-item staff-portal-dropdown-item" to="/admin/social-post-studio">
-                          Social post studio
                         </NavLink>
                       </li>
                       <li>
