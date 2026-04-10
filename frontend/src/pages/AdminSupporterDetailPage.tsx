@@ -232,24 +232,15 @@ export function AdminSupporterDetailPage() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       {supporter === null && !error ? (
-        <p className="text-body-secondary">Loading{'\u2026'}</p>
+        <p className="text-body-secondary">Loading...</p>
       ) : supporter ? (
         <>
           <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
             <div>
               <h1 className="h3 mb-1">{supporter.display_name}</h1>
               <p className="text-body-secondary small mb-0">
-                {supporter.email}
-                {' \u00B7 '}
-                {supporter.supporter_type}
-                {' \u00B7 '}
-                {supporter.status}
-                {supporter.phone ? (
-                  <>
-                    {' \u00B7 '}
-                    {supporter.phone}
-                  </>
-                ) : null}
+                {supporter.email} - {supporter.supporter_type} - {supporter.status}
+                {supporter.phone ? ` - ${supporter.phone}` : ''}
               </p>
             </div>
             <div className="text-end small">
@@ -329,7 +320,7 @@ export function AdminSupporterDetailPage() {
 
           <h2 className="h5 mb-3">Donations &amp; allocations</h2>
           {donations === null ? (
-            <p className="text-body-secondary">Loading{'\u2026'}</p>
+            <p className="text-body-secondary">Loading...</p>
           ) : donations.length === 0 ? (
             <p className="text-body-secondary">No donations recorded for this supporter yet.</p>
           ) : (
@@ -338,14 +329,12 @@ export function AdminSupporterDetailPage() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between flex-wrap gap-2">
                     <div>
-                      <strong>{d.donation_type}</strong>
-                      {' \u00B7 '}
-                      {d.donation_date}
+                      <strong>{d.donation_type}</strong> - {d.donation_date}
                       <div className="small text-body-secondary">
                         {d.amount != null
                           ? `${d.currency_code ?? ''} ${Number(d.amount).toLocaleString()}`.trim()
                           : `Est. ${Number(d.estimated_value).toLocaleString()} (${d.impact_unit})`}
-                        {' \u00B7 '}
+                        {' - '}
                         {d.channel_source}
                       </div>
                       {d.notes ? <div className="small mt-1">{d.notes}</div> : null}
@@ -370,10 +359,7 @@ export function AdminSupporterDetailPage() {
                         {d.donation_allocations.map((a) => (
                           <li key={a.allocation_id} className="list-group-item d-flex justify-content-between align-items-start">
                             <div>
-                              <strong>{a.program_area}</strong>
-                              {' \u2014 '}
-                              safehouse #{a.safehouse_id}
-                              {' \u2014 '}
+                              <strong>{a.program_area}</strong> - safehouse #{a.safehouse_id} -{' '}
                               {Number(a.amount_allocated).toLocaleString()} on {a.allocation_date}
                               {a.allocation_notes ? <div className="small text-body-secondary">{a.allocation_notes}</div> : null}
                             </div>
@@ -416,9 +402,7 @@ export function AdminSupporterDetailPage() {
                   >
                     {safehouses.map((s) => (
                       <option key={s.safehouse_id} value={s.safehouse_id}>
-                        {s.safehouse_code}
-                        {' \u2014 '}
-                        {s.name}
+                        {s.safehouse_code} - {s.name}
                       </option>
                     ))}
                   </select>
