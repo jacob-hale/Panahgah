@@ -213,6 +213,19 @@ export type Model5InsightsResponse = {
   story_effect: Model5StoryEffect;
 };
 
+/** Monthly rollups from social_media_posts (admin timeseries API). */
+export type SocialMediaMonthlyTimeseriesPoint = {
+  period: string;
+  post_count: number;
+  total_engagement: number;
+  total_donation_referrals: number;
+  total_estimated_donation_value_php: number;
+};
+
+export type SocialMediaMonthlyTimeseriesResponse = {
+  points: SocialMediaMonthlyTimeseriesPoint[];
+};
+
 export type SocialPostGenerateRequest = {
   platform: string;
   goal: string;
