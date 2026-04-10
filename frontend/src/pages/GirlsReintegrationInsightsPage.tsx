@@ -56,6 +56,8 @@ export function GirlsReintegrationInsightsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<GirlsReintegrationInsights | null>(null);
+  const [training, setTraining] = useState(false);
+  const [trainError, setTrainError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -72,6 +74,19 @@ export function GirlsReintegrationInsightsPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  const handleRetrain = async () => {
+    setTraining(true);
+    setTrainError(null);
+    try {
+      await apiFetch('/api/ml/girls-reintegration/train', { method: 'POST' });
+      await load();
+    } catch (e) {
+      setTrainError(e instanceof Error ? e.message : 'Training failed.');
+    } finally {
+      setTraining(false);
+    }
+  };
 
   const notTrained = !data || data.pipeline_health?.status !== 'ok';
 
@@ -180,6 +195,17 @@ export function GirlsReintegrationInsightsPage() {
                 </table>
               </div>
             </div>
+          </div>
+
+          <div className="d-flex flex-column align-items-start gap-2">
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleRetrain} disabled={training}>
+              {training ? 'Retraining...' : 'Retrain reintegration model'}
+            </button>
+            {trainError ? (
+              <span className="small text-danger" style={{ whiteSpace: 'pre-wrap' }}>
+                {trainError}
+              </span>
+            ) : null}
           </div>
 
         </div>
