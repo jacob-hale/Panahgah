@@ -18,8 +18,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         // The social studio can take 60–120s when scoring + LLM generation runs.
-        timeout: 180_000,
-        proxyTimeout: 180_000,
+        timeout: 300_000,
+        proxyTimeout: 300_000,
       },
     },
   },
