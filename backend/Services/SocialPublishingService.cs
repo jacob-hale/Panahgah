@@ -780,7 +780,10 @@ public sealed class MetaGraphSocialPublisher(
     }
 }
 
-public sealed class SocialPublishWorker(IServiceScopeFactory scopeFactory, ILogger<SocialPublishWorker> logger)
+public sealed class SocialPublishWorker(
+    IServiceScopeFactory scopeFactory,
+    InstagramTimelineCacheVersion timelineCacheVersion,
+    ILogger<SocialPublishWorker> logger)
     : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(20);
@@ -838,6 +841,10 @@ public sealed class SocialPublishWorker(IServiceScopeFactory scopeFactory, ILogg
                         post.published_post_url = publishResult.publishedPostUrl;
                         post.error_message = null;
                         post.published_at_utc = DateTime.UtcNow;
+                        if (post.platform.Contains("Instagram", StringComparison.OrdinalIgnoreCase))
+                        {
+                            timelineCacheVersion.Bump();
+                        }
                     }
                     else
                     {

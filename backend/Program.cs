@@ -80,9 +80,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 // Railway expects the app to bind to the port it provides.
-// If PORT is present, bind to 0.0.0.0:$PORT (otherwise use framework defaults).
+// Do not apply PORT in Development: many dev shells inherit PORT from other tools, which would
+// override launchSettings (e.g. 5238) and break the Vite proxy target → ECONNREFUSED.
 var portEnv = Environment.GetEnvironmentVariable("PORT");
-if (int.TryParse(portEnv, out var port) && port is > 0 and < 65536)
+if (!builder.Environment.IsDevelopment()
+    && int.TryParse(portEnv, out var port) && port is > 0 and < 65536)
 {
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
@@ -90,6 +92,7 @@ if (int.TryParse(portEnv, out var port) && port is > 0 and < 65536)
 // Add services to the container.
 builder.Services.Configure<SocialPublicFeedOptions>(builder.Configuration.GetSection(SocialPublicFeedOptions.SectionName));
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<InstagramTimelineCacheVersion>();
 builder.Services.AddHttpClient<InstagramPublicMediaFeedService>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();

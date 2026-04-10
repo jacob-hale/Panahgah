@@ -71,7 +71,7 @@ export async function apiFetch<T>(
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'Failed to fetch' || err instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. In dev: start backend (`dotnet run` in /backend) and keep `npm run dev` in /frontend so the Vite proxy can forward `/api`. In production: ensure backend is reachable and CORS/HTTPS are configured.',
+        'Could not reach the API. In dev: start the backend first (`dotnet run` in /backend, listen on http://127.0.0.1:5238), then `npm run dev` in /frontend. If you still see proxy errors: unset a stray PORT env var (it forces a different listen port) or set VITE_DEV_API_PROXY_TARGET to match. In production: ensure the backend is reachable and CORS/HTTPS are configured.',
       );
     }
     throw err;
