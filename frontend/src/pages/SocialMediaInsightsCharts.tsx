@@ -3,7 +3,7 @@ import type { Model5StoryEffect, SocialMediaMonthlyTimeseriesPoint } from '../ap
 function formatMonthLabel(period: string): string {
   const d = new Date(`${period}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return period;
-  return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
 }
 
 function MonthlyBars({
@@ -11,46 +11,49 @@ function MonthlyBars({
   getValue,
   formatValue,
   emptyHint,
+  barClassName,
 }: {
   points: SocialMediaMonthlyTimeseriesPoint[];
   getValue: (p: SocialMediaMonthlyTimeseriesPoint) => number;
   formatValue: (n: number) => string;
   emptyHint: string;
+  barClassName?: string;
 }) {
   if (points.length === 0) {
     return <p className="small text-body-secondary mb-0">{emptyHint}</p>;
   }
 
   const max = Math.max(1, ...points.map((p) => getValue(p)));
+  const barColor = barClassName ?? 'bg-primary';
 
   return (
-    <div className="d-flex align-items-stretch gap-1 gap-md-2" style={{ height: 168 }}>
+    <div className="d-flex align-items-stretch gap-2" style={{ height: 200 }}>
       {points.map((p) => {
         const v = getValue(p);
         const pct = max > 0 ? (v / max) * 100 : 0;
-        const barPct = v > 0 ? Math.max(pct, 6) : 0;
+        const barPct = v > 0 ? Math.max(pct, 5) : 0;
         return (
           <div
             key={p.period}
             className="d-flex flex-column align-items-center flex-grow-1"
-            style={{ minWidth: 0 }}
+            style={{ minWidth: 0, maxWidth: 56 }}
           >
-            <div className="flex-grow-1 w-100 d-flex flex-column justify-content-end" style={{ minHeight: 120 }}>
+            <div className="flex-grow-1 w-100 d-flex flex-column justify-content-end" style={{ minHeight: 140 }}>
               <div
-                className="rounded-top bg-primary mx-auto"
+                className={`rounded-top mx-auto ${barColor}`}
                 role="img"
                 aria-label={`${formatMonthLabel(p.period)}: ${formatValue(v)}`}
                 style={{
-                  width: '72%',
+                  width: '80%',
                   height: `${barPct}%`,
-                  minHeight: v > 0 ? 6 : 0,
+                  minHeight: v > 0 ? 8 : 0,
                 }}
                 title={`${formatMonthLabel(p.period)}: ${formatValue(v)} (${p.post_count} posts)`}
               />
             </div>
             <div
-              className="text-body-secondary text-center mt-1 text-truncate w-100"
-              style={{ fontSize: '0.65rem' }}
+              className="text-body-secondary text-center mt-2 text-truncate w-100 small"
+              style={{ fontSize: '0.7rem', lineHeight: 1.2 }}
             >
               {formatMonthLabel(p.period)}
             </div>
@@ -65,54 +68,72 @@ export function SocialTrendsFromPosts({
   points,
   loading,
   error,
+  months,
+  onMonthsChange,
 }: {
   points: SocialMediaMonthlyTimeseriesPoint[] | null;
   loading: boolean;
   error: string | null;
+  months: 6 | 12;
+  onMonthsChange: (m: 6 | 12) => void;
 }) {
   return (
     <div className="card shadow-sm">
       <div className="card-body">
-        <h2 className="h5">Trends from post records</h2>
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <h2 className="h5 mb-0">Trends from post records</h2>
+          <div className="btn-group btn-group-sm" role="group" aria-label="Time range">
+            <button
+              type="button"
+              className={`btn ${months === 6 ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => onMonthsChange(6)}
+            >
+              6 months
+            </button>
+            <button
+              type="button"
+              className={`btn ${months === 12 ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => onMonthsChange(12)}
+            >
+              12 months
+            </button>
+          </div>
+        </div>
         <p className="small text-body-secondary mb-3">
-          Rolled up by calendar month from <code>social_media_posts</code>. Engagement is likes + comments + shares +
-          saves. Donation figures are whatever is stored per post (attributed referrals / estimated value)—not live bank
-          data.
+          Last <strong>{months}</strong> calendar months from <code>social_media_posts</code> (UTC). Engagement = likes
+          + comments + shares + saves. Dollar amounts show the same stored values as before, prefixed with{' '}
+          <strong>$</strong> for display only.
         </p>
         {loading ? <p className="small text-body-secondary mb-0">Loading trends…</p> : null}
         {error ? <div className="alert alert-warning py-2 small mb-0">{error}</div> : null}
         {!loading && !error && points ? (
           points.length === 0 ? (
             <p className="small text-body-secondary mb-0">
-              No rows in social media posts yet—import or sync data to see charts.
+              No months in range—import or sync post data to see charts.
             </p>
           ) : (
             <div className="row g-4">
               <div className="col-12 col-lg-6">
-                <h3 className="h6 text-body-secondary">Engagement over time</h3>
+                <h3 className="h6 text-body-secondary mb-3">Engagement over time</h3>
                 <MonthlyBars
                   points={points}
                   getValue={(p) => p.total_engagement}
-                  formatValue={(n) => n.toLocaleString() + ' interactions'}
+                  formatValue={(n) => `${n.toLocaleString()} interactions`}
                   emptyHint="No data."
+                  barClassName="bg-primary"
                 />
               </div>
               <div className="col-12 col-lg-6">
-                <h3 className="h6 text-body-secondary">Attributed donation referrals over time</h3>
-                <MonthlyBars
-                  points={points}
-                  getValue={(p) => p.total_donation_referrals}
-                  formatValue={(n) => n.toLocaleString() + ' referrals'}
-                  emptyHint="No data."
-                />
-              </div>
-              <div className="col-12">
-                <h3 className="h6 text-body-secondary">Estimated donation value on posts (PHP)</h3>
+                <h3 className="h6 text-body-secondary mb-3">Estimated donation value on posts</h3>
                 <MonthlyBars
                   points={points}
                   getValue={(p) => p.total_estimated_donation_value_php}
-                  formatValue={(n) => '₱' + n.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  formatValue={(n) =>
+                    '$' +
+                    n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+                  }
                   emptyHint="No data."
+                  barClassName="bg-info"
                 />
               </div>
             </div>
