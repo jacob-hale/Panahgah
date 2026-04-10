@@ -338,6 +338,21 @@ export type CampaignGeneratePayload = {
   post_to_instagram: boolean;
 };
 
+export type CampaignGenerateJobStart = {
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+};
+
+export type CampaignGenerateJobStatus = {
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  generated_count: number;
+  error: string | null;
+  created_at_utc: string;
+  started_at_utc: string | null;
+  finished_at_utc: string | null;
+};
+
 export type SinglePostGeneratePayload = {
   post_topic: string;
   goal: string;

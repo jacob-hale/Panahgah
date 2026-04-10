@@ -19,6 +19,7 @@ public sealed class SocialPostSchedulerController(
     ISocialConnectionSecretResolver connectionSecretResolver,
     IHttpClientFactory httpClientFactory,
     ICampaignSchedulerService campaignSchedulerService,
+    CampaignGenerationJobService campaignGenerationJobService,
     IMediaAssetSelector mediaAssetSelector) : ControllerBase
 {
     [HttpGet("connections")]
@@ -225,6 +226,50 @@ public sealed class SocialPostSchedulerController(
         {
             return BadRequest($"Campaign generation failed: {ex.Message}");
         }
+    }
+
+    [HttpPost("campaigns/generate-async")]
+    public IActionResult GenerateCampaignAsync([FromBody] CampaignGenerateRequestDto request)
+    {
+        if (request.start_utc == default || request.end_utc == default || request.end_utc <= request.start_utc)
+        {
+            return BadRequest("Valid start_utc and end_utc are required.");
+        }
+
+        if (request.posts_per_week <= 0)
+        {
+            return BadRequest("posts_per_week must be greater than zero.");
+        }
+
+        var startRequest = new CampaignGenerateRequestDto
+        {
+            campaign_name = request.campaign_name,
+            campaign_goal = request.campaign_goal,
+            post_topic = request.post_topic,
+            media_category = request.media_category,
+            tone = request.tone,
+            post_type = request.post_type,
+            start_utc = request.start_utc,
+            end_utc = request.end_utc,
+            posts_per_week = request.posts_per_week,
+            include_resident_story = request.include_resident_story,
+            post_to_facebook = request.post_to_facebook,
+            post_to_instagram = request.post_to_instagram
+        };
+        var jobId = campaignGenerationJobService.Start(startRequest);
+        return Accepted(new { job_id = jobId, status = "queued" });
+    }
+
+    [HttpGet("campaigns/generate-status/{jobId:guid}")]
+    public IActionResult GetCampaignGenerateStatus(Guid jobId)
+    {
+        var state = campaignGenerationJobService.Get(jobId);
+        if (state is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(state);
     }
 
     [HttpPost("scheduled-posts/generate-single")]
