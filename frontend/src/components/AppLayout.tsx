@@ -186,7 +186,46 @@ export function AppLayout() {
       <footer className="border-top bg-white mt-auto">
         <div className="container py-4">
           <div className="row align-items-start g-4">
-            <div className="col-12 col-md-4">
+            <div className="col-12 col-md-6 text-md-end">
+              <div className="row g-4">
+                <div className="col-6">
+                  <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>
+                    Platform
+                  </p>
+                  <ul className="list-unstyled small mb-0">
+                    <li className="mb-1">
+                      <Link className="text-body-secondary text-decoration-none" to="/impact-dashboard">
+                        Impact Dashboard
+                      </Link>
+                    </li>
+                    <li className="mb-1">
+                      <Link className="text-body-secondary text-decoration-none" to="/news">
+                        News &amp; updates
+                      </Link>
+                    </li>
+                    <li className="mb-1">
+                      <Link className="text-body-secondary text-decoration-none" to="/admin">
+                        Staff Portal
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+                <div className="col-6">
+                  <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>
+                    Legal
+                  </p>
+                  <ul className="list-unstyled small mb-0">
+                    <li className="mb-1">
+                      <Link className="text-body-secondary text-decoration-none" to="/privacy">
+                        Privacy Policy
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12 col-md-6">
               <div className="d-flex align-items-center gap-2 mb-2">
                 <img
                   src="/panahgah-logo.png"
@@ -195,27 +234,13 @@ export function AppLayout() {
                   height={32}
                   style={{ borderRadius: 6, objectFit: 'contain' }}
                 />
-                <span className="fw-bold" style={{ color: 'var(--pg-color-ink)' }}>Panahgah</span>
+                <span className="fw-bold" style={{ color: 'var(--pg-color-ink)' }}>
+                  Panahgah
+                </span>
               </div>
               <p className="small text-body-secondary mb-0">
                 Protecting and empowering survivors through technology, data, and compassion.
               </p>
-            </div>
-
-            <div className="col-6 col-md-4">
-              <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>Platform</p>
-              <ul className="list-unstyled small mb-0">
-                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/impact-dashboard">Impact Dashboard</Link></li>
-                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/news">News &amp; updates</Link></li>
-                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/admin">Staff Portal</Link></li>
-              </ul>
-            </div>
-
-            <div className="col-6 col-md-4">
-              <p className="small fw-semibold text-uppercase text-body-secondary mb-2" style={{ letterSpacing: '0.08em' }}>Legal</p>
-              <ul className="list-unstyled small mb-0">
-                <li className="mb-1"><Link className="text-body-secondary text-decoration-none" to="/privacy">Privacy Policy</Link></li>
-              </ul>
             </div>
           </div>
 
