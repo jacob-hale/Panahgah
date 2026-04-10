@@ -167,13 +167,17 @@ export function AppLayout() {
         </div>
       </nav>
 
-      <main
-        className={
-          isHomePage ? 'flex-grow-1 min-w-0' : 'container py-4 flex-grow-1 min-w-0'
-        }
-      >
-        <Outlet />
-      </main>
+      <div className="d-flex flex-column flex-grow-1 min-w-0 min-h-0">
+        <main
+          className={
+            isHomePage ? 'flex-grow-1 min-w-0' : 'container py-4 flex-grow-1 min-w-0'
+          }
+        >
+          <Outlet />
+        </main>
+
+        <CookieConsentBanner />
+      </div>
 
       <footer className="border-top bg-white mt-auto">
         <div className="container py-4">
@@ -215,8 +219,6 @@ export function AppLayout() {
           </div>
         </div>
       </footer>
-
-      <CookieConsentBanner />
     </div>
   );
 }

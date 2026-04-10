@@ -30,10 +30,32 @@ body {
   --bs-border-radius-lg: 0.5rem;
 }
 
-.cookie-banner {
-  position: sticky;
-  bottom: 0;
-  z-index: 1030;
+/* Cookie consent: in document flow only (no fixed/sticky). See .cookie-consent-* in component. */
+.cookie-consent-anchor {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.cookie-consent-card {
+  width: min(92vw, max(17.5rem, 35vw));
+  max-width: 40rem; /* ~640px, within 500–700px ask */
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow:
+    0 0.35rem 1.25rem rgba(21, 34, 55, 0.12),
+    0 0.125rem 0.35rem rgba(21, 34, 55, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 575.98px) {
+  .cookie-consent-card {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 /* Staff portal dropdown: only exact /admin matches "Admin dashboard"; clear hover highlight */
