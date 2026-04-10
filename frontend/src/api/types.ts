@@ -447,20 +447,11 @@ export type AdminReportsAnalytics = {
     amount_sum: number;
     estimated_value_sum: number;
   }>;
-  network_monthly_trends: Array<{
-    month_start: string | null;
-    avg_health_score: number;
-    avg_education_progress: number;
-    sessions_count: number;
-  }>;
-  safehouse_performance: Array<{
+  safehouse_occupancy: Array<{
     safehouse_id: number;
     safehouse_name: string;
     metric_month: string;
     active_residents: number;
-    avg_health_score: number;
-    avg_education_progress: number;
-    process_recording_count: number;
   }>;
   total_process_recordings: number;
 };

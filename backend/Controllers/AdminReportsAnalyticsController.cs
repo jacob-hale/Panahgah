@@ -75,28 +75,6 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
             });
         }
 
-        // SafehouseMonthlyMetric columns are nullable in DB/model (prod may have NULLs).
-        var networkMonthly = await dbContext.safehouse_monthly_metrics.AsNoTracking()
-            .GroupBy(m => m.month_start)
-            .Select(g => new AdminReportsNetworkMonthTrendDto
-            {
-                month_start = g.Key,
-                avg_health_score = g.Average(x => x.avg_health_score) ?? 0m,
-                avg_education_progress = g.Average(x => x.avg_education_progress) ?? 0m,
-                sessions_count = g.Sum(x => x.process_recording_count) ?? 0
-            })
-            .OrderBy(x => x.month_start)
-            .ToListAsync();
-
-        var networkLast12 = networkMonthly
-            .Where(x => x.month_start.HasValue && x.month_start.Value >= firstTrendMonth)
-            .OrderBy(x => x.month_start)
-            .ToList();
-        if (networkLast12.Count > 12)
-        {
-            networkLast12 = networkLast12.TakeLast(12).ToList();
-        }
-
         var maxPerHouse = await dbContext.safehouse_monthly_metrics.AsNoTracking()
             .GroupBy(m => m.safehouse_id)
             .Select(g => new
@@ -106,17 +84,17 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
             })
             .ToListAsync();
 
-        List<AdminReportsSafehousePerformanceDto> safehousePerformance;
+        List<AdminReportsSafehouseOccupancyDto> safehouseOccupancy;
         if (maxPerHouse.Count == 0)
         {
-            safehousePerformance = [];
+            safehouseOccupancy = [];
         }
         else
         {
             var maxWithMonth = maxPerHouse.Where(x => x.maxMonth.HasValue).ToList();
             if (maxWithMonth.Count == 0)
             {
-                safehousePerformance = [];
+                safehouseOccupancy = [];
             }
             else
             {
@@ -129,10 +107,7 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
                     {
                         m.safehouse_id,
                         month_start = m.month_start,
-                        active_residents = m.active_residents ?? 0,
-                        avg_health_score = m.avg_health_score ?? 0m,
-                        avg_education_progress = m.avg_education_progress ?? 0m,
-                        process_recording_count = m.process_recording_count ?? 0
+                        active_residents = m.active_residents ?? 0
                     })
                     .ToListAsync();
 
@@ -140,18 +115,15 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
                     .Where(s => houseIds.Contains(s.safehouse_id))
                     .ToDictionaryAsync(s => s.safehouse_id, s => s.name);
 
-                safehousePerformance = metricRows
+                safehouseOccupancy = metricRows
                     .Where(x => maxDict.TryGetValue(x.safehouse_id, out var mm) && x.month_start == mm)
                     .Where(x => houseNames.ContainsKey(x.safehouse_id))
-                    .Select(x => new AdminReportsSafehousePerformanceDto
+                    .Select(x => new AdminReportsSafehouseOccupancyDto
                     {
                         safehouse_id = x.safehouse_id,
                         safehouse_name = houseNames[x.safehouse_id],
                         metric_month = x.month_start!.Value,
-                        active_residents = x.active_residents,
-                        avg_health_score = x.avg_health_score,
-                        avg_education_progress = x.avg_education_progress,
-                        process_recording_count = x.process_recording_count
+                        active_residents = x.active_residents
                     })
                     .OrderBy(x => x.safehouse_name)
                     .ToList();
@@ -179,8 +151,7 @@ public sealed class AdminReportsAnalyticsController(ApplicationDbContext dbConte
                 completion_rate = reintRate
             },
             donation_trend_monthly = donationTrend,
-            network_monthly_trends = networkLast12,
-            safehouse_performance = safehousePerformance,
+            safehouse_occupancy = safehouseOccupancy,
             total_process_recordings = totalSessions
         };
 

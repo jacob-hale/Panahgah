@@ -18,6 +18,11 @@ function formatPct(rate: number) {
 
 function DonationBars(props: { points: AdminReportsAnalytics['donation_trend_monthly'] }) {
   const { points } = props;
+  const moneyFmt = useMemo(
+    () => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }),
+    [],
+  );
+  const monthLabels = useMemo(() => points.map((p) => formatMonthLabel(p.month_start)), [points]);
   const maxVal = useMemo(() => {
     let m = 0;
     for (const p of points) {
@@ -28,22 +33,53 @@ function DonationBars(props: { points: AdminReportsAnalytics['donation_trend_mon
 
   const w = 640;
   const h = 200;
-  const pad = 24;
-  const barW = (w - pad * 2) / Math.max(points.length, 1);
+  const padL = 54;
+  const padR = 16;
+  const padT = 12;
+  const padB = 34;
+  const barW = (w - padL - padR) / Math.max(points.length, 1);
 
   return (
     <svg width="100%" viewBox={`0 0 ${w} ${h}`} className="d-block" role="img" aria-label="Donation trend by month">
       <title>Donation trend (estimated value per month)</title>
+      {/* axes */}
+      <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="currentColor" opacity={0.25} />
+      <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="currentColor" opacity={0.25} />
+      {[0, 0.5, 1].map((t) => {
+        const y = padT + (h - padT - padB) * (1 - t);
+        const v = maxVal * t;
+        return (
+          <g key={t}>
+            <line x1={padL} y1={y} x2={w - padR} y2={y} stroke="currentColor" opacity={0.08} />
+            <text x={padL - 8} y={y + 4} textAnchor="end" className="small" fill="currentColor" opacity={0.75}>
+              {moneyFmt.format(v)}
+            </text>
+          </g>
+        );
+      })}
       {points.map((p, i) => {
         const v = p.estimated_value_sum;
-        const bh = ((h - pad * 2) * v) / maxVal;
-        const x = pad + i * barW + barW * 0.15;
+        const bh = ((h - padT - padB) * v) / maxVal;
+        const x = padL + i * barW + barW * 0.15;
         const bw = barW * 0.7;
-        const y = h - pad - bh;
-        return <rect key={p.month_start} x={x} y={y} width={bw} height={Math.max(bh, 0)} fill="var(--bs-primary)" opacity={0.85} />;
+        const y = h - padB - bh;
+        return (
+          <g key={p.month_start}>
+            <rect x={x} y={y} width={bw} height={Math.max(bh, 0)} fill="var(--bs-primary)" opacity={0.85} />
+            {/* show every other month label to avoid crowding */}
+            {i % 2 === 0 ? (
+              <text x={x + bw / 2} y={h - 12} textAnchor="middle" className="small" fill="currentColor" opacity={0.75}>
+                {monthLabels[i]}
+              </text>
+            ) : null}
+          </g>
+        );
       })}
-      <text x={pad} y={h - 4} className="small" fill="currentColor">
-        Last 12 months (UTC), estimated value
+      <text x={padL} y={h - 4} className="small" fill="currentColor" opacity={0.75}>
+        Month (UTC)
+      </text>
+      <text x={padL} y={10} className="small" fill="currentColor" opacity={0.75}>
+        Estimated value (USD)
       </text>
     </svg>
   );
@@ -191,11 +227,11 @@ export function ReportsAnalyticsPage() {
 
           <div className="card shadow-sm mb-4">
             <div className="card-body">
-              <h2 className="h5 mb-3">Safehouse performance (latest month on file)</h2>
+              <h2 className="h5 mb-3">Safehouse occupancy (latest month on file)</h2>
               <p className="small text-body-secondary mb-3">
                 One row per safehouse: most recent monthly metrics snapshot.
               </p>
-              {data.safehouse_performance.length === 0 ? (
+              {data.safehouse_occupancy.length === 0 ? (
                 <p className="text-body-secondary small mb-0">No safehouse monthly metrics yet.</p>
               ) : (
                 <div className="table-responsive">
@@ -205,55 +241,14 @@ export function ReportsAnalyticsPage() {
                         <th>Safehouse</th>
                         <th>Month</th>
                         <th className="text-end">Active residents</th>
-                        <th className="text-end">Avg health</th>
-                        <th className="text-end">Avg education %</th>
-                        <th className="text-end">Sessions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.safehouse_performance.map((s) => (
+                      {data.safehouse_occupancy.map((s) => (
                         <tr key={s.safehouse_id}>
                           <td>{s.safehouse_name}</td>
                           <td>{formatMonthLabel(s.metric_month)}</td>
                           <td className="text-end">{s.active_residents}</td>
-                          <td className="text-end">{s.avg_health_score.toFixed(2)}</td>
-                          <td className="text-end">{s.avg_education_progress.toFixed(1)}</td>
-                          <td className="text-end">{s.process_recording_count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="card shadow-sm mb-4">
-            <div className="card-body">
-              <h2 className="h5 mb-3">Network trends (monthly metrics)</h2>
-              <p className="small text-body-secondary mb-3">
-                Aggregated across safehouses by month (health, education, session counts).
-              </p>
-              {data.network_monthly_trends.length === 0 ? (
-                <p className="text-body-secondary small mb-0">No monthly metric rows in range.</p>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-sm table-striped mb-0">
-                    <thead>
-                      <tr>
-                        <th>Month</th>
-                        <th className="text-end">Avg health</th>
-                        <th className="text-end">Avg education %</th>
-                        <th className="text-end">Sessions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.network_monthly_trends.map((row, idx) => (
-                        <tr key={row.month_start ?? `m-${idx}`}>
-                          <td>{row.month_start ? formatMonthLabel(row.month_start) : '—'}</td>
-                          <td className="text-end">{row.avg_health_score.toFixed(2)}</td>
-                          <td className="text-end">{row.avg_education_progress.toFixed(1)}</td>
-                          <td className="text-end">{row.sessions_count}</td>
                         </tr>
                       ))}
                     </tbody>
