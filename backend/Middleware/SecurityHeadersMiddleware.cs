@@ -4,7 +4,14 @@ public class SecurityHeadersMiddleware(RequestDelegate next, IWebHostEnvironment
 {
     private readonly RequestDelegate _next = next;
     private readonly IWebHostEnvironment _environment = environment;
-    private const string CspHeaderValue = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'";
+    private const string CspHeaderValue =
+        "default-src 'self'; " +
+        "base-uri 'self'; " +
+        "frame-ancestors 'none'; " +
+        "object-src 'none'; " +
+        "script-src 'self' https://www.chatbase.co; " +
+        "frame-src 'self' https://www.chatbase.co https://*.chatbase.co; " +
+        "connect-src 'self' https://www.chatbase.co https://*.chatbase.co wss://*.chatbase.co";
 
     public async Task InvokeAsync(HttpContext context)
     {
