@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Contracts;
 using Panahgah.Api.Data;
@@ -26,9 +27,12 @@ public sealed class CampaignSchedulerService(
     ApplicationDbContext dbContext,
     IWebHostEnvironment environment,
     IConfiguration configuration,
+    IMemoryCache memoryCache,
     IMediaAssetSelector mediaAssetSelector,
     ISocialPostGenerator socialPostGenerator) : ICampaignSchedulerService
 {
+    private const string InsightsCacheKey = "model5_scored_insights_v1";
+
     public async Task<IReadOnlyList<ScheduledSocialPost>> GenerateCampaignAsync(
         CampaignGenerateRequestDto request,
         CancellationToken cancellationToken = default)
@@ -644,6 +648,15 @@ public sealed class CampaignSchedulerService(
 
     private async Task<Model5InsightsResponseDto> ScoreInsightsAsync(CancellationToken cancellationToken)
     {
+        // Avoid rerunning Python scoring on every request; it can take tens of seconds.
+        // This helps both campaign generation and single-post drafts.
+        var cacheMinutesRaw = configuration["Ml:Model5InsightsCacheMinutes"];
+        var cacheMinutes = int.TryParse(cacheMinutesRaw, out var m) ? Math.Clamp(m, 0, 60) : 5;
+        if (cacheMinutes > 0 && memoryCache.TryGetValue<Model5InsightsResponseDto>(InsightsCacheKey, out var cached) && cached is not null)
+        {
+            return cached;
+        }
+
         var posts = await dbContext.social_media_posts
             .AsNoTracking()
             .Select(p => new
@@ -713,7 +726,12 @@ public sealed class CampaignSchedulerService(
         }
 
         var parsed = JsonSerializer.Deserialize<Model5InsightsResponseDto>(stdout);
-        return parsed ?? new Model5InsightsResponseDto();
+        var result = parsed ?? new Model5InsightsResponseDto();
+        if (cacheMinutes > 0)
+        {
+            memoryCache.Set(InsightsCacheKey, result, TimeSpan.FromMinutes(cacheMinutes));
+        }
+        return result;
     }
 
     private string ResolvePythonExecutable()
