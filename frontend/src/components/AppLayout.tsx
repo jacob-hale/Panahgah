@@ -1,5 +1,6 @@
 ﻿import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { ChatbaseRouteGate } from './ChatbaseRouteGate';
 import { CookieConsentBanner } from './CookieConsentBanner';
 
 export function AppLayout() {
@@ -15,6 +16,7 @@ export function AppLayout() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
+      <ChatbaseRouteGate />
       <nav className="navbar navbar-expand-xl pg-navbar bg-white border-bottom shadow-sm">
         <div className="container">
           <Link className="navbar-brand d-inline-flex align-items-center gap-2 gap-xl-3 me-2" to="/">
