@@ -177,6 +177,7 @@ public sealed class CampaignSchedulerService(
             request.include_resident_story,
             imageContext,
             insights,
+            posts[0].scheduled_for_utc,
             cancellationToken);
 
         foreach (var p in posts)
@@ -323,6 +324,7 @@ public sealed class CampaignSchedulerService(
                     includeResidentStory,
                     plan.imageContext,
                     insights,
+                    plan.slot,
                     cancellationToken);
                 return (plan.slot, plan.asset, caption);
             }
@@ -674,7 +676,7 @@ public sealed class CampaignSchedulerService(
         var configured = configuration["Social:CampaignGenerateMaxAiCalls"];
         var maxCalls = int.TryParse(configured, out var n) && n > 0
             ? Math.Min(n, 8)
-            : 2;
+            : 3;
         return Math.Min(Math.Max(1, maxCalls), Math.Max(1, slotCount));
     }
 
@@ -707,12 +709,13 @@ public sealed class CampaignSchedulerService(
         bool includeResidentStory,
         string imageContext,
         Model5InsightsResponseDto insights,
+        DateTime? slotUtc,
         CancellationToken cancellationToken)
     {
         var configured = configuration["Social:CampaignGeneratePerCaptionTimeoutSeconds"];
         var timeoutSeconds = int.TryParse(configured, out var n) && n > 0
-            ? Math.Clamp(n, 8, 60)
-            : 25;
+            ? Math.Clamp(n, 12, 120)
+            : 45;
 
         using var budgetCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         budgetCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
@@ -732,25 +735,28 @@ public sealed class CampaignSchedulerService(
             var rawCaption = generated.generated_posts.FirstOrDefault()?.caption;
             var normalizedCaption = SocialCaptionFormatting.NormalizeAiCaption(rawCaption);
             var captionBody = string.IsNullOrEmpty(normalizedCaption)
-                ? BuildFallbackCaption(goal, postTopic)
+                ? BuildFallbackCaption(goal, postTopic, slotUtc)
                 : normalizedCaption;
             return SocialCaptionFormatting.EnsurePanahgahHashtag(captionBody);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return SocialCaptionFormatting.EnsurePanahgahHashtag(BuildFallbackCaption(goal, postTopic));
+            return SocialCaptionFormatting.EnsurePanahgahHashtag(BuildFallbackCaption(goal, postTopic, slotUtc));
         }
         catch
         {
-            return SocialCaptionFormatting.EnsurePanahgahHashtag(BuildFallbackCaption(goal, postTopic));
+            return SocialCaptionFormatting.EnsurePanahgahHashtag(BuildFallbackCaption(goal, postTopic, slotUtc));
         }
     }
 
-    private static string BuildFallbackCaption(string goal, string postTopic)
+    private static string BuildFallbackCaption(string goal, string postTopic, DateTime? slotUtc)
     {
         var cleanGoal = string.IsNullOrWhiteSpace(goal) ? "support" : goal.Trim();
         var cleanTopic = string.IsNullOrWhiteSpace(postTopic) ? "our mission" : postTopic.Trim();
-        return $"Support {cleanGoal} for Panahgah Refuge. Today we spotlight {cleanTopic}.";
+        var cue = slotUtc.HasValue
+            ? $"This {slotUtc.Value.ToString("dddd")} we spotlight {cleanTopic}."
+            : $"Today we spotlight {cleanTopic}.";
+        return $"Support {cleanGoal} for Panahgah Refuge. {cue}";
     }
 
     private static string EnsureCaptionVariety(
@@ -762,7 +768,7 @@ public sealed class CampaignSchedulerService(
         var candidate = (caption ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(candidate))
         {
-            candidate = BuildFallbackCaption("support", postTopic);
+            candidate = BuildFallbackCaption("support", postTopic, slotUtc);
         }
 
         if (!usedCaptions.Contains(candidate))
