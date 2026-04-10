@@ -39,14 +39,23 @@ public class SocialMediaPostsController(ApplicationDbContext dbContext) : Contro
     }
 
     /// <summary>
-    /// Monthly rollups from <c>social_media_posts</c> for charts (engagement + fields used for referral modeling).
+    /// Monthly rollups from <c>social_media_posts</c> for charts. Includes every month in the window (zeros if no posts).
     /// </summary>
+    /// <param name="months">Trailing calendar months to include (UTC month boundaries), default 12, max 24.</param>
     [HttpGet("timeseries/monthly")]
     [Authorize(Policy = AuthPolicies.RequireAdmin)]
-    public async Task<IActionResult> GetMonthlyTimeseries(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMonthlyTimeseries([FromQuery] int months = 12, CancellationToken cancellationToken = default)
     {
-        var rows = await dbContext.social_media_posts
+        months = Math.Clamp(months, 1, 24);
+
+        var now = DateTime.UtcNow;
+        var endMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var startMonth = endMonth.AddMonths(-(months - 1));
+        var exclusiveUpper = endMonth.AddMonths(1);
+
+        var aggregated = await dbContext.social_media_posts
             .AsNoTracking()
+            .Where(p => p.created_at >= startMonth && p.created_at < exclusiveUpper)
             .GroupBy(p => new { p.created_at.Year, p.created_at.Month })
             .Select(g => new
             {
@@ -57,20 +66,38 @@ public class SocialMediaPostsController(ApplicationDbContext dbContext) : Contro
                 total_donation_referrals = g.Sum(p => p.donation_referrals),
                 total_estimated_donation_value_php = g.Sum(p => p.estimated_donation_value_php),
             })
-            .OrderBy(x => x.Year)
-            .ThenBy(x => x.Month)
             .ToListAsync(cancellationToken);
 
-        var points = rows
-            .Select(x => new SocialMediaMonthlyTimeseriesPointDto
+        var lookup = aggregated.ToDictionary(x => (x.Year, x.Month));
+
+        var points = new List<SocialMediaMonthlyTimeseriesPointDto>();
+        for (var cursor = startMonth; cursor <= endMonth; cursor = cursor.AddMonths(1))
+        {
+            var y = cursor.Year;
+            var m = cursor.Month;
+            if (lookup.TryGetValue((y, m), out var row))
             {
-                period = new DateTime(x.Year, x.Month, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd"),
-                post_count = x.post_count,
-                total_engagement = x.total_engagement,
-                total_donation_referrals = x.total_donation_referrals,
-                total_estimated_donation_value_php = x.total_estimated_donation_value_php,
-            })
-            .ToList();
+                points.Add(new SocialMediaMonthlyTimeseriesPointDto
+                {
+                    period = new DateTime(y, m, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd"),
+                    post_count = row.post_count,
+                    total_engagement = row.total_engagement,
+                    total_donation_referrals = row.total_donation_referrals,
+                    total_estimated_donation_value_php = row.total_estimated_donation_value_php,
+                });
+            }
+            else
+            {
+                points.Add(new SocialMediaMonthlyTimeseriesPointDto
+                {
+                    period = new DateTime(y, m, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd"),
+                    post_count = 0,
+                    total_engagement = 0,
+                    total_donation_referrals = 0,
+                    total_estimated_donation_value_php = 0,
+                });
+            }
+        }
 
         return Ok(new SocialMediaMonthlyTimeseriesResponseDto { points = points });
     }
