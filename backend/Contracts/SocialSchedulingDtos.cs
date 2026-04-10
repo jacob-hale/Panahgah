@@ -90,6 +90,10 @@ public sealed class ScheduledSocialPostResponseDto
     public int scheduled_post_id { get; set; }
     public int? campaign_id { get; set; }
     public int? media_asset_id { get; set; }
+
+    /// <summary>Campaign name or single-post topic label for the queue.</summary>
+    public string? campaign_title { get; set; }
+
     public string platform { get; set; } = string.Empty;
     public DateTime scheduled_for_utc { get; set; }
     public string caption { get; set; } = string.Empty;
@@ -98,6 +102,10 @@ public sealed class ScheduledSocialPostResponseDto
     public int attempt_count { get; set; }
     public string? error_message { get; set; }
     public string? platform_post_id { get; set; }
+
+    /// <summary>Public URL on Facebook or Instagram after a successful publish.</summary>
+    public string? published_post_url { get; set; }
+
     public DateTime created_at_utc { get; set; }
     public DateTime? published_at_utc { get; set; }
 }
@@ -138,4 +146,15 @@ public sealed class DraftRegenerateRequestDto
     public string media_category { get; set; } = "random";
 
     public bool include_resident_story { get; set; } = true;
+}
+
+public sealed class CampaignMediaUploadResponseDto
+{
+    public string category { get; set; } = string.Empty;
+    public string file_name { get; set; } = string.Empty;
+    public string public_url { get; set; } = string.Empty;
+    public int width { get; set; }
+    public int height { get; set; }
+    public long size_bytes { get; set; }
+    public string format { get; set; } = string.Empty;
 }

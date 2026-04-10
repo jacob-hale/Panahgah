@@ -24,6 +24,7 @@ import { SocialMediaInsightsPage } from './pages/SocialMediaInsightsPage';
 import { VisitsAndConferencesPage } from './pages/VisitsAndConferencesPage';
 import { GirlsReintegrationInsightsPage } from './pages/GirlsReintegrationInsightsPage';
 import { ReportsAnalyticsPage } from './pages/ReportsAnalyticsPage';
+import { NewsAndSocialPage } from './pages/NewsAndSocialPage';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
         <Route path="donate" element={<DonatePage />} />
         <Route path="donate/checkout" element={<DonateCheckoutPage />} />
         <Route path="impact-dashboard" element={<ImpactDashboardPage />} />
+        <Route path="news" element={<NewsAndSocialPage />} />
         <Route path="privacy" element={<PrivacyPolicyPage />} />
         <Route path="admin" element={<AdminRoute />}>
           <Route index element={<AdminDashboardPage />} />

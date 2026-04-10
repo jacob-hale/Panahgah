@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Panahgah.Api.Auth;
@@ -174,6 +175,28 @@ public sealed class SocialPostSchedulerController(
     {
         var categories = await mediaAssetSelector.ListCategoriesAsync(cancellationToken);
         return Ok(categories);
+    }
+
+    /// <summary>Adds an image file into an existing campaign-media category folder (PNG, JPEG, or WebP; optimized for Meta posting).</summary>
+    [HttpPost("media-categories/{category}/upload")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadCampaignMedia(string category, IFormFile? file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest("Choose an image file to upload.");
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await mediaAssetSelector.UploadCampaignImageAsync(category, stream, file.FileName, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost("campaigns/generate")]
@@ -493,6 +516,7 @@ public sealed class SocialPostSchedulerController(
             scheduled_post_id = post.scheduled_post_id,
             campaign_id = post.campaign_id,
             media_asset_id = null,
+            campaign_title = post.campaign_title,
             platform = post.platform,
             scheduled_for_utc = post.scheduled_for_utc,
             caption = post.caption,
@@ -501,6 +525,7 @@ public sealed class SocialPostSchedulerController(
             attempt_count = post.attempt_count,
             error_message = post.error_message,
             platform_post_id = post.platform_post_id,
+            published_post_url = post.published_post_url,
             created_at_utc = post.created_at_utc,
             published_at_utc = post.published_at_utc
         };

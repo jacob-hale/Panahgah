@@ -7,176 +7,6 @@ using Panahgah.Api.Models;
 
 namespace Panahgah.Api.Services;
 
-public interface IMediaAssetSelector
-{
-    Task<SelectedMediaAsset?> SelectAsync(string category, string platform, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<string>> ListCategoriesAsync(CancellationToken cancellationToken = default);
-    Task<string?> PickRandomCategoryAsync(CancellationToken cancellationToken = default);
-}
-
-public sealed class SelectedMediaAsset
-{
-    public string category { get; init; } = string.Empty;
-    public string url { get; init; } = string.Empty;
-    public string? alt_text { get; init; }
-    public string? tags { get; init; }
-}
-
-public sealed class MediaAssetSelector(IWebHostEnvironment environment, IConfiguration configuration) : IMediaAssetSelector
-{
-    private static readonly Random Random = new();
-    // Keep campaign assets to formats Meta reliably accepts for both Facebook photos and Instagram images.
-    private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg"];
-
-    /// <summary>
-    /// When the API runs in Docker / cloud, there is often no checkout of <c>frontend/public</c>.
-    /// Public URLs still point at the deployed static host; this table must stay aligned with that tree.
-    /// </summary>
-    private static readonly Dictionary<string, string[]> FallbackCampaignFilesByCategory = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["donation_impact"] = ["donations_reliefItems.png", "donations_schoolSupplies.png"],
-        ["events"] = ["events_commuityOutreach.png", "event_awarenessWorkshop.png"],
-        ["girls"] = ["girls_withSocialWorker.png", "girl_studyAtDesk.png"],
-        ["motivational_quotes"] = ["motivational_quote_plantGrowing.png", "motivational_quote_sunrise.png"],
-        ["safehouses"] = ["safehouse_cleanBedroom.png", "safehouse_cleanSanctuary.png"],
-    };
-
-    public Task<IReadOnlyList<string>> ListCategoriesAsync(CancellationToken cancellationToken = default)
-    {
-        var root = ResolveMediaRootPath();
-        if (Directory.Exists(root))
-        {
-            var categories = Directory.GetDirectories(root)
-                .Select(Path.GetFileName)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x!)
-                .OrderBy(x => x)
-                .ToList();
-            if (categories.Count > 0)
-            {
-                return Task.FromResult<IReadOnlyList<string>>(categories);
-            }
-        }
-
-        return Task.FromResult<IReadOnlyList<string>>(FallbackCampaignFilesByCategory.Keys.OrderBy(k => k).ToList());
-    }
-
-    public async Task<string?> PickRandomCategoryAsync(CancellationToken cancellationToken = default)
-    {
-        var categories = await ListCategoriesAsync(cancellationToken);
-        if (categories.Count == 0)
-        {
-            return null;
-        }
-
-        return categories[Random.Next(categories.Count)];
-    }
-
-    public Task<SelectedMediaAsset?> SelectAsync(string category, string platform, CancellationToken cancellationToken = default)
-    {
-        var normalizedCategory = category.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(normalizedCategory))
-        {
-            return Task.FromResult<SelectedMediaAsset?>(null);
-        }
-
-        var root = ResolveMediaRootPath();
-        if (Directory.Exists(root))
-        {
-            var categoryFolder = Directory.GetDirectories(root)
-                .FirstOrDefault(d =>
-                    string.Equals(Path.GetFileName(d), normalizedCategory, StringComparison.OrdinalIgnoreCase))
-                ?? Path.Combine(root, normalizedCategory);
-            if (Directory.Exists(categoryFolder))
-            {
-                var files = Directory.GetFiles(categoryFolder)
-                    .Where(path => ImageExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()))
-                    .ToList();
-                if (files.Count > 0)
-                {
-                    var selectedFile = files[Random.Next(files.Count)];
-                    var fileName = Path.GetFileName(selectedFile);
-                    var realCategory = Path.GetFileName(categoryFolder) ?? normalizedCategory;
-                    return Task.FromResult<SelectedMediaAsset?>(BuildSelectedAsset(realCategory, fileName));
-                }
-            }
-        }
-
-        if (TrySelectFallback(normalizedCategory, out var fallback))
-        {
-            return Task.FromResult<SelectedMediaAsset?>(fallback);
-        }
-
-        return Task.FromResult<SelectedMediaAsset?>(null);
-    }
-
-    private SelectedMediaAsset BuildSelectedAsset(string realCategoryFolderName, string fileName)
-    {
-        var publicUrl =
-            $"{ResolveMediaPublicBaseUrl().TrimEnd('/')}/{realCategoryFolderName}/{Uri.EscapeDataString(fileName)}";
-        var guessedAlt = Path.GetFileNameWithoutExtension(fileName).Replace('-', ' ').Replace('_', ' ');
-        return new SelectedMediaAsset
-        {
-            category = realCategoryFolderName,
-            url = publicUrl,
-            alt_text = guessedAlt,
-            tags = realCategoryFolderName,
-        };
-    }
-
-    private bool TrySelectFallback(string normalizedCategory, out SelectedMediaAsset? asset)
-    {
-        asset = null;
-        if (!FallbackCampaignFilesByCategory.TryGetValue(normalizedCategory, out var names) || names.Length == 0)
-        {
-            return false;
-        }
-
-        var fileName = names[Random.Next(names.Length)];
-        asset = BuildSelectedAsset(normalizedCategory, fileName);
-        return true;
-    }
-
-    private string ResolveMediaRootPath()
-    {
-        var configured = configuration["Social:MediaRootPath"];
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            return Path.GetFullPath(configured);
-        }
-
-        var alongsideApp = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "campaign-media"));
-        var monorepoDev = Path.GetFullPath(
-            Path.Combine(environment.ContentRootPath, "..", "frontend", "public", "campaign-media"));
-
-        if (Directory.Exists(alongsideApp))
-        {
-            return alongsideApp;
-        }
-
-        if (Directory.Exists(monorepoDev))
-        {
-            return monorepoDev;
-        }
-
-        // Prefer /app/campaign-media in Docker once populated; else dev path for new clones.
-        return alongsideApp;
-    }
-
-    private string ResolveMediaPublicBaseUrl()
-    {
-        var configured = configuration["Social:MediaPublicBaseUrl"];
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            return configured;
-        }
-
-        var frontendBase = configuration["App:FrontendBaseUrl"] ?? "https://panahgah.up.railway.app";
-        return $"{frontendBase.TrimEnd('/')}/campaign-media";
-    }
-
-}
-
 public interface ICampaignSchedulerService
 {
     Task<IReadOnlyList<ScheduledSocialPost>> GenerateCampaignAsync(
@@ -236,6 +66,7 @@ public sealed class CampaignSchedulerService(
             request.post_type,
             platforms,
             insights,
+            request.campaign_name.Trim(),
             cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -260,6 +91,7 @@ public sealed class CampaignSchedulerService(
             request.post_type,
             platforms,
             insights,
+            request.post_topic.Trim(),
             cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         return created;
@@ -423,6 +255,7 @@ public sealed class CampaignSchedulerService(
         string? requestedPostType,
         IReadOnlyList<string> platforms,
         Model5InsightsResponseDto insights,
+        string? campaignTitle,
         CancellationToken cancellationToken)
     {
         var created = new List<ScheduledSocialPost>();
@@ -483,6 +316,7 @@ public sealed class CampaignSchedulerService(
                 var scheduledPost = new ScheduledSocialPost
                 {
                     campaign_id = campaignId,
+                    campaign_title = string.IsNullOrWhiteSpace(campaignTitle) ? null : campaignTitle.Trim(),
                     platform = platform,
                     scheduled_for_utc = slot,
                     caption = caption,

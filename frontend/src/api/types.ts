@@ -260,6 +260,8 @@ export type ScheduledSocialPost = {
   scheduled_post_id: number;
   campaign_id: number | null;
   media_asset_id?: number | null;
+  /** Campaign name or single-post topic — shown on the queue. */
+  campaign_title?: string | null;
   platform: string;
   scheduled_for_utc: string;
   caption: string;
@@ -268,8 +270,36 @@ export type ScheduledSocialPost = {
   attempt_count: number;
   error_message: string | null;
   platform_post_id: string | null;
+  /** Link to the live post on Facebook or Instagram after publish. */
+  published_post_url?: string | null;
   created_at_utc: string;
   published_at_utc: string | null;
+};
+
+export type PublicSocialFeedItem = {
+  platform: string;
+  platforms?: string[] | null;
+  caption: string;
+  /** Instagram Graph: IMAGE, VIDEO, CAROUSEL_ALBUM, etc. */
+  media_type?: string | null;
+  media_url: string | null;
+  /** Best URL for embed (Instagram preferred when cross-posted). */
+  published_post_url: string | null;
+  facebook_post_url?: string | null;
+  instagram_post_url?: string | null;
+  published_at_utc: string | null;
+  campaign_title: string | null;
+};
+
+/** Response from POST .../media-categories/{category}/upload */
+export type CampaignMediaUploadResponse = {
+  category: string;
+  file_name: string;
+  public_url: string;
+  width: number;
+  height: number;
+  size_bytes: number;
+  format: string;
 };
 
 export type ScheduledSocialPostCreatePayload = {
