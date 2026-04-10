@@ -338,6 +338,7 @@ export function SocialPostStudioPage() {
     event.preventDefault();
     setScheduleError(null);
     setGenerateCampaignError(null);
+    const beforeDraftCount = scheduledPosts.filter((p) => norm(p.status) === 'draft').length;
     const startMs = new Date(campaignGeneratePayload.start_utc).getTime();
     const endMs = new Date(campaignGeneratePayload.end_utc).getTime();
     if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
@@ -367,6 +368,25 @@ export function SocialPostStudioPage() {
       setGenerateCampaignMessage(`Success: generated ${created.length} draft post${created.length === 1 ? '' : 's'}. Review and confirm below.`);
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : 'Unable to auto-generate campaign posts.';
+      const timedOut = /timed out|504/i.test(message);
+      if (timedOut) {
+        try {
+          const refreshed = await apiFetch<ScheduledSocialPost[]>('/api/social-post-scheduler/scheduled-posts');
+          const afterDraftCount = refreshed.filter((p) => norm(p.status) === 'draft').length;
+          const added = Math.max(0, afterDraftCount - beforeDraftCount);
+          await loadSchedulingData();
+          if (added > 0) {
+            setGenerateCampaignError(null);
+            setScheduleError(null);
+            setGenerateCampaignMessage(
+              `Generation timed out while waiting for a response, but ${added} new draft post${added === 1 ? '' : 's'} were created. Review below.`,
+            );
+            return;
+          }
+        } catch {
+          // Fall through to normal error surface below.
+        }
+      }
       setGenerateCampaignError(message);
       setScheduleError(message);
       setGenerateCampaignMessage(null);
