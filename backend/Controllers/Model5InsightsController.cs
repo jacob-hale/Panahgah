@@ -252,6 +252,7 @@ public class Model5InsightsController(
             return (false, $"Model 5 scorer returned invalid JSON: {preview}", null);
         }
     }
+
     private string ResolvePythonExecutable()
     {
         var configured = configuration["Ml:PythonExecutable"];
