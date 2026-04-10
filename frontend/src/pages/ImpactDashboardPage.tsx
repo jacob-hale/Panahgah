@@ -234,24 +234,38 @@ export function ImpactDashboardPage() {
       </div>
 
       {loading ? (
-        <div className="row g-3">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div className="col-12 col-md-6 col-lg-3" key={idx}>
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <div className="placeholder-glow">
-                    <span className="placeholder col-6" />
-                    <div className="mt-2">
-                      <span className="placeholder col-8" style={{ height: 28, display: 'block' }} />
-                    </div>
-                    <div className="mt-2">
-                      <span className="placeholder col-7" />
+        <div className="row g-3 align-items-stretch">
+          <div className="col-12 col-lg-8">
+            <div className="row g-3">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div className="col-12 col-md-6" key={idx}>
+                  <div className="card h-100 shadow-sm">
+                    <div className="card-body">
+                      <div className="placeholder-glow">
+                        <span className="placeholder col-6" />
+                        <div className="mt-2">
+                          <span className="placeholder col-8" style={{ height: 28, display: 'block' }} />
+                        </div>
+                        <div className="mt-2">
+                          <span className="placeholder col-7" />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+          <div className="col-12 col-lg-4">
+            <div className="card h-100 shadow-sm">
+              <div className="card-body placeholder-glow">
+                <span className="placeholder col-8 mb-3" />
+                <span className="placeholder col-12 mb-2" />
+                <span className="placeholder col-12 mb-2" />
+                <span className="placeholder col-12" style={{ height: 80 }} />
               </div>
             </div>
-          ))}
+          </div>
         </div>
       ) : null}
 
@@ -259,58 +273,51 @@ export function ImpactDashboardPage() {
 
       {!loading && !error && data ? (
         <>
-          {/* SECTION 1: HERO METRICS */}
-          <div className="row g-3 mb-4">
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard title="Safehouses" value={formatCompactNumber(heroSafehouses)} subtext="Places of refuge currently operating" icon={<IconHome />} />
+          {/* SECTION 1: HERO METRICS — two rows of stats; Total support top-right */}
+          <div className="row g-3 mb-4 align-items-stretch">
+            <div className="col-12 col-lg-8 order-1">
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                  <StatCard title="Safehouses" value={formatCompactNumber(heroSafehouses)} subtext="Places of refuge currently operating" icon={<IconHome />} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <StatCard
+                    title="Residents supported"
+                    value={formatCompactNumber(heroResidents)}
+                    subtext="Young women receiving safety and care"
+                    icon={<IconHeart />}
+                    accentClassName="bg-danger-subtle"
+                  />
+                </div>
+                <div className="col-12 col-md-6">
+                  <StatCard
+                    title="Progress rate"
+                    value={`${heroProgressPct.toFixed(0)}%`}
+                    subtext="Sessions where progress was recorded"
+                    icon={<IconCheck />}
+                    accentClassName="bg-success-subtle"
+                  />
+                </div>
+                <div className="col-12 col-md-6">
+                  <StatCard
+                    title="Successful reintegration"
+                    value={formatCompactNumber(heroReintegration)}
+                    subtext="Residents who completed reintegration"
+                    icon={<IconShield />}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard
-                title="Residents supported"
-                value={formatCompactNumber(heroResidents)}
-                subtext="Young women receiving safety and care"
-                icon={<IconHeart />}
-                accentClassName="bg-danger-subtle"
-              />
-            </div>
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard
-                title="Progress rate"
-                value={`${heroProgressPct.toFixed(0)}%`}
-                subtext="Sessions where progress was recorded"
-                icon={<IconCheck />}
-                accentClassName="bg-success-subtle"
-              />
-            </div>
-            <div className="col-12 col-md-6 col-lg-3">
-              <StatCard
-                title="Successful reintegration"
-                value={formatCompactNumber(heroReintegration)}
-                subtext="Residents who completed reintegration"
-                icon={<IconShield />}
-              />
-            </div>
-          </div>
-
-          {/* SECTION 4: DONOR IMPACT */}
-          <div className="row g-3 mb-4" id="donor-impact">
-            <div className="col-12">
-              <h2 className="h4 mb-1">Donor impact</h2>
-              <p className="text-body-secondary mb-3" style={{ maxWidth: 820 }}>
-                Donations support safe housing, education, wellbeing, and operations. We report totals and allocations in aggregate.
-              </p>
-            </div>
-
-            <div className="col-12 col-lg-5">
+            <div className="col-12 col-lg-4 order-2">
               <div className="card h-100 shadow-sm">
                 <div className="card-body">
                   <div className="fw-semibold mb-2">Total support received</div>
                   <div className="d-flex flex-column gap-2">
-                    <div className="d-flex justify-content-between">
+                    <div className="d-flex justify-content-between gap-2">
                       <span className="text-body-secondary">Monetary (USD)</span>
                       <span className="fw-semibold">{formatCurrencyUSD(data.donor_impact.donations_total_amount_php)}</span>
                     </div>
-                    <div className="d-flex justify-content-between">
+                    <div className="d-flex justify-content-between gap-2">
                       <span className="text-body-secondary">Estimated total value (USD)</span>
                       <span className="fw-semibold">{formatCurrencyUSD(data.donor_impact.donations_total_estimated_php)}</span>
                     </div>
@@ -324,6 +331,30 @@ export function ImpactDashboardPage() {
                       Donate now
                     </Link>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 4: DONOR IMPACT */}
+          <div className="row g-3 mb-4" id="donor-impact">
+            <div className="col-12">
+              <h2 className="h4 mb-1">Donor impact</h2>
+              <p className="text-body-secondary mb-3" style={{ maxWidth: 820 }}>
+                Donations support safe housing, education, wellbeing, and operations. We report totals and allocations in aggregate.
+              </p>
+            </div>
+
+            <div className="col-12 col-lg-5">
+              <div className="card h-100 shadow-sm border-light overflow-hidden">
+                <div className="ratio ratio-4x3 bg-body-secondary">
+                  <img
+                    src="/house.avif"
+                    alt=""
+                    decoding="async"
+                    className="object-fit-cover w-100 h-100"
+                    style={{ objectPosition: 'center 40%' }}
+                  />
                 </div>
               </div>
             </div>
