@@ -325,7 +325,7 @@ export function ImpactDashboardPage() {
                   <div className="alert alert-primary mt-3 mb-0">
                     <div className="fw-semibold">Giving guide</div>
                     <div className="small">
-                      <span className="fw-semibold">$50</span> supports one resident for one week. (Placeholder — we can calibrate with real program costs.)
+                      <span className="fw-semibold">$50</span> supports one resident for one week.
                     </div>
                     <Link to="/donate" className="btn btn-primary btn-sm mt-3">
                       Donate now
