@@ -24,13 +24,14 @@ export function SocialMediaInsightsPage() {
   const [timeseries, setTimeseries] = useState<SocialMediaMonthlyTimeseriesResponse | null>(null);
   const [timeseriesLoading, setTimeseriesLoading] = useState(true);
   const [timeseriesError, setTimeseriesError] = useState<string | null>(null);
+  const [trendMonths, setTrendMonths] = useState<6 | 12>(12);
 
   const loadTimeseries = useCallback(async () => {
     setTimeseriesLoading(true);
     setTimeseriesError(null);
     try {
       const data = await apiFetch<SocialMediaMonthlyTimeseriesResponse>(
-        '/api/social-media-posts/timeseries/monthly',
+        `/api/social-media-posts/timeseries/monthly?months=${trendMonths}`,
       );
       setTimeseries(data);
     } catch {
@@ -39,7 +40,7 @@ export function SocialMediaInsightsPage() {
     } finally {
       setTimeseriesLoading(false);
     }
-  }, []);
+  }, [trendMonths]);
 
   const loadInsights = async () => {
     setLoading(true);
@@ -58,8 +59,11 @@ export function SocialMediaInsightsPage() {
 
   useEffect(() => {
     void loadInsights();
-    void loadTimeseries();
   }, []);
+
+  useEffect(() => {
+    void loadTimeseries();
+  }, [loadTimeseries]);
 
   const handleTrainModel = async () => {
     setTraining(true);
@@ -128,6 +132,8 @@ export function SocialMediaInsightsPage() {
           points={timeseries?.points ?? null}
           loading={timeseriesLoading}
           error={timeseriesError}
+          months={trendMonths}
+          onMonthsChange={setTrendMonths}
         />
       </div>
 
