@@ -6,64 +6,110 @@ function formatMonthLabel(period: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
 }
 
+function niceAxisMax(rawMax: number): number {
+  // Round up to a human-friendly axis max: 1/2/5 * 10^k
+  if (!Number.isFinite(rawMax) || rawMax <= 0) return 1;
+  const exp = Math.floor(Math.log10(rawMax));
+  const base = Math.pow(10, exp);
+  const scaled = rawMax / base;
+  const rounded = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10;
+  return rounded * base;
+}
+
+function formatTick(n: number): string {
+  if (!Number.isFinite(n)) return '';
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 10_000) return `${Math.round(n / 1000)}k`;
+  if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
 function MonthlyBars({
   points,
   getValue,
   formatValue,
   emptyHint,
   barClassName,
-  yAxisLabel,
 }: {
   points: SocialMediaMonthlyTimeseriesPoint[];
   getValue: (p: SocialMediaMonthlyTimeseriesPoint) => number;
   formatValue: (n: number) => string;
   emptyHint: string;
   barClassName?: string;
-  yAxisLabel: string;
 }) {
   if (points.length === 0) {
     return <p className="small text-body-secondary mb-0">{emptyHint}</p>;
   }
 
-  const max = Math.max(1, ...points.map((p) => getValue(p)));
+  const rawMax = Math.max(0, ...points.map((p) => getValue(p)));
+  const axisMax = niceAxisMax(rawMax);
   const barColor = barClassName ?? 'bg-primary';
+  const ticks = [axisMax, axisMax * (2 / 3), axisMax * (1 / 3), 0];
 
   return (
-    <div>
-      <div className="small text-body-secondary mb-2">{yAxisLabel}</div>
-      <div className="d-flex align-items-stretch gap-2" style={{ height: 200 }}>
-        {points.map((p) => {
-          const v = getValue(p);
-          const pct = max > 0 ? (v / max) * 100 : 0;
-          const barPct = v > 0 ? Math.max(pct, 5) : 0;
-          return (
-            <div
-              key={p.period}
-              className="d-flex flex-column align-items-center flex-grow-1"
-              style={{ minWidth: 0, maxWidth: 56 }}
-            >
-              <div className="flex-grow-1 w-100 d-flex flex-column justify-content-end" style={{ minHeight: 140 }}>
-                <div
-                  className={`rounded-top mx-auto ${barColor}`}
-                  role="img"
-                  aria-label={`${formatMonthLabel(p.period)}: ${formatValue(v)}`}
-                  style={{
-                    width: '80%',
-                    height: `${barPct}%`,
-                    minHeight: v > 0 ? 8 : 0,
-                  }}
-                  title={`${formatMonthLabel(p.period)}: ${formatValue(v)} (${p.post_count} posts)`}
-                />
-              </div>
+    <div className="d-flex align-items-stretch gap-2" style={{ height: 220 }}>
+      <div
+        className="d-flex flex-column justify-content-between text-body-secondary"
+        style={{ width: 46, fontSize: '0.72rem' }}
+        aria-hidden="true"
+      >
+        {ticks.map((t, idx) => (
+          <div key={idx} className="text-end">
+            {formatTick(t)}
+          </div>
+        ))}
+      </div>
+
+      <div className="position-relative flex-grow-1">
+        {/* Grid lines (top, 2/3, 1/3, bottom) */}
+        {[
+          { top: 0 },
+          { top: '33.333%' },
+          { top: '66.666%' },
+          { top: '100%' },
+        ].map((g, idx) => (
+          <div
+            key={idx}
+            className="position-absolute start-0 end-0 border-top"
+            style={{ top: g.top, opacity: idx === 3 ? 0.5 : 0.25 }}
+            aria-hidden="true"
+          />
+        ))}
+
+        <div className="d-flex align-items-stretch gap-2 h-100">
+          {points.map((p) => {
+            const v = getValue(p);
+            const pct = axisMax > 0 ? (v / axisMax) * 100 : 0;
+            const barPct = v > 0 ? Math.max(pct, 4) : 0;
+            return (
               <div
-                className="text-body-secondary text-center mt-2 text-truncate w-100 small"
-                style={{ fontSize: '0.7rem', lineHeight: 1.2 }}
+                key={p.period}
+                className="d-flex flex-column align-items-center flex-grow-1"
+                style={{ minWidth: 0, maxWidth: 56 }}
               >
-                {formatMonthLabel(p.period)}
+                <div className="flex-grow-1 w-100 d-flex flex-column justify-content-end" style={{ minHeight: 140 }}>
+                  <div
+                    className={`rounded-top mx-auto ${barColor}`}
+                    role="img"
+                    aria-label={`${formatMonthLabel(p.period)}: ${formatValue(v)}`}
+                    style={{
+                      width: '80%',
+                      height: `${barPct}%`,
+                      minHeight: v > 0 ? 8 : 0,
+                    }}
+                    title={`${formatMonthLabel(p.period)}: ${formatValue(v)} (${p.post_count} posts)`}
+                  />
+                </div>
+                <div
+                  className="text-body-secondary text-center mt-2 text-truncate w-100 small"
+                  style={{ fontSize: '0.7rem', lineHeight: 1.2 }}
+                >
+                  {formatMonthLabel(p.period)}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -126,7 +172,6 @@ export function SocialTrendsFromPosts({
                   formatValue={(n) => `${n.toLocaleString()} interactions`}
                   emptyHint="No data."
                   barClassName="bg-primary"
-                  yAxisLabel="Y-axis: total interactions"
                 />
               </div>
               <div className="col-12 col-lg-6">
@@ -140,7 +185,6 @@ export function SocialTrendsFromPosts({
                   }
                   emptyHint="No data."
                   barClassName="bg-info"
-                  yAxisLabel="Y-axis: total estimated donation value ($)"
                 />
               </div>
             </div>
