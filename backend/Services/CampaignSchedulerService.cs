@@ -89,7 +89,7 @@ public sealed class CampaignSchedulerService(
         CancellationToken cancellationToken = default)
     {
         var platforms = ResolvePlatforms(request.post_to_facebook, request.post_to_instagram);
-        var insights = await ScoreInsightsAsync(cancellationToken);
+        var insights = await ScoreInsightsWithBudgetAsync(cancellationToken);
         var slots = new List<DateTime> { request.scheduled_for_utc };
         var created = await BuildDraftsForSlotsAsync(
             slots,
@@ -168,23 +168,16 @@ public sealed class CampaignSchedulerService(
 
         var effectiveCategory = asset.category;
         var imageContext = BuildImageContext(asset, effectiveCategory);
-        var generated = await socialPostGenerator.GenerateAsync(new SocialPostGenerateRequestDto
-        {
-            platform = primaryPlatform,
-            goal = request.goal.Trim(),
-            post_type = bestPostType,
-            post_topic = request.post_topic.Trim(),
-            tone = request.tone.Trim(),
-            include_resident_story = request.include_resident_story,
-            key_details = imageContext
-        }, insights, cancellationToken);
-
-        var rawCaption = generated.generated_posts.FirstOrDefault()?.caption;
-        var normalizedCaption = SocialCaptionFormatting.NormalizeAiCaption(rawCaption);
-        var captionBody = string.IsNullOrEmpty(normalizedCaption)
-            ? $"Support {request.goal.Trim()} for Panahgah Refuge."
-            : normalizedCaption;
-        var caption = SocialCaptionFormatting.EnsurePanahgahHashtag(captionBody);
+        var caption = await GenerateCaptionWithBudgetAsync(
+            primaryPlatform,
+            bestPostType,
+            request.post_topic.Trim(),
+            request.goal.Trim(),
+            request.tone.Trim(),
+            request.include_resident_story,
+            imageContext,
+            insights,
+            cancellationToken);
 
         foreach (var p in posts)
         {
@@ -341,11 +334,13 @@ public sealed class CampaignSchedulerService(
 
         var aiCaptions = await Task.WhenAll(captionTasks);
         var rowsWithCaptions = new List<(DateTime slot, SelectedMediaAsset asset, string caption)>(plans.Count);
+        var usedCaptions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < plans.Count; i += 1)
         {
             var plan = plans[i];
             var chosenCaption = aiCaptions[i % aiCaptions.Length].caption;
-            rowsWithCaptions.Add((plan.slot, plan.asset, chosenCaption));
+            var uniqueCaption = EnsureCaptionVariety(chosenCaption, postTopic, plan.slot, usedCaptions);
+            rowsWithCaptions.Add((plan.slot, plan.asset, uniqueCaption));
         }
 
         foreach (var row in rowsWithCaptions)
@@ -756,6 +751,46 @@ public sealed class CampaignSchedulerService(
         var cleanGoal = string.IsNullOrWhiteSpace(goal) ? "support" : goal.Trim();
         var cleanTopic = string.IsNullOrWhiteSpace(postTopic) ? "our mission" : postTopic.Trim();
         return $"Support {cleanGoal} for Panahgah Refuge. Today we spotlight {cleanTopic}.";
+    }
+
+    private static string EnsureCaptionVariety(
+        string caption,
+        string postTopic,
+        DateTime slotUtc,
+        ISet<string> usedCaptions)
+    {
+        var candidate = (caption ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            candidate = BuildFallbackCaption("support", postTopic);
+        }
+
+        if (!usedCaptions.Contains(candidate))
+        {
+            usedCaptions.Add(candidate);
+            return candidate;
+        }
+
+        var dayStamp = slotUtc.ToString("ddd");
+        var dateStamp = slotUtc.ToString("MMM d");
+        var withTag = $"{candidate} ({dayStamp} {dateStamp})";
+        if (!usedCaptions.Contains(withTag))
+        {
+            usedCaptions.Add(withTag);
+            return withTag;
+        }
+
+        var n = 2;
+        while (true)
+        {
+            var numbered = $"{withTag} #{n}";
+            if (!usedCaptions.Contains(numbered))
+            {
+                usedCaptions.Add(numbered);
+                return numbered;
+            }
+            n += 1;
+        }
     }
 
     private async Task<Model5InsightsResponseDto> ScoreInsightsAsync(CancellationToken cancellationToken)

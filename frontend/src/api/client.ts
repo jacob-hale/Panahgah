@@ -23,7 +23,7 @@ function parseApiErrorMessage(text: string, status: number): string {
   if (!text) return fallback;
   const lowered = text.toLowerCase();
   if (status === 504 || lowered.includes('504 gateway time-out') || lowered.includes('504 gateway timeout')) {
-    return 'The request took too long and timed out. Try a smaller campaign range (fewer posts/date span) and run again.';
+    return 'Generation took too long and timed out. Please try again. If this keeps happening, reduce request size (for campaigns: shorter date range/fewer posts) or retry a single draft/regeneration.';
   }
 
   try {
