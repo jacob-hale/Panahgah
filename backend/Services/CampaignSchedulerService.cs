@@ -639,7 +639,7 @@ public sealed class CampaignSchedulerService(
         var configured = configuration["Social:CampaignGenerateMaxSlots"];
         return int.TryParse(configured, out var n) && n > 0
             ? Math.Min(n, 50)
-            : 8;
+            : 24;
     }
 
     private async Task<Model5InsightsResponseDto> ScoreInsightsAsync(CancellationToken cancellationToken)

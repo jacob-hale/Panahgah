@@ -29,15 +29,17 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .ToList();
         var maxModelsToTry = int.TryParse(configuration["Llms:GeminiMaxModelsToTry"], out var mm) && mm > 0
-            ? Math.Min(mm, 4)
-            : 2;
+            ? Math.Min(mm, 8)
+            : 4;
         if (modelCandidates.Count > maxModelsToTry)
         {
             modelCandidates = modelCandidates.Take(maxModelsToTry).ToList();
         }
+        // Default 120s: Gemini JSON calls often need 30–90s on cold start / busy regions; 12s per-HTTP was aborting every attempt.
         var maxRequestSeconds = int.TryParse(configuration["Llms:GeminiMaxRequestSeconds"], out var ms) && ms > 0
-            ? Math.Min(ms, 90)
-            : 25;
+            ? Math.Clamp(ms, 30, 180)
+            : 120;
+        var perHttpTimeoutSeconds = Math.Clamp(maxRequestSeconds - 5, 45, 120);
         var stopwatch = Stopwatch.StartNew();
         var systemPrompt =
             SocialPostCopyGuidance.OrganizationSystemBlock
@@ -69,7 +71,7 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
 
         string? lastFailure = null;
         string? responseBody = null;
-        var tokenBudgets = new[] { 900, 1300 };
+        var tokenBudgets = new[] { 900, 1400, 1800 };
         foreach (var tokenBudget in tokenBudgets)
         {
             if (stopwatch.Elapsed > TimeSpan.FromSeconds(maxRequestSeconds))
@@ -88,7 +90,7 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
                 {
                     var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
                     using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
+                    perAttemptCts.CancelAfter(TimeSpan.FromSeconds(perHttpTimeoutSeconds));
                     using var response = await httpClient.PostAsync(
                         endpoint,
                         new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
@@ -178,7 +180,7 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
                     {
                         var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{discoveredModel}:generateContent?key={apiKey}";
                         using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                        perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
+                        perAttemptCts.CancelAfter(TimeSpan.FromSeconds(perHttpTimeoutSeconds));
                         using var retryResponse = await httpClient.PostAsync(
                             endpoint,
                             new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
