@@ -132,6 +132,19 @@ export function GirlsReintegrationInsightsPage() {
         </div>
       ) : null}
 
+      {!loading && !error ? (
+        <div className="d-flex flex-column align-items-start gap-2 mb-3">
+          <button type="button" className="btn btn-primary btn-sm" onClick={handleRetrain} disabled={training}>
+            {training ? 'Retraining...' : 'Retrain reintegration model'}
+          </button>
+          {trainError ? (
+            <span className="small text-danger" style={{ whiteSpace: 'pre-wrap' }}>
+              {trainError}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       {!loading && !error && !notTrained && data ? (
         <div className="d-grid gap-4">
           <div className="row g-3">
@@ -195,17 +208,6 @@ export function GirlsReintegrationInsightsPage() {
                 </table>
               </div>
             </div>
-          </div>
-
-          <div className="d-flex flex-column align-items-start gap-2">
-            <button type="button" className="btn btn-primary btn-sm" onClick={handleRetrain} disabled={training}>
-              {training ? 'Retraining...' : 'Retrain reintegration model'}
-            </button>
-            {trainError ? (
-              <span className="small text-danger" style={{ whiteSpace: 'pre-wrap' }}>
-                {trainError}
-              </span>
-            ) : null}
           </div>
 
         </div>
