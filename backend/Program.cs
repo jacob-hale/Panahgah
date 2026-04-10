@@ -158,6 +158,7 @@ builder.Services.AddScoped<ISocialPostGenerator, ConfigurableSocialPostGenerator
 builder.Services.AddScoped<ISocialConnectionSecretResolver, SocialConnectionSecretResolver>();
 builder.Services.AddScoped<IMediaAssetSelector, MediaAssetSelector>();
 builder.Services.AddScoped<ICampaignSchedulerService, CampaignSchedulerService>();
+builder.Services.AddSingleton<CampaignGenerationJobService>();
 builder.Services.AddHttpClient<MetaGraphSocialPublisher>();
 builder.Services.AddScoped<ISocialPublisher, MetaGraphSocialPublisher>();
 builder.Services.AddHostedService<SocialPublishWorker>();

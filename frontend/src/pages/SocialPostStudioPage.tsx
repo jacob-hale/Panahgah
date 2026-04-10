@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 import type {
   CampaignGeneratePayload,
+  CampaignGenerateJobStart,
+  CampaignGenerateJobStatus,
   CampaignMediaUploadResponse,
   DraftRegeneratePayload,
   Model5InsightsResponse,
@@ -338,17 +340,16 @@ export function SocialPostStudioPage() {
     event.preventDefault();
     setScheduleError(null);
     setGenerateCampaignError(null);
-    const beforeDraftCount = scheduledPosts.filter((p) => norm(p.status) === 'draft').length;
     const startMs = new Date(campaignGeneratePayload.start_utc).getTime();
     const endMs = new Date(campaignGeneratePayload.end_utc).getTime();
     if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
       setGenerateCampaignError('Choose valid start and end dates for the campaign.');
       return;
     }
-    setGenerateCampaignMessage('Generating draft posts... this can take up to 1-2 minutes.');
+    setGenerateCampaignMessage('Generating draft posts... this can take 1-3 minutes.');
     setIsGeneratingCampaign(true);
     try {
-      const created = await apiFetch<ScheduledSocialPost[]>('/api/social-post-scheduler/campaigns/generate', {
+      const started = await apiFetch<CampaignGenerateJobStart>('/api/social-post-scheduler/campaigns/generate-async', {
         method: 'POST',
         jsonBody: {
           ...campaignGeneratePayload,
@@ -357,6 +358,29 @@ export function SocialPostStudioPage() {
           posts_per_week: Math.max(1, Number(campaignGeneratePayload.posts_per_week) || 1),
         },
       });
+
+      const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+      let finalStatus: CampaignGenerateJobStatus | null = null;
+      for (let attempt = 0; attempt < 120; attempt += 1) {
+        await sleep(3000);
+        const status = await apiFetch<CampaignGenerateJobStatus>(
+          `/api/social-post-scheduler/campaigns/generate-status/${started.job_id}`,
+        );
+        if (status.status === 'queued' || status.status === 'running') {
+          setGenerateCampaignMessage('Generating draft posts... still running in the background.');
+          continue;
+        }
+        finalStatus = status;
+        break;
+      }
+
+      if (!finalStatus) {
+        throw new Error('Generation is still running. Please refresh in a moment to see completed drafts.');
+      }
+      if (finalStatus.status === 'failed') {
+        throw new Error(finalStatus.error || 'Campaign generation failed.');
+      }
+
       setCampaignGeneratePayload((curr) => ({
         ...curr,
         campaign_name: '',
@@ -365,28 +389,11 @@ export function SocialPostStudioPage() {
         end_utc: '',
       }));
       await loadSchedulingData();
-      setGenerateCampaignMessage(`Success: generated ${created.length} draft post${created.length === 1 ? '' : 's'}. Review and confirm below.`);
+      setGenerateCampaignMessage(
+        `Success: generated ${finalStatus.generated_count} draft post${finalStatus.generated_count === 1 ? '' : 's'}. Review and confirm below.`,
+      );
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : 'Unable to auto-generate campaign posts.';
-      const timedOut = /timed out|504/i.test(message);
-      if (timedOut) {
-        try {
-          const refreshed = await apiFetch<ScheduledSocialPost[]>('/api/social-post-scheduler/scheduled-posts');
-          const afterDraftCount = refreshed.filter((p) => norm(p.status) === 'draft').length;
-          const added = Math.max(0, afterDraftCount - beforeDraftCount);
-          await loadSchedulingData();
-          if (added > 0) {
-            setGenerateCampaignError(null);
-            setScheduleError(null);
-            setGenerateCampaignMessage(
-              `Generation timed out while waiting for a response, but ${added} new draft post${added === 1 ? '' : 's'} were created. Review below.`,
-            );
-            return;
-          }
-        } catch {
-          // Fall through to normal error surface below.
-        }
-      }
       setGenerateCampaignError(message);
       setScheduleError(message);
       setGenerateCampaignMessage(null);
