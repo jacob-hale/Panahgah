@@ -167,17 +167,13 @@ export function AppLayout() {
         </div>
       </nav>
 
-      <div className="d-flex flex-column flex-grow-1 min-w-0 min-h-0">
-        <main
-          className={
-            isHomePage ? 'flex-grow-1 min-w-0' : 'container py-4 flex-grow-1 min-w-0'
-          }
-        >
-          <Outlet />
-        </main>
-
-        <CookieConsentBanner />
-      </div>
+      <main
+        className={
+          isHomePage ? 'flex-grow-1 min-w-0' : 'container py-4 flex-grow-1 min-w-0'
+        }
+      >
+        <Outlet />
+      </main>
 
       <footer className="border-top bg-white mt-auto">
         <div className="container py-4">
@@ -219,6 +215,9 @@ export function AppLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Fixed overlay; portaled to document.body inside component — not in main/footer flow */}
+      <CookieConsentBanner />
     </div>
   );
 }
