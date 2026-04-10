@@ -14,7 +14,15 @@ public sealed class GirlsReintegrationInsightsResponseDto
     public List<GirlsResidentWorklistRowDto> top_resident_worklist { get; set; } = [];
     public List<GirlsFeatureImportanceDto> key_features { get; set; } = [];
     public GirlsModelMetricsDto model_metrics { get; set; } = new();
+    public GirlsLabelAuditDto label_audit { get; set; } = new();
     public GirlsPipelineHealthDto pipeline_health { get; set; } = new();
+}
+
+public sealed class GirlsLabelAuditDto
+{
+    public int labeled_negative { get; set; }
+    public int labeled_positive { get; set; }
+    public List<string> unmapped_status_samples { get; set; } = [];
 }
 
 public sealed class GirlsReadinessDistributionDto
@@ -46,11 +54,18 @@ public sealed class GirlsFeatureImportanceDto
 public sealed class GirlsModelMetricsDto
 {
     public double? roc_auc { get; set; }
+    public double? roc_auc_std { get; set; }
     public double avg_precision { get; set; }
+    public double? avg_precision_std { get; set; }
     public double f1 { get; set; }
+    public double? f1_cv_mean { get; set; }
+    public double? f1_cv_std { get; set; }
+    public double? optimal_threshold { get; set; }
     public double test_positive_rate { get; set; }
     public int train_rows { get; set; }
     public int test_rows { get; set; }
+    public string? eval_mode { get; set; }
+    public int? cv_folds { get; set; }
 }
 
 public sealed class GirlsPipelineHealthDto
