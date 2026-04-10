@@ -41,6 +41,13 @@ public sealed class CampaignSchedulerService(
         {
             return [];
         }
+        var maxSlots = ResolveMaxDraftSlotsPerRequest();
+        if (slots.Count > maxSlots)
+        {
+            throw new InvalidOperationException(
+                $"This range would generate {slots.Count} posts, which can time out in deployment. " +
+                $"Limit the date range or posts/week to {maxSlots} posts or fewer per request.");
+        }
 
         var campaign = new SocialCampaign
         {
@@ -625,6 +632,14 @@ public sealed class CampaignSchedulerService(
     private static DayOfWeek ParseDayOfWeek(string dayName)
     {
         return Enum.TryParse<DayOfWeek>(dayName, true, out var day) ? day : DayOfWeek.Wednesday;
+    }
+
+    private int ResolveMaxDraftSlotsPerRequest()
+    {
+        var configured = configuration["Social:CampaignGenerateMaxSlots"];
+        return int.TryParse(configured, out var n) && n > 0
+            ? Math.Min(n, 50)
+            : 8;
     }
 
     private async Task<Model5InsightsResponseDto> ScoreInsightsAsync(CancellationToken cancellationToken)

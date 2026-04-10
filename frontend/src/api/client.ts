@@ -27,6 +27,10 @@ type ApiFetchOptions = RequestInit & {
 function parseApiErrorMessage(text: string, status: number): string {
   const fallback = text || `Request failed with status ${status}`;
   if (!text) return fallback;
+  const lowered = text.toLowerCase();
+  if (status === 504 || lowered.includes('504 gateway time-out') || lowered.includes('504 gateway timeout')) {
+    return 'The request took too long and timed out. Try a smaller campaign range (fewer posts/date span) and run again.';
+  }
 
   try {
     const parsed = JSON.parse(text) as {
