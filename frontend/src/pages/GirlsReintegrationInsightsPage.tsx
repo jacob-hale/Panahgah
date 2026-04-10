@@ -56,8 +56,6 @@ export function GirlsReintegrationInsightsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<GirlsReintegrationInsights | null>(null);
-  const [training, setTraining] = useState(false);
-  const [trainError, setTrainError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -74,19 +72,6 @@ export function GirlsReintegrationInsightsPage() {
   useEffect(() => {
     void load();
   }, []);
-
-  const handleRetrain = async () => {
-    setTraining(true);
-    setTrainError(null);
-    try {
-      await apiFetch('/api/ml/girls-reintegration/train', { method: 'POST' });
-      await load();
-    } catch (e) {
-      setTrainError(e instanceof Error ? e.message : 'Training failed.');
-    } finally {
-      setTraining(false);
-    }
-  };
 
   const notTrained = !data || data.pipeline_health?.status !== 'ok';
 
@@ -114,16 +99,6 @@ export function GirlsReintegrationInsightsPage() {
       <p className="text-body-secondary">
         Reintegration-readiness scoring to prioritize case conference worklists and intervention planning.
       </p>
-      <div className="d-flex gap-2 align-items-center mb-3">
-        <button type="button" className="btn btn-primary btn-sm" onClick={handleRetrain} disabled={training}>
-          {training ? 'Retraining...' : 'Retrain reintegration model'}
-        </button>
-        {trainError ? (
-          <span className="small text-danger" style={{ whiteSpace: 'pre-wrap' }}>
-            {trainError}
-          </span>
-        ) : null}
-      </div>
 
       {loading ? <p>Loading resident reintegration insights...</p> : null}
       {error ? <div className="alert alert-danger">{error}</div> : null}
@@ -137,8 +112,8 @@ export function GirlsReintegrationInsightsPage() {
           {data?.model_metrics?.eval_mode === 'stratified_cv'
             ? `, ${data.model_metrics.cv_folds ?? '?'} CV folds`
             : `, ~${testRows} rows per validation fold`}
-          ). Headline metrics are experimental and can swing widely; use relative ranking cautiously until you have
-          more labeled residents and stable cross-validation or holdout estimates.
+          ). The model's predictive power will improve as more residents move through the system and additional labeled
+          outcomes are captured.
         </div>
       ) : null}
 
@@ -207,89 +182,6 @@ export function GirlsReintegrationInsightsPage() {
             </div>
           </div>
 
-          <div className="row g-3">
-            <div className="col-12 col-lg-6">
-              <div className="card">
-                <div className="card-body">
-                  <h2 className="h6">Model metrics</h2>
-                  <div className="small">
-                    {data.model_metrics.eval_mode === 'stratified_cv' ? (
-                      <>
-                        ROC-AUC: {data.model_metrics.roc_auc?.toFixed(3) ?? 'N/A'}
-                        {data.model_metrics.roc_auc_std != null
-                          ? ` ± ${data.model_metrics.roc_auc_std.toFixed(3)}`
-                          : ''}{' '}
-                        | AP: {data.model_metrics.avg_precision.toFixed(3)}
-                        {data.model_metrics.avg_precision_std != null
-                          ? ` ± ${data.model_metrics.avg_precision_std.toFixed(3)}`
-                          : ''}{' '}
-                        | F1 (OOF, tuned τ): {data.model_metrics.f1.toFixed(3)}
-                        {data.model_metrics.f1_cv_mean != null ? (
-                          <>
-                            {' '}
-                            | F1 @0.5 (folds): {data.model_metrics.f1_cv_mean.toFixed(3)}
-                            {data.model_metrics.f1_cv_std != null
-                              ? ` ± ${data.model_metrics.f1_cv_std.toFixed(3)}`
-                              : ''}
-                          </>
-                        ) : null}{' '}
-                        | τ*: {data.model_metrics.optimal_threshold?.toFixed(3) ?? 'N/A'} | CV folds:{' '}
-                        {data.model_metrics.cv_folds ?? 'N/A'} | Labeled rows: {data.model_metrics.train_rows}
-                      </>
-                    ) : (
-                      <>
-                        ROC-AUC: {data.model_metrics.roc_auc?.toFixed(3) ?? 'N/A'} | AP:{' '}
-                        {data.model_metrics.avg_precision.toFixed(3)} | F1 (tuned τ):{' '}
-                        {data.model_metrics.f1.toFixed(3)} | τ*:{' '}
-                        {data.model_metrics.optimal_threshold?.toFixed(3) ?? 'N/A'} | Train/Test:{' '}
-                        {data.model_metrics.train_rows}/{data.model_metrics.test_rows}
-                      </>
-                    )}
-                  </div>
-                  {data.label_audit &&
-                  (data.label_audit.unmapped_status_samples?.length > 0 ||
-                    data.label_audit.labeled_negative + data.label_audit.labeled_positive > 0) ? (
-                    <div className="small text-body-secondary mt-2">
-                      Label audit: {data.label_audit.labeled_negative} negative / {data.label_audit.labeled_positive}{' '}
-                      positive
-                      {data.label_audit.unmapped_status_samples?.length ? (
-                        <>
-                          . Unmapped status samples:{' '}
-                          {data.label_audit.unmapped_status_samples.slice(0, 8).join('; ')}
-                          {data.label_audit.unmapped_status_samples.length > 8 ? ' …' : ''}
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <div className="small text-body-secondary mt-2">
-                    Last trained: {data.pipeline_health.last_trained_at_utc || 'N/A'} | Rows used:{' '}
-                    {data.pipeline_health.rows_used ?? 'N/A'}
-                  </div>
-                  {data.pipeline_health.warnings && data.pipeline_health.warnings.length > 0 ? (
-                    <ul className="small text-warning-emphasis mt-2 mb-0">
-                      {data.pipeline_health.warnings.map((w) => (
-                        <li key={w}>{w}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-            <div className="col-12 col-lg-6">
-              <div className="card">
-                <div className="card-body">
-                  <h2 className="h6">Top features</h2>
-                  <ul className="small mb-0">
-                    {data.key_features.map((feature) => (
-                      <li key={feature.feature}>
-                        {feature.feature}: {feature.importance.toFixed(4)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       ) : null}
     </section>
