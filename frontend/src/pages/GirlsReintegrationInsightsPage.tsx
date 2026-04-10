@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 
+const SMALL_SAMPLE_ROWS_USED = 30;
+const SMALL_SAMPLE_TEST_ROWS = 15;
+
 type GirlsReintegrationInsights = {
   readiness_distribution: {
     high_count: number;
@@ -22,11 +25,23 @@ type GirlsReintegrationInsights = {
   key_features: { feature: string; importance: number }[];
   model_metrics: {
     roc_auc?: number | null;
+    roc_auc_std?: number | null;
     avg_precision: number;
+    avg_precision_std?: number | null;
     f1: number;
+    f1_cv_mean?: number | null;
+    f1_cv_std?: number | null;
+    optimal_threshold?: number | null;
     test_positive_rate: number;
     train_rows: number;
     test_rows: number;
+    eval_mode?: string | null;
+    cv_folds?: number | null;
+  };
+  label_audit?: {
+    labeled_negative: number;
+    labeled_positive: number;
+    unmapped_status_samples: string[];
   };
   pipeline_health: {
     status: string;
@@ -75,6 +90,13 @@ export function GirlsReintegrationInsightsPage() {
 
   const notTrained = !data || data.pipeline_health?.status !== 'ok';
 
+  const rowsUsed = data?.pipeline_health?.rows_used ?? 0;
+  const testRows = data?.model_metrics?.test_rows ?? 0;
+  const showSmallSampleBanner =
+    !notTrained &&
+    data &&
+    (rowsUsed < SMALL_SAMPLE_ROWS_USED || testRows < SMALL_SAMPLE_TEST_ROWS);
+
   return (
     <section>
       <nav aria-label="breadcrumb" className="mb-3">
@@ -107,6 +129,17 @@ export function GirlsReintegrationInsightsPage() {
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {!loading && !error && notTrained ? (
         <div className="alert alert-warning">Model not trained yet. Run retraining to generate insights.</div>
+      ) : null}
+
+      {!loading && !error && showSmallSampleBanner ? (
+        <div className="alert alert-info" role="status">
+          Labeled sample size is small (rows used: {rowsUsed}
+          {data?.model_metrics?.eval_mode === 'stratified_cv'
+            ? `, ${data.model_metrics.cv_folds ?? '?'} CV folds`
+            : `, ~${testRows} rows per validation fold`}
+          ). Headline metrics are experimental and can swing widely; use relative ranking cautiously until you have
+          more labeled residents and stable cross-validation or holdout estimates.
+        </div>
       ) : null}
 
       {!loading && !error && !notTrained && data ? (
@@ -180,10 +213,54 @@ export function GirlsReintegrationInsightsPage() {
                 <div className="card-body">
                   <h2 className="h6">Model metrics</h2>
                   <div className="small">
-                    ROC-AUC: {data.model_metrics.roc_auc?.toFixed(3) ?? 'N/A'} | AP:{' '}
-                    {data.model_metrics.avg_precision.toFixed(3)} | F1: {data.model_metrics.f1.toFixed(3)} | Train/Test:{' '}
-                    {data.model_metrics.train_rows}/{data.model_metrics.test_rows}
+                    {data.model_metrics.eval_mode === 'stratified_cv' ? (
+                      <>
+                        ROC-AUC: {data.model_metrics.roc_auc?.toFixed(3) ?? 'N/A'}
+                        {data.model_metrics.roc_auc_std != null
+                          ? ` ± ${data.model_metrics.roc_auc_std.toFixed(3)}`
+                          : ''}{' '}
+                        | AP: {data.model_metrics.avg_precision.toFixed(3)}
+                        {data.model_metrics.avg_precision_std != null
+                          ? ` ± ${data.model_metrics.avg_precision_std.toFixed(3)}`
+                          : ''}{' '}
+                        | F1 (OOF, tuned τ): {data.model_metrics.f1.toFixed(3)}
+                        {data.model_metrics.f1_cv_mean != null ? (
+                          <>
+                            {' '}
+                            | F1 @0.5 (folds): {data.model_metrics.f1_cv_mean.toFixed(3)}
+                            {data.model_metrics.f1_cv_std != null
+                              ? ` ± ${data.model_metrics.f1_cv_std.toFixed(3)}`
+                              : ''}
+                          </>
+                        ) : null}{' '}
+                        | τ*: {data.model_metrics.optimal_threshold?.toFixed(3) ?? 'N/A'} | CV folds:{' '}
+                        {data.model_metrics.cv_folds ?? 'N/A'} | Labeled rows: {data.model_metrics.train_rows}
+                      </>
+                    ) : (
+                      <>
+                        ROC-AUC: {data.model_metrics.roc_auc?.toFixed(3) ?? 'N/A'} | AP:{' '}
+                        {data.model_metrics.avg_precision.toFixed(3)} | F1 (tuned τ):{' '}
+                        {data.model_metrics.f1.toFixed(3)} | τ*:{' '}
+                        {data.model_metrics.optimal_threshold?.toFixed(3) ?? 'N/A'} | Train/Test:{' '}
+                        {data.model_metrics.train_rows}/{data.model_metrics.test_rows}
+                      </>
+                    )}
                   </div>
+                  {data.label_audit &&
+                  (data.label_audit.unmapped_status_samples?.length > 0 ||
+                    data.label_audit.labeled_negative + data.label_audit.labeled_positive > 0) ? (
+                    <div className="small text-body-secondary mt-2">
+                      Label audit: {data.label_audit.labeled_negative} negative / {data.label_audit.labeled_positive}{' '}
+                      positive
+                      {data.label_audit.unmapped_status_samples?.length ? (
+                        <>
+                          . Unmapped status samples:{' '}
+                          {data.label_audit.unmapped_status_samples.slice(0, 8).join('; ')}
+                          {data.label_audit.unmapped_status_samples.length > 8 ? ' …' : ''}
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="small text-body-secondary mt-2">
                     Last trained: {data.pipeline_health.last_trained_at_utc || 'N/A'} | Rows used:{' '}
                     {data.pipeline_health.rows_used ?? 'N/A'}

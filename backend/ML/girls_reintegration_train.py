@@ -11,8 +11,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
+from sklearn.base import clone
 from sklearn.metrics import average_precision_score, f1_score, roc_auc_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, cross_val_predict, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -50,16 +51,33 @@ def readiness_label(status: str):
     s = normalize_status(status)
     if not s:
         return None
-    # Multi-word phrases first (substring checks).
+    # Multi-word phrases first (substring checks). Longer / more specific phrases before generic tokens.
     negative_phrases = (
         "high risk",
         "not ready",
+        "not completed",
         "in progress",
         "pending review",
+        "on hold",
+        "on-hold",
+        "preparation",
+        "awaiting",
+        "screening",
+        "intake",
     )
     for phrase in negative_phrases:
         if phrase in s:
             return 0
+
+    positive_phrases = (
+        "successfully",
+        "reintegration complete",
+        "case closed",
+        "closed successfully",
+    )
+    for phrase in positive_phrases:
+        if phrase in s:
+            return 1
 
     # Single-word tokens: use word tokens so "inactive" does not match "active".
     words = set(re.findall(r"[a-z0-9]+", s))
@@ -67,8 +85,11 @@ def readiness_label(status: str):
     positive_words = frozenset(
         {
             "ready",
+            "readiness",
             "reintegrated",
+            "reintegration",
             "successful",
+            "success",
             "completed",
             "complete",
             "stable",
@@ -76,6 +97,14 @@ def readiness_label(status: str):
             "graduated",
             "reunified",
             "restored",
+            "transitioned",
+            "transition",
+            "closure",
+            "closed",
+            "achieved",
+            "cleared",
+            "exit",
+            "reunification",
         }
     )
     negative_words = frozenset(
@@ -90,8 +119,17 @@ def readiness_label(status: str):
             "admitted",
             "withdrawn",
             "cancelled",
+            "canceled",
             "suspended",
             "deferred",
+            "delayed",
+            "stalled",
+            "paused",
+            "monitoring",
+            "hold",
+            "waiting",
+            "tbd",
+            "unknown",
         }
     )
     if words & positive_words:
@@ -130,10 +168,10 @@ def build_preprocessor(df: pd.DataFrame):
     )
 
 
-def safe_metric_block(y_true, y_prob, y_pred, train_rows: int, test_rows: int):
+def safe_metric_block(y_true, y_prob, y_pred, train_rows: int, test_rows: int, extras=None):
     positive_rate = float(np.mean(y_true)) if len(y_true) else 0.0
     roc_auc = float(roc_auc_score(y_true, y_prob)) if len(set(y_true)) > 1 else None
-    return {
+    out = {
         "roc_auc": roc_auc,
         "avg_precision": float(average_precision_score(y_true, y_prob)) if len(y_true) else 0.0,
         "f1": float(f1_score(y_true, y_pred, zero_division=0)),
@@ -141,6 +179,114 @@ def safe_metric_block(y_true, y_prob, y_pred, train_rows: int, test_rows: int):
         "train_rows": int(train_rows),
         "test_rows": int(test_rows),
     }
+    if extras:
+        out.update(extras)
+    return out
+
+
+def _cv_fold_count(y: pd.Series, max_folds: int = 5) -> int:
+    """Stratified k-fold size k: at most max_folds, at least 2, limited by minority class and n."""
+    n = len(y)
+    if n < 8:
+        return 0
+    vc = y.value_counts()
+    if len(vc) < 2:
+        return 0
+    min_class = int(vc.min())
+    n_splits = min(max_folds, min_class, max(2, n // 2))
+    n_splits = max(2, int(n_splits))
+    if n < n_splits * 2:
+        n_splits = min(n_splits, n // 2)
+    if n_splits < 2:
+        return 0
+    return n_splits
+
+
+def _fold_metrics_one_split(y_true, y_prob):
+    if len(y_true) == 0:
+        return None, None, None
+    if len(set(y_true)) < 2:
+        return None, float(average_precision_score(y_true, y_prob)), float(
+            f1_score(y_true, (y_prob >= 0.5).astype(int), zero_division=0)
+        )
+    return (
+        float(roc_auc_score(y_true, y_prob)),
+        float(average_precision_score(y_true, y_prob)),
+        float(f1_score(y_true, (y_prob >= 0.5).astype(int), zero_division=0)),
+    )
+
+
+def best_f1_threshold(y_true, proba):
+    best_t, best_f1 = 0.5, 0.0
+    for t in np.linspace(0.05, 0.95, 19):
+        pred = (proba >= t).astype(int)
+        f1v = f1_score(y_true, pred, zero_division=0)
+        if f1v > best_f1:
+            best_f1, best_t = f1v, t
+    return float(best_t), float(best_f1)
+
+
+def stratified_cv_metrics_block(pipeline_template, x: pd.DataFrame, y: pd.Series, max_folds: int = 5):
+    """Mean ± std over stratified folds; OOF probabilities for threshold tuning."""
+    n_splits = _cv_fold_count(y, max_folds=max_folds)
+    if n_splits < 2:
+        return None
+
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    aucs, aps, f1s = [], [], []
+    for train_idx, val_idx in skf.split(x, y):
+        pipe = clone(pipeline_template)
+        pipe.fit(x.iloc[train_idx], y.iloc[train_idx])
+        proba = pipe.predict_proba(x.iloc[val_idx])[:, 1]
+        yt = y.iloc[val_idx]
+        roc_m, ap_m, f1_m = _fold_metrics_one_split(yt, proba)
+        if roc_m is not None:
+            aucs.append(roc_m)
+        if ap_m is not None:
+            aps.append(ap_m)
+        if f1_m is not None:
+            f1s.append(f1_m)
+
+    oof_proba = cross_val_predict(
+        clone(pipeline_template), x, y, cv=skf, method="predict_proba", n_jobs=1
+    )[:, 1]
+
+    opt_t, opt_f1 = best_f1_threshold(y.values, oof_proba)
+
+    fold_test_n = max(1, len(y) // n_splits)
+    return {
+        "roc_auc": float(np.mean(aucs)) if aucs else None,
+        "roc_auc_std": float(np.std(aucs)) if len(aucs) > 1 else 0.0,
+        "avg_precision": float(np.mean(aps)) if aps else 0.0,
+        "avg_precision_std": float(np.std(aps)) if len(aps) > 1 else 0.0,
+        "f1": opt_f1,
+        "f1_cv_mean": float(np.mean(f1s)) if f1s else 0.0,
+        "f1_cv_std": float(np.std(f1s)) if len(f1s) > 1 else 0.0,
+        "optimal_threshold": opt_t,
+        "test_positive_rate": float(np.mean(y)),
+        "train_rows": int(len(y)),
+        "test_rows": int(fold_test_n),
+        "eval_mode": "stratified_cv",
+        "cv_folds": int(n_splits),
+    }
+
+
+def rf_pipeline_from_x(x_train_df: pd.DataFrame):
+    pre = build_preprocessor(x_train_df)
+    return Pipeline(
+        [
+            ("pre", pre),
+            (
+                "model",
+                RandomForestClassifier(
+                    n_estimators=300,
+                    min_samples_leaf=3,
+                    random_state=42,
+                    class_weight="balanced_subsample",
+                ),
+            ),
+        ]
+    )
 
 
 def top_features_block(model, x_test, y_test):
@@ -318,28 +464,55 @@ def main():
     x = train_df[features]
     y = train_df["label"].astype(int)
     stratify_y = y if y.nunique() > 1 else None
+
+    rf_template = rf_pipeline_from_x(x)
+    cv_block = stratified_cv_metrics_block(rf_template, x, y, max_folds=5)
+
+    if cv_block is not None:
+        metrics = cv_block
+    else:
+        try:
+            x_train_m, x_test_m, y_train_m, y_test_m = train_test_split(
+                x, y, test_size=0.25, random_state=42, stratify=stratify_y
+            )
+        except ValueError:
+            x_train_m, x_test_m, y_train_m, y_test_m = train_test_split(x, y, test_size=0.25, random_state=42)
+        p_hold = rf_pipeline_from_x(x_train_m)
+        p_hold.fit(x_train_m, y_train_m)
+        prob_test = p_hold.predict_proba(x_test_m)[:, 1]
+        opt_t, opt_f1 = best_f1_threshold(y_test_m.values, prob_test)
+        pred_opt = (prob_test >= opt_t).astype(int)
+        metrics = safe_metric_block(
+            y_test_m,
+            prob_test,
+            pred_opt,
+            len(x_train_m),
+            len(x_test_m),
+            {
+                "eval_mode": "holdout_25pct",
+                "optimal_threshold": opt_t,
+                "roc_auc_std": None,
+                "avg_precision_std": None,
+                "f1_cv_mean": None,
+                "f1_cv_std": None,
+                "cv_folds": None,
+            },
+        )
+
+    predictive = rf_pipeline_from_x(x)
+    predictive.fit(x, y)
+    explanatory = Pipeline(
+        [("pre", build_preprocessor(x)), ("model", LogisticRegression(max_iter=2000, class_weight="balanced"))]
+    )
+    explanatory.fit(x, y)
+
     try:
-        x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=0.25, random_state=42, stratify=stratify_y
+        _, xi_te, _, yi_te = train_test_split(
+            x, y, test_size=0.2, random_state=42, stratify=stratify_y
         )
     except ValueError:
-        # Small / imbalanced classes: split without stratification.
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=42)
-
-    pre = build_preprocessor(x_train)
-    predictive = Pipeline(
-        [("pre", pre), ("model", RandomForestClassifier(n_estimators=300, min_samples_leaf=3, random_state=42))]
-    )
-    explanatory = Pipeline(
-        [("pre", pre), ("model", LogisticRegression(max_iter=2000, class_weight="balanced"))]
-    )
-    predictive.fit(x_train, y_train)
-    explanatory.fit(x_train, y_train)
-
-    prob_test = predictive.predict_proba(x_test)[:, 1]
-    pred_test = (prob_test >= 0.5).astype(int)
-    metrics = safe_metric_block(y_test, prob_test, pred_test, len(x_train), len(x_test))
-    key_features = top_features_block(predictive, x_test, y_test)
+        _, xi_te, _, yi_te = train_test_split(x, y, test_size=0.2, random_state=42)
+    key_features = top_features_block(predictive, xi_te, yi_te)
 
     all_features = base[features].copy()
     base["readiness_score"] = predictive.predict_proba(all_features)[:, 1]
@@ -367,6 +540,20 @@ def main():
             }
         )
 
+    def unmapped_status_samples(df_base, limit=25):
+        m = df_base[df_base["label"].isna() & df_base["reintegration_status"].notna()]
+        if m.empty:
+            return []
+        raw = m["reintegration_status"].dropna().astype(str).str.strip()
+        uniq = sorted(set(raw.tolist()))
+        return uniq[:limit]
+
+    label_audit = {
+        "labeled_negative": int((train_df["label"] == 0).sum()),
+        "labeled_positive": int((train_df["label"] == 1).sum()),
+        "unmapped_status_samples": unmapped_status_samples(base),
+    }
+
     duration_ms = int((time.time() - started) * 1000)
     warnings_out = []
     if len(train_df) < 30:
@@ -388,6 +575,7 @@ def main():
         "top_resident_worklist": top_rows,
         "key_features": key_features,
         "model_metrics": metrics,
+        "label_audit": label_audit,
         "pipeline_health": {
             "status": "ok",
             "last_trained_at_utc": pd.Timestamp.utcnow().isoformat(),
