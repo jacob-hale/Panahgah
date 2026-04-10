@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Panahgah.Api.Contracts;
+using System.Diagnostics;
 
 namespace Panahgah.Api.Services;
 
@@ -27,6 +28,17 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
         var modelCandidates = (configuredModels ?? "gemini-2.0-flash,gemini-1.5-flash,gemini-1.5-flash-latest,gemini-1.5-pro,gemini-1.5-pro-latest")
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .ToList();
+        var maxModelsToTry = int.TryParse(configuration["Llms:GeminiMaxModelsToTry"], out var mm) && mm > 0
+            ? Math.Min(mm, 4)
+            : 2;
+        if (modelCandidates.Count > maxModelsToTry)
+        {
+            modelCandidates = modelCandidates.Take(maxModelsToTry).ToList();
+        }
+        var maxRequestSeconds = int.TryParse(configuration["Llms:GeminiMaxRequestSeconds"], out var ms) && ms > 0
+            ? Math.Min(ms, 90)
+            : 25;
+        var stopwatch = Stopwatch.StartNew();
         var systemPrompt =
             SocialPostCopyGuidance.OrganizationSystemBlock
             + """
@@ -57,17 +69,27 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
 
         string? lastFailure = null;
         string? responseBody = null;
-        var tokenBudgets = new[] { 900, 1400, 1800 };
+        var tokenBudgets = new[] { 900, 1300 };
         foreach (var tokenBudget in tokenBudgets)
         {
+            if (stopwatch.Elapsed > TimeSpan.FromSeconds(maxRequestSeconds))
+            {
+                break;
+            }
             var payload = BuildPayload(systemPrompt, userPrompt, tokenBudget);
             foreach (var model in modelCandidates)
             {
+                if (stopwatch.Elapsed > TimeSpan.FromSeconds(maxRequestSeconds))
+                {
+                    break;
+                }
                 var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+                using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
                 using var response = await httpClient.PostAsync(
                     endpoint,
                     new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
-                    cancellationToken);
+                    perAttemptCts.Token);
                 responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
@@ -110,19 +132,29 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
             }
         }
 
-        if (lastFailure is not null)
+        if (lastFailure is not null && stopwatch.Elapsed <= TimeSpan.FromSeconds(maxRequestSeconds))
         {
             var discovered = await DiscoverGenerateContentModelsAsync(apiKey, cancellationToken);
             foreach (var tokenBudget in tokenBudgets)
             {
+                if (stopwatch.Elapsed > TimeSpan.FromSeconds(maxRequestSeconds))
+                {
+                    break;
+                }
                 var payload = BuildPayload(systemPrompt, userPrompt, tokenBudget);
                 foreach (var discoveredModel in discovered.Where(x => !modelCandidates.Contains(x, StringComparer.OrdinalIgnoreCase)))
                 {
+                    if (stopwatch.Elapsed > TimeSpan.FromSeconds(maxRequestSeconds))
+                    {
+                        break;
+                    }
                     var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{discoveredModel}:generateContent?key={apiKey}";
+                    using var perAttemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    perAttemptCts.CancelAfter(TimeSpan.FromSeconds(Math.Min(12, maxRequestSeconds)));
                     using var retryResponse = await httpClient.PostAsync(
                         endpoint,
                         new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
-                        cancellationToken);
+                        perAttemptCts.Token);
                     responseBody = await retryResponse.Content.ReadAsStringAsync(cancellationToken);
 
                     if (!retryResponse.IsSuccessStatusCode)
@@ -156,6 +188,11 @@ public sealed class GeminiSocialPostGenerator(HttpClient httpClient, IConfigurat
 
         if (lastFailure is not null || responseBody is null)
         {
+            if (stopwatch.Elapsed > TimeSpan.FromSeconds(maxRequestSeconds))
+            {
+                throw new InvalidOperationException(
+                    "AI generation timed out. Try fewer posts (or a smaller date range), then run again.");
+            }
             throw new InvalidOperationException($"Gemini request failed: {lastFailure}");
         }
         throw new InvalidOperationException("Gemini request failed for unknown reasons.");
