@@ -440,50 +440,6 @@ namespace Panahgah.Api.Migrations
                     b.ToTable("intervention_plans", (string)null);
                 });
 
-            modelBuilder.Entity("Panahgah.Api.Models.MediaAsset", b =>
-                {
-                    b.Property<int>("media_asset_id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("media_asset_id"));
-
-                    b.Property<string>("alt_text")
-                        .HasColumnType("text");
-
-                    b.Property<string>("category")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at_utc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("is_active")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("platform_suitability")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("tags")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("updated_at_utc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("url")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("media_asset_id");
-
-                    b.ToTable("media_assets", (string)null);
-                });
-
             modelBuilder.Entity("Panahgah.Api.Models.MlInsight", b =>
                 {
                     b.Property<int>("insight_id")
@@ -1010,9 +966,6 @@ namespace Panahgah.Api.Migrations
                     b.Property<string>("error_message")
                         .HasColumnType("text");
 
-                    b.Property<int?>("media_asset_id")
-                        .HasColumnType("integer");
-
                     b.Property<string>("media_url")
                         .HasColumnType("text");
 
@@ -1036,8 +989,6 @@ namespace Panahgah.Api.Migrations
                     b.HasKey("scheduled_post_id");
 
                     b.HasIndex("campaign_id");
-
-                    b.HasIndex("media_asset_id");
 
                     b.ToTable("scheduled_social_posts", (string)null);
                 });
@@ -1515,13 +1466,7 @@ namespace Panahgah.Api.Migrations
                         .WithMany("scheduled_posts")
                         .HasForeignKey("campaign_id");
 
-                    b.HasOne("Panahgah.Api.Models.MediaAsset", "media_asset")
-                        .WithMany("scheduled_posts")
-                        .HasForeignKey("media_asset_id");
-
                     b.Navigation("campaign");
-
-                    b.Navigation("media_asset");
                 });
 
             modelBuilder.Entity("Panahgah.Api.Models.Donation", b =>
@@ -1529,11 +1474,6 @@ namespace Panahgah.Api.Migrations
                     b.Navigation("donation_allocations");
 
                     b.Navigation("in_kind_donation_items");
-                });
-
-            modelBuilder.Entity("Panahgah.Api.Models.MediaAsset", b =>
-                {
-                    b.Navigation("scheduled_posts");
                 });
 
             modelBuilder.Entity("Panahgah.Api.Models.Partner", b =>
