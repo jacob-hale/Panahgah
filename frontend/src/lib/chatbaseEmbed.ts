@@ -1,13 +1,45 @@
-/** Loads Chatbase once per session (same behavior as their default embed snippet). */
+type ChatbaseQueueFn = ((...args: unknown[]) => void) & { q?: unknown[][] };
+type ChatbaseProxyFn = ChatbaseQueueFn & { getState?: () => string };
+
+/** Loads Chatbase once per session (equivalent to their snippet, without inline JS). */
 export function installChatbaseEmbed(): void {
-  const w = window as Window & { __panahgahChatbaseLoader?: boolean };
+  const w = window as Window & {
+    __panahgahChatbaseLoader?: boolean;
+    chatbase?: ChatbaseProxyFn;
+  };
   if (w.__panahgahChatbaseLoader) return;
   w.__panahgahChatbaseLoader = true;
 
-  const inline = document.createElement('script');
-  inline.textContent = `(function(){if(!window.chatbase||window.chatbase("getState")!=="initialized"){window.chatbase=(...arguments)=>{if(!window.chatbase.q){window.chatbase.q=[]}window.chatbase.q.push(arguments)};window.chatbase=new Proxy(window.chatbase,{get(target,prop){if(prop==="q"){return target.q}return(...args)=>target(prop,...args)}})}const onLoad=function(){const script=document.createElement("script");script.src="https://www.chatbase.co/embed.min.js";script.id="Mahh96yzKdinEv4RFzOxq";script.domain="www.chatbase.co";document.body.appendChild(script)};if(document.readyState==="complete"){onLoad()}else{window.addEventListener("load",onLoad)}})();`;
-  document.body.appendChild(inline);
-  inline.remove();
+  const getState = w.chatbase as unknown as ((name: string) => unknown) | undefined;
+  const alreadyInitialized = typeof getState === 'function' && getState('getState') === 'initialized';
+  if (!alreadyInitialized) {
+    const queued: ChatbaseQueueFn = ((...args: unknown[]) => {
+      if (!queued.q) queued.q = [];
+      queued.q.push(args);
+    }) as ChatbaseQueueFn;
+
+    w.chatbase = new Proxy(queued, {
+      get(target, prop) {
+        if (prop === 'q') return target.q;
+        return (...args: unknown[]) => target(String(prop), ...args);
+      },
+      apply(target, _thisArg, argArray) {
+        target(...argArray);
+      },
+    }) as ChatbaseProxyFn;
+  }
+
+  const addScript = () => {
+    if (document.getElementById('Mahh96yzKdinEv4RFzOxq')) return;
+    const script = document.createElement('script');
+    script.src = 'https://www.chatbase.co/embed.min.js';
+    script.id = 'Mahh96yzKdinEv4RFzOxq';
+    script.setAttribute('domain', 'www.chatbase.co');
+    document.body.appendChild(script);
+  };
+
+  if (document.readyState === 'complete') addScript();
+  else window.addEventListener('load', addScript, { once: true });
 }
 
 export function tryCloseChatbaseWidget(): void {
