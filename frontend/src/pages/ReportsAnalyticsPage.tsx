@@ -19,7 +19,7 @@ function formatPct(rate: number) {
 function DonationBars(props: { points: AdminReportsAnalytics['donation_trend_monthly'] }) {
   const { points } = props;
   const moneyFmt = useMemo(
-    () => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }),
+    () => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 0 }),
     [],
   );
   const monthLabels = useMemo(() => points.map((p) => formatMonthLabel(p.month_start)), [points]);
@@ -75,9 +75,6 @@ function DonationBars(props: { points: AdminReportsAnalytics['donation_trend_mon
           </g>
         );
       })}
-      <text x={padL} y={h - 4} className="small" fill="currentColor" opacity={0.75}>
-        Month (UTC)
-      </text>
       <text x={padL} y={10} className="small" fill="currentColor" opacity={0.75}>
         Estimated value (USD)
       </text>
@@ -123,11 +120,6 @@ export function ReportsAnalyticsPage() {
       </nav>
 
       <h1 className="h3 mb-2">Reports &amp; Analytics</h1>
-      <p className="text-body-secondary mb-4">
-        Aggregated trends for planning and reporting. Sections below align with common annual accomplishment themes—
-        <strong> caring</strong> (services and reach), <strong> healing</strong> (wellbeing), and <strong> teaching</strong>{' '}
-        (education)—using data already captured in Panahgah.
-      </p>
 
       {loading ? (
         <div className="d-flex justify-content-center py-5">
@@ -144,16 +136,15 @@ export function ReportsAnalyticsPage() {
               <div className="card h-100 shadow-sm border-primary-subtle">
                 <div className="card-body">
                   <h2 className="h6 text-primary">Caring (reach &amp; services)</h2>
-                  <p className="small text-body-secondary mb-2">Residents served and supportive sessions recorded.</p>
                   <ul className="list-unstyled small mb-0">
                     <li>
-                      <strong>{data.beneficiaries.residents_total}</strong> residents (all)
+                      <strong>{data.beneficiaries.residents_total}</strong> residents
                     </li>
                     <li>
-                      <strong>{data.beneficiaries.residents_active}</strong> active cases (by status)
+                      <strong>{data.beneficiaries.residents_active}</strong> active cases
                     </li>
                     <li>
-                      <strong>{data.total_process_recordings}</strong> process recordings (sessions)
+                      <strong>{data.total_process_recordings}</strong> process recordings
                     </li>
                   </ul>
                 </div>
@@ -163,9 +154,8 @@ export function ReportsAnalyticsPage() {
               <div className="card h-100 shadow-sm border-success-subtle">
                 <div className="card-body">
                   <h2 className="h6 text-success">Healing (wellbeing)</h2>
-                  <p className="small text-body-secondary mb-2">Average general health score from health records.</p>
+                  <p className="small text-body-secondary mb-2">Average general health score (out of 5).</p>
                   <p className="display-6 mb-0">{data.outcomes.avg_health_score.toFixed(2)}</p>
-                  <p className="small text-body-secondary mb-0">scale from recorded health assessments</p>
                 </div>
               </div>
             </div>
@@ -175,7 +165,6 @@ export function ReportsAnalyticsPage() {
                   <h2 className="h6 text-info-emphasis">Teaching (education)</h2>
                   <p className="small text-body-secondary mb-2">Average education progress percent.</p>
                   <p className="display-6 mb-0">{data.outcomes.avg_education_progress_percent.toFixed(1)}%</p>
-                  <p className="small text-body-secondary mb-0">from education records</p>
                 </div>
               </div>
             </div>
@@ -228,9 +217,6 @@ export function ReportsAnalyticsPage() {
           <div className="card shadow-sm mb-4">
             <div className="card-body">
               <h2 className="h5 mb-3">Safehouse occupancy (latest month on file)</h2>
-              <p className="small text-body-secondary mb-3">
-                One row per safehouse: most recent monthly metrics snapshot.
-              </p>
               {data.safehouse_occupancy.length === 0 ? (
                 <p className="text-body-secondary small mb-0">No safehouse monthly metrics yet.</p>
               ) : (
