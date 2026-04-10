@@ -70,7 +70,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor |
-        ForwardedHeaders.XForwardedProto;
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
 
     // In container/PaaS environments, proxy IPs are not known ahead of time.
     options.KnownNetworks.Clear();
