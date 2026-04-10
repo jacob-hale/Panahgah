@@ -1,10 +1,22 @@
 ﻿/* App.css - Panahgah global overrides */
 
+/* Scales with viewport so nav links keep room beside the brand on md/lg widths. */
+.navbar-brand-logo {
+  height: clamp(2.25rem, 5.5vw + 0.75rem, 6.5rem);
+  width: auto;
+  max-height: 6.5rem;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  border-radius: clamp(8px, 1vw + 6px, 16px);
+}
+
 .brand-name {
-  font-size: 1.4rem;
+  font-size: clamp(1.05rem, 0.95rem + 0.45vw, 1.4rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--pg-color-ink);
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -37,5 +49,56 @@
 .nav-link.active {
   color: var(--pg-color-navy) !important;
   font-weight: 600;
+}
+
+/* Expanded top nav (xl+): smaller, calmer type + nowrap so labels don’t stack awkwardly.
+   Below 1200px the bar collapses to the hamburger—avoids the cramped lg-only band. */
+@media (min-width: 1200px) {
+  .pg-navbar .navbar-nav > .nav-item > .nav-link,
+  .pg-navbar .navbar-nav > .nav-item > .nav-link.dropdown-toggle {
+    white-space: nowrap;
+    font-size: clamp(0.8125rem, 0.74rem + 0.18vw, 0.875rem);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    padding-left: clamp(0.3rem, 0.12rem + 0.35vw, 0.55rem);
+    padding-right: clamp(0.3rem, 0.12rem + 0.35vw, 0.55rem);
+    color: rgba(21, 34, 55, 0.76);
+  }
+
+  .pg-navbar .navbar-nav > .nav-item > .nav-link:hover,
+  .pg-navbar .navbar-nav > .nav-item > .nav-link:focus,
+  .pg-navbar .navbar-nav > .nav-item > .nav-link.dropdown-toggle:hover,
+  .pg-navbar .navbar-nav > .nav-item > .nav-link.dropdown-toggle:focus {
+    color: var(--pg-color-navy);
+  }
+}
+
+/* Mobile / collapsed drawer: slightly softer than default primary link */
+@media (max-width: 1199.98px) {
+  .pg-navbar .navbar-nav .nav-link,
+  .pg-navbar .navbar-nav .nav-link.dropdown-toggle {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: rgba(21, 34, 55, 0.88);
+  }
+
+  .pg-navbar .navbar-nav .nav-link:hover,
+  .pg-navbar .navbar-nav .nav-link:focus,
+  .pg-navbar .navbar-nav .nav-link.dropdown-toggle:hover,
+  .pg-navbar .navbar-nav .nav-link.dropdown-toggle:focus {
+    color: var(--pg-color-navy);
+  }
+}
+
+.pg-navbar-toolbar {
+  row-gap: 0.35rem;
+}
+
+.pg-navbar-session {
+  max-width: min(10.5rem, 18vw);
 }
 
