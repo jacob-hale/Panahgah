@@ -1216,7 +1216,6 @@ export function SocialPostStudioPage() {
                             <th>Status</th>
                             <th>Attempts</th>
                             <th>Error</th>
-                            <th>Live post</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -1235,8 +1234,6 @@ export function SocialPostStudioPage() {
                             const canEditQueue = st === 'scheduled' || st === 'failed';
                             const isEditing = queueEditKey === rowKey;
                             const campaignLabel = (first.campaign_title ?? '').trim() || '—';
-                            const platformLabel = (p: ScheduledSocialPost) =>
-                              p.platform.toLowerCase().includes('face') ? 'Facebook' : 'Instagram';
                             return (
                               <Fragment key={rowKey}>
                                 <tr>
@@ -1246,23 +1243,6 @@ export function SocialPostStudioPage() {
                                   <td>{first.status}</td>
                                   <td>{attempts}</td>
                                   <td className="small text-danger">{error}</td>
-                                  <td className="small">
-                                    {fresh.some((p) => (p.published_post_url ?? '').trim()) ? (
-                                      <div className="d-flex flex-column gap-1">
-                                        {fresh.map((p) => {
-                                          const url = (p.published_post_url ?? '').trim();
-                                          if (!url) return null;
-                                          return (
-                                            <a key={p.scheduled_post_id} href={url} target="_blank" rel="noopener noreferrer">
-                                              Open on {platformLabel(p)}
-                                            </a>
-                                          );
-                                        })}
-                                      </div>
-                                    ) : (
-                                      <span className="text-body-secondary">—</span>
-                                    )}
-                                  </td>
                                   <td className="d-flex flex-wrap gap-1">
                                     {canEditQueue ? (
                                       <button
@@ -1286,7 +1266,7 @@ export function SocialPostStudioPage() {
                                 </tr>
                                 {isEditing && canEditQueue ? (
                                   <tr className="table-light">
-                                    <td colSpan={8}>
+                                    <td colSpan={7}>
                                       <div className="small text-body-secondary mb-2">
                                         {st === 'failed'
                                           ? 'Saving moves this group back to scheduled so the worker can try again.'

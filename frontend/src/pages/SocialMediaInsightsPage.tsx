@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
-import type { Model5InsightsResponse } from '../api/types';
+import type { Model5InsightsResponse, SocialMediaMonthlyTimeseriesResponse } from '../api/types';
+import { ResidentStoryBarComparison, SocialTrendsFromPosts } from './SocialMediaInsightsCharts';
 type Model5TrainResponse = {
   rows_used: number;
   train_rows: number;
@@ -20,6 +21,25 @@ export function SocialMediaInsightsPage() {
   const [training, setTraining] = useState(false);
   const [trainError, setTrainError] = useState<string | null>(null);
   const [trainResult, setTrainResult] = useState<Model5TrainResponse | null>(null);
+  const [timeseries, setTimeseries] = useState<SocialMediaMonthlyTimeseriesResponse | null>(null);
+  const [timeseriesLoading, setTimeseriesLoading] = useState(true);
+  const [timeseriesError, setTimeseriesError] = useState<string | null>(null);
+
+  const loadTimeseries = useCallback(async () => {
+    setTimeseriesLoading(true);
+    setTimeseriesError(null);
+    try {
+      const data = await apiFetch<SocialMediaMonthlyTimeseriesResponse>(
+        '/api/social-media-posts/timeseries/monthly',
+      );
+      setTimeseries(data);
+    } catch {
+      setTimeseriesError('Could not load monthly trends from post records.');
+      setTimeseries(null);
+    } finally {
+      setTimeseriesLoading(false);
+    }
+  }, []);
 
   const loadInsights = async () => {
     setLoading(true);
@@ -38,6 +58,7 @@ export function SocialMediaInsightsPage() {
 
   useEffect(() => {
     void loadInsights();
+    void loadTimeseries();
   }, []);
 
   const handleTrainModel = async () => {
@@ -50,6 +71,7 @@ export function SocialMediaInsightsPage() {
       });
       setTrainResult(result);
       await loadInsights();
+      await loadTimeseries();
     } catch (e) {
       setTrainError(e instanceof Error ? e.message : 'Training failed.');
     } finally {
@@ -89,10 +111,26 @@ export function SocialMediaInsightsPage() {
         <button type="button" className="btn btn-primary" onClick={handleTrainModel} disabled={training}>
           {training ? 'Retraining insights…' : 'Retrain insights from database'}
         </button>
-        <button type="button" className="btn btn-outline-secondary" onClick={() => void loadInsights()} disabled={loading}>
+        <button
+          type="button"
+          className="btn btn-outline-secondary"
+          onClick={() => {
+            void loadInsights();
+            void loadTimeseries();
+          }}
+          disabled={loading}
+        >
           Refresh insights
         </button>
       </div>
+      <div className="mb-4">
+        <SocialTrendsFromPosts
+          points={timeseries?.points ?? null}
+          loading={timeseriesLoading}
+          error={timeseriesError}
+        />
+      </div>
+
       {trainError ? <div className="alert alert-danger">{trainError}</div> : null}
       {trainResult ? (
         <div className="alert alert-success">
@@ -220,6 +258,7 @@ export function SocialMediaInsightsPage() {
                   </div>
                 </div>
               </div>
+              <ResidentStoryBarComparison story={storyEffect} />
             </div>
           </div>
         </div>
